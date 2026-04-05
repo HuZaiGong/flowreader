@@ -7,6 +7,7 @@ import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.dao.BookmarkDao
 import com.flowreader.app.data.local.dao.CategoryDao
 import com.flowreader.app.data.local.dao.ChapterDao
+import com.flowreader.app.data.local.dao.ReadingStatsDao
 import com.flowreader.app.data.repository.*
 import com.flowreader.app.domain.repository.*
 import dagger.Binds
@@ -46,6 +47,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideCategoryDao(database: AppDatabase): CategoryDao = database.categoryDao()
+
+    @Provides
+    @Singleton
+    fun provideReadingStatsDao(database: AppDatabase): ReadingStatsDao = database.readingStatsDao()
 }
 
 @Module
@@ -67,4 +72,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindCategoryRepository(impl: CategoryRepositoryImpl): CategoryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReadingStatsRepository(impl: ReadingStatsRepositoryImpl): ReadingStatsRepository
 }

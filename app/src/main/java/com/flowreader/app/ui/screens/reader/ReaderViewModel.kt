@@ -39,6 +39,8 @@ class ReaderViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
+    val scope = viewModelScope
+
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
 
     private val _uiState = MutableStateFlow(ReaderUiState())

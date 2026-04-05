@@ -2,10 +2,12 @@ package com.flowreader.app.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.Bookmark
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.LibraryBooks
@@ -29,11 +31,13 @@ import com.flowreader.app.ui.screens.history.HistoryScreen
 import com.flowreader.app.ui.screens.library.LibraryScreen
 import com.flowreader.app.ui.screens.reader.ReaderScreen
 import com.flowreader.app.ui.screens.settings.SettingsScreen
+import com.flowreader.app.ui.screens.statistics.StatisticsScreen
 
 sealed class Screen(val route: String) {
     object Library : Screen("library")
     object Bookmarks : Screen("bookmarks")
     object History : Screen("history")
+    object Statistics : Screen("statistics")
     object Settings : Screen("settings")
     object BookDetail : Screen("book_detail/{bookId}") {
         fun createRoute(bookId: Long) = "book_detail/$bookId"
@@ -67,6 +71,12 @@ sealed class BottomNavItem(
         selectedIcon = Icons.Filled.History,
         unselectedIcon = Icons.Outlined.History
     )
+    object Statistics : BottomNavItem(
+        route = Screen.Statistics.route,
+        title = "统计",
+        selectedIcon = Icons.Filled.Analytics,
+        unselectedIcon = Icons.Outlined.Analytics
+    )
     object Settings : BottomNavItem(
         route = Screen.Settings.route,
         title = "设置",
@@ -79,6 +89,7 @@ private val bottomNavItems = listOf(
     BottomNavItem.Library,
     BottomNavItem.Bookmarks,
     BottomNavItem.History,
+    BottomNavItem.Statistics,
     BottomNavItem.Settings
 )
 
@@ -154,6 +165,14 @@ fun FlowReaderNavHost() {
                     },
                     onReadClick = { bookId ->
                         navController.navigate(Screen.Reader.createRoute(bookId))
+                    }
+                )
+            }
+
+            composable(Screen.Statistics.route) {
+                StatisticsScreen(
+                    onBookClick = { bookId ->
+                        navController.navigate(Screen.BookDetail.createRoute(bookId))
                     }
                 )
             }

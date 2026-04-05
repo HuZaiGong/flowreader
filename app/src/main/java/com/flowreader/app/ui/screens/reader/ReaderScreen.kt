@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 
 package com.flowreader.app.ui.screens.reader
 
@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.domain.model.*
 import com.flowreader.app.ui.theme.ReaderColors
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +49,19 @@ fun ReaderScreen(
 
     val contentScrollState = rememberScrollState()
     val chapterScrollPositions = remember { mutableStateMapOf<Int, Int>() }
+
+    var showBrightnessSlider by remember { mutableStateOf(false) }
+    var controlsAutoHideJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+    fun resetAutoHide() {
+        controlsAutoHideJob?.cancel()
+        controlsAutoHideJob = viewModel.scope.launch {
+            delay(5000)
+            if (uiState.showControls) {
+                viewModel.toggleControls()
+            }
+        }
+    }
 
     LaunchedEffect(uiState.currentChapterIndex) {
         val savedPosition = chapterScrollPositions[uiState.currentChapterIndex] ?: 0
@@ -68,20 +83,24 @@ fun ReaderScreen(
         }
     }
 
-    val backgroundColor = when (uiState.readingSettings.theme) {
-        ReaderTheme.LIGHT -> ReaderColors.LightBackground
-        ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkBackground
-        ReaderTheme.SEPIA -> ReaderColors.SepiaBackground
-        ReaderTheme.PAPER -> ReaderColors.PaperBackground
-        ReaderTheme.AMOLED -> ReaderColors.AmoledBackground
+    val backgroundColor = remember(uiState.readingSettings.theme) {
+        when (uiState.readingSettings.theme) {
+            ReaderTheme.LIGHT -> ReaderColors.LightBackground
+            ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkBackground
+            ReaderTheme.SEPIA -> ReaderColors.SepiaBackground
+            ReaderTheme.PAPER -> ReaderColors.PaperBackground
+            ReaderTheme.AMOLED -> ReaderColors.AmoledBackground
+        }
     }
 
-    val textColor = when (uiState.readingSettings.theme) {
-        ReaderTheme.LIGHT -> ReaderColors.LightText
-        ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkText
-        ReaderTheme.SEPIA -> ReaderColors.SepiaText
-        ReaderTheme.PAPER -> ReaderColors.PaperText
-        ReaderTheme.AMOLED -> ReaderColors.AmoledText
+    val textColor = remember(uiState.readingSettings.theme) {
+        when (uiState.readingSettings.theme) {
+            ReaderTheme.LIGHT -> ReaderColors.LightText
+            ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkText
+            ReaderTheme.SEPIA -> ReaderColors.SepiaText
+            ReaderTheme.PAPER -> ReaderColors.PaperText
+            ReaderTheme.AMOLED -> ReaderColors.AmoledText
+        }
     }
 
     Box(
@@ -107,7 +126,10 @@ fun ReaderScreen(
                         when {
                             offset.x < (middle - tapZoneWidth) -> viewModel.goToPreviousChapter()
                             offset.x > (middle + tapZoneWidth) -> viewModel.goToNextChapter()
-                            else -> viewModel.toggleControls()
+                            else -> {
+                                viewModel.toggleControls()
+                                resetAutoHide()
+                            }
                         }
                     },
                     onPositionChanged = { viewModel.updatePosition(it) }
@@ -132,6 +154,25 @@ fun ReaderScreen(
                         val text = uiState.currentChapter?.content?.take(50) ?: ""
                         viewModel.addBookmark(text)
                     },
+                    onBrightnessClick = { showBrightnessSlider = !showBrightnessSlider },
+                    textColor = textColor,
+                    backgroundColor = backgroundColor
+                )
+            }
+
+            AnimatedVisibility(
+                visible = showBrightnessSlider,
+                enter = fadeIn() + slideInVertically(),
+                exit = fadeOut() + slideOutVertically(),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                BrightnessSlider(
+                    onBrightnessChange = { brightness ->
+                        val layoutParams = activity?.window?.attributes
+                        layoutParams?.screenBrightness = brightness
+                        activity?.window?.attributes = layoutParams
+                    },
+                    onDismiss = { showBrightnessSlider = false },
                     textColor = textColor,
                     backgroundColor = backgroundColor
                 )
@@ -170,6 +211,63 @@ fun ReaderScreen(
                     textColor = textColor,
                     backgroundColor = backgroundColor
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BrightnessSlider(
+    onBrightnessChange: (Float) -> Unit,
+    onDismiss: () -> Unit,
+    textColor: Color,
+    backgroundColor: Color
+) {
+    var sliderValue by remember { mutableFloatStateOf(0.5f) }
+
+    LaunchedEffect(sliderValue) {
+        onBrightnessChange(sliderValue)
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(32.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor.copy(alpha = 0.95f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "亮度调节",
+                style = MaterialTheme.typography.titleMedium,
+                color = textColor
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    imageVector = Icons.Default.BrightnessLow,
+                    contentDescription = null,
+                    tint = textColor
+                )
+                Slider(
+                    value = sliderValue,
+                    onValueChange = { sliderValue = it },
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = Icons.Default.BrightnessHigh,
+                    contentDescription = null,
+                    tint = textColor
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            TextButton(onClick = onDismiss) {
+                Text("完成", color = textColor)
             }
         }
     }
@@ -257,6 +355,7 @@ private fun ReaderControls(
     onSettingsClick: () -> Unit,
     onBookmarkClick: () -> Unit,
     onAddBookmark: () -> Unit,
+    onBrightnessClick: () -> Unit,
     textColor: Color,
     backgroundColor: Color
 ) {
@@ -286,6 +385,9 @@ private fun ReaderControls(
                 }
             },
             actions = {
+                IconButton(onClick = onBrightnessClick) {
+                    Icon(Icons.Default.Brightness6, contentDescription = "亮度", tint = textColor)
+                }
                 IconButton(onClick = onChapterClick) {
                     Icon(Icons.Default.List, contentDescription = "目录", tint = textColor)
                 }
