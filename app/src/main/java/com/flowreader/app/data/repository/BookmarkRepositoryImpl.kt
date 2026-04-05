@@ -43,4 +43,14 @@ class BookmarkRepositoryImpl @Inject constructor(
     override suspend fun deleteBookmarksByBookId(bookId: Long) {
         bookmarkDao.deleteBookmarksByBookId(bookId)
     }
+
+    override fun getAllBookmarks(): Flow<List<Bookmark>> {
+        return bookmarkDao.getAllBookmarks().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun clearAllBookmarks() {
+        bookmarkDao.deleteAllBookmarks()
+    }
 }

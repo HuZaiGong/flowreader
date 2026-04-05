@@ -33,6 +33,7 @@ interface ChapterRepository {
 }
 
 interface BookmarkRepository {
+    fun getAllBookmarks(): Flow<List<Bookmark>>
     fun getBookmarksByBookId(bookId: Long): Flow<List<Bookmark>>
     suspend fun getBookmarksListByBookId(bookId: Long): List<Bookmark>
     suspend fun getBookmarkById(id: Long): Bookmark?
@@ -40,6 +41,7 @@ interface BookmarkRepository {
     suspend fun deleteBookmark(bookmark: Bookmark)
     suspend fun deleteBookmarkById(id: Long)
     suspend fun deleteBookmarksByBookId(bookId: Long)
+    suspend fun clearAllBookmarks()
 }
 
 interface CategoryRepository {

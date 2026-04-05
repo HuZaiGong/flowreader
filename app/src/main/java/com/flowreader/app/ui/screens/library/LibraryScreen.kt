@@ -32,7 +32,6 @@ import java.io.File
 @Composable
 fun LibraryScreen(
     onBookClick: (Long) -> Unit,
-    onSettingsClick: () -> Unit,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -74,9 +73,6 @@ fun LibraryScreen(
                             }
                             IconButton(onClick = { bookPickerLauncher.launch(arrayOf("*/*")) }) {
                                 Icon(Icons.Default.Add, contentDescription = "添加书籍")
-                            }
-                            IconButton(onClick = onSettingsClick) {
-                                Icon(Icons.Default.Settings, contentDescription = "设置")
                             }
                         }
                     )
