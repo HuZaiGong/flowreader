@@ -30,7 +30,8 @@ data class ReadingSettings(
     val theme: ReaderTheme = ReaderTheme.LIGHT,
     val pageMode: PageMode = PageMode.SLIDE,
     val keepScreenOn: Boolean = true,
-    val screenTimeoutMinutes: Int = 0
+    val screenTimeoutMinutes: Int = 0,
+    val tapZoneRatio: Float = 0.3f
 )
 
 data class AppSettings(

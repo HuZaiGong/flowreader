@@ -44,6 +44,22 @@ fun ReaderScreen(
     val context = LocalContext.current
     val activity = context as? ComponentActivity
 
+    val contentScrollState = rememberScrollState()
+    val chapterScrollPositions = remember { mutableStateMapOf<Int, Int>() }
+
+    LaunchedEffect(uiState.currentChapterIndex) {
+        val savedPosition = chapterScrollPositions[uiState.currentChapterIndex] ?: 0
+        if (savedPosition > 0) {
+            contentScrollState.scrollTo(savedPosition)
+        }
+    }
+
+    LaunchedEffect(contentScrollState.value, uiState.currentChapterIndex) {
+        if (uiState.currentChapterIndex >= 0) {
+            chapterScrollPositions[uiState.currentChapterIndex] = contentScrollState.value
+        }
+    }
+
     LaunchedEffect(uiState.readingSettings.theme) {
         when (uiState.readingSettings.theme) {
             ReaderTheme.AMOLED -> activity?.window?.decorView?.setBackgroundColor(Color.Black.toArgb())
@@ -83,11 +99,13 @@ fun ReaderScreen(
                     settings = uiState.readingSettings,
                     textColor = textColor,
                     backgroundColor = backgroundColor,
+                    scrollState = contentScrollState,
                     onTap = { offset, size ->
+                        val tapZoneWidth = size.width * uiState.readingSettings.tapZoneRatio
                         val middle = size.width / 2
                         when {
-                            offset.x < middle -> viewModel.goToPreviousChapter()
-                            offset.x > middle -> viewModel.goToNextChapter()
+                            offset.x < (middle - tapZoneWidth) -> viewModel.goToPreviousChapter()
+                            offset.x > (middle + tapZoneWidth) -> viewModel.goToNextChapter()
                             else -> viewModel.toggleControls()
                         }
                     },
@@ -162,11 +180,10 @@ private fun ReaderContent(
     settings: ReadingSettings,
     textColor: Color,
     backgroundColor: Color,
+    scrollState: ScrollState,
     onTap: (offset: androidx.compose.ui.geometry.Offset, size: androidx.compose.ui.geometry.Size) -> Unit,
     onPositionChanged: (Int) -> Unit
 ) {
-    val scrollState = rememberScrollState()
-
     LaunchedEffect(scrollState.value) {
         onPositionChanged(scrollState.value)
     }
@@ -194,7 +211,7 @@ private fun ReaderContent(
                 .verticalScroll(scrollState)
                 .padding(
                     horizontal = 20.dp,
-                    vertical = 60.dp
+                    vertical = 80.dp
                 )
         ) {
             Text(
@@ -242,9 +259,7 @@ private fun ReaderControls(
     textColor: Color,
     backgroundColor: Color
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
                 Column {
@@ -285,13 +300,14 @@ private fun ReaderControls(
             },
             colors = TopAppBarDefaults.topAppBarColors(
                 containerColor = backgroundColor.copy(alpha = 0.95f)
-            )
+            ),
+            modifier = Modifier.align(Alignment.TopCenter)
         )
 
-        Spacer(modifier = Modifier.weight(1f))
-
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter),
             color = backgroundColor.copy(alpha = 0.95f)
         ) {
             Row(
