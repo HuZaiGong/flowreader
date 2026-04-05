@@ -114,20 +114,11 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSection(title = "账户") {
-                SettingsItem(
-                    icon = Icons.Default.AccountCircle,
-                    title = "账户与同步",
-                    subtitle = "登录以同步阅读数据",
-                    onClick = { }
-                )
-            }
-
             SettingsSection(title = "关于") {
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "版本",
-                    subtitle = "12.0.0",
+                    subtitle = "11.0.0",
                     onClick = { showAboutDialog = true }
                 )
 

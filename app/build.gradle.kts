@@ -3,7 +3,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
-    id("com.google.gms.google-services")
 }
 
 android {
@@ -14,8 +13,8 @@ android {
         applicationId = "com.flowreader.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "12.0.0"
+        versionCode = 11
+        versionName = "11.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -101,14 +100,6 @@ dependencies {
 
     // JSoup for HTML parsing
     implementation("org.jsoup:jsoup:1.16.2")
-
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-
-    // Google Sign-In
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

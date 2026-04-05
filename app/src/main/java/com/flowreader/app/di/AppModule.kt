@@ -10,8 +10,6 @@ import com.flowreader.app.data.local.dao.ChapterDao
 import com.flowreader.app.data.local.dao.ReadingStatsDao
 import com.flowreader.app.data.repository.*
 import com.flowreader.app.domain.repository.*
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -57,19 +55,6 @@ object DatabaseModule {
 
 @Module
 @InstallIn(SingletonComponent::class)
-object FirebaseModule {
-
-    @Provides
-    @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
-
-    @Provides
-    @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
 abstract class RepositoryModule {
 
     @Binds
@@ -91,12 +76,4 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindReadingStatsRepository(impl: ReadingStatsRepositoryImpl): ReadingStatsRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
-
-    @Binds
-    @Singleton
-    abstract fun bindSyncRepository(impl: SyncRepositoryImpl): SyncRepository
 }
