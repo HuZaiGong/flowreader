@@ -94,7 +94,7 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "版本",
-                    subtitle = "1.0.0",
+                    subtitle = "9.1.0-pre.1",
                     onClick = {}
                 )
             }
