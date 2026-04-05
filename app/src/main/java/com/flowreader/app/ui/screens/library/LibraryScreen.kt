@@ -44,20 +44,43 @@ fun LibraryScreen(
         uri?.let { viewModel.importBook(it) }
     }
 
+    var showSearchBar by remember { mutableStateOf(false) }
+
     FlowReaderTheme(theme = uiState.appTheme) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = { Text("心流阅读") },
-                    actions = {
-                        IconButton(onClick = { bookPickerLauncher.launch(arrayOf("*/*")) }) {
-                            Icon(Icons.Default.Add, contentDescription = "添加书籍")
-                        }
-                        IconButton(onClick = onSettingsClick) {
-                            Icon(Icons.Default.Settings, contentDescription = "设置")
-                        }
+                if (showSearchBar) {
+                    SearchBar(
+                        query = uiState.searchQuery,
+                        onQueryChange = { viewModel.updateSearchQuery(it) },
+                        onSearch = { showSearchBar = false },
+                        active = true,
+                        onActiveChange = { showSearchBar = it },
+                        placeholder = { Text("搜索书籍...") },
+                        leadingIcon = {
+                            IconButton(onClick = { showSearchBar = false }) {
+                                Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                     }
-                )
+                } else {
+                    TopAppBar(
+                        title = { Text("心流阅读") },
+                        actions = {
+                            IconButton(onClick = { showSearchBar = true }) {
+                                Icon(Icons.Default.Search, contentDescription = "搜索")
+                            }
+                            IconButton(onClick = { bookPickerLauncher.launch(arrayOf("*/*")) }) {
+                                Icon(Icons.Default.Add, contentDescription = "添加书籍")
+                            }
+                            IconButton(onClick = onSettingsClick) {
+                                Icon(Icons.Default.Settings, contentDescription = "设置")
+                            }
+                        }
+                    )
+                }
             }
         ) { paddingValues ->
             if (uiState.isLoading && uiState.books.isEmpty()) {
@@ -198,6 +221,8 @@ private fun RecentBookCard(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(File(book.coverPath))
                             .crossfade(true)
+                            .memoryCacheKey(book.coverPath)
+                            .diskCacheKey(book.coverPath)
                             .build(),
                         contentDescription = book.title,
                         modifier = Modifier.fillMaxSize(),
@@ -270,6 +295,8 @@ private fun BookListItem(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(File(book.coverPath))
                             .crossfade(true)
+                            .memoryCacheKey(book.coverPath)
+                            .diskCacheKey(book.coverPath)
                             .build(),
                         contentDescription = book.title,
                         modifier = Modifier.fillMaxSize(),

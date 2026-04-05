@@ -9,6 +9,8 @@ import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -42,9 +44,41 @@ class ReaderViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
+    private var progressSaveJob: Job? = null
+    private val progressDebounceMs = 3000L
+
     init {
         loadBook()
         loadSettings()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        progressSaveJob?.cancel()
+        saveProgressImmediately()
+    }
+
+    private fun saveProgressImmediately() {
+        val state = _uiState.value
+        if (state.chapters.isNotEmpty()) {
+            val progress = (state.currentChapterIndex.toFloat() + 1) / state.chapters.size
+            viewModelScope.launch {
+                bookRepository.updateReadingProgress(
+                    bookId, 
+                    state.currentChapterIndex, 
+                    state.currentPosition, 
+                    progress
+                )
+            }
+        }
+    }
+
+    private fun debouncedSaveProgress(chapterIndex: Int, position: Int, progress: Float) {
+        progressSaveJob?.cancel()
+        progressSaveJob = viewModelScope.launch {
+            delay(progressDebounceMs)
+            bookRepository.updateReadingProgress(bookId, chapterIndex, position, progress)
+        }
     }
 
     private fun loadSettings() {
@@ -129,9 +163,7 @@ class ReaderViewModel @Inject constructor(
         val state = _uiState.value
         if (state.chapters.isNotEmpty()) {
             val progress = (state.currentChapterIndex.toFloat() + 1) / state.chapters.size
-            viewModelScope.launch {
-                bookRepository.updateReadingProgress(bookId, state.currentChapterIndex, position, progress)
-            }
+            debouncedSaveProgress(state.currentChapterIndex, position, progress)
         }
     }
 

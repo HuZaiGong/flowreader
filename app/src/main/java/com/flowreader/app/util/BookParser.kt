@@ -9,19 +9,30 @@ import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.Chapter
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
-// import nl.siegmann.epublib.domain.Book as EpubBook
-// import nl.siegmann.epublib.epub.EpubReader
 import org.jsoup.Jsoup
 import java.io.*
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
+sealed class ParseProgress {
+    object Starting : ParseProgress()
+    data class Reading(val bytesRead: Long, val totalBytes: Long) : ParseProgress()
+    object Parsing : ParseProgress()
+    object Saving : ParseProgress()
+    object Complete : ParseProgress()
+    data class Error(val message: String) : ParseProgress()
+}
+
 @Singleton
 class BookParser @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    private val bufferSize = 8192
+
     suspend fun parseBook(uri: Uri): Result<BookParseResult> = withContext(Dispatchers.IO) {
         try {
             val inputStream = context.contentResolver.openInputStream(uri)
@@ -32,14 +43,49 @@ class BookParser @Inject constructor(
             val fileSize = getFileSize(uri)
 
             when (format) {
-                BookFormat.EPUB -> parseEpub(inputStream, fileName, fileSize)
-                BookFormat.TXT -> parseTxt(inputStream, fileName, fileSize)
+                BookFormat.EPUB -> parseEpubStream(inputStream, fileName, fileSize)
+                BookFormat.TXT -> parseTxtStream(inputStream, fileName, fileSize)
                 else -> Result.failure(Exception("不支持的格式: $format"))
             }
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
+
+    fun parseBookWithProgress(uri: Uri) = flow {
+        emit(ParseProgress.Starting)
+        
+        try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+                ?: throw Exception("无法打开文件")
+
+            val fileName = getFileName(uri)
+            val format = detectFormat(fileName)
+            val fileSize = getFileSize(uri)
+
+            when (format) {
+                BookFormat.EPUB -> {
+                    emit(ParseProgress.Reading(0, fileSize))
+                    val result = parseEpubStream(inputStream, fileName, fileSize)
+                    emit(ParseProgress.Parsing)
+                    result
+                }
+                BookFormat.TXT -> {
+                    emit(ParseProgress.Reading(0, fileSize))
+                    val result = parseTxtStream(inputStream, fileName, fileSize)
+                    emit(ParseProgress.Parsing)
+                    result
+                }
+                else -> Result.failure(Exception("不支持的格式: $format"))
+            }.onSuccess {
+                emit(ParseProgress.Complete)
+            }.onFailure {
+                emit(ParseProgress.Error(it.message ?: "解析失败"))
+            }
+        } catch (e: Exception) {
+            emit(ParseProgress.Error(e.message ?: "解析失败"))
+        }
+    }.flowOn(Dispatchers.IO)
 
     private fun detectFormat(fileName: String): BookFormat {
         return when {
@@ -76,7 +122,7 @@ class BookParser @Inject constructor(
         return size
     }
 
-    private fun parseEpub(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+    private fun parseEpubStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         // 暂时使用简化版的EPUB解析
         // 完整的EPUB解析需要添加epublib依赖
         return try {
@@ -132,7 +178,7 @@ class BookParser @Inject constructor(
         }
     }
 
-    private fun parseTxt(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+    private fun parseTxtStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
             val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
 
