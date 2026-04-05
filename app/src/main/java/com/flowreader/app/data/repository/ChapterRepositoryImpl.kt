@@ -14,6 +14,9 @@ class ChapterRepositoryImpl @Inject constructor(
     private val chapterDao: ChapterDao
 ) : ChapterRepository {
 
+    private val chapterCache = mutableMapOf<Long, MutableMap<Int, Chapter>>()
+    private val metadataCache = mutableMapOf<Long, List<Chapter>>()
+
     override fun getChaptersByBookId(bookId: Long): Flow<List<Chapter>> {
         return chapterDao.getChaptersByBookId(bookId).map { entities ->
             entities.map { it.toDomain() }
@@ -21,11 +24,16 @@ class ChapterRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getChaptersListByBookId(bookId: Long): List<Chapter> {
-        return chapterDao.getChaptersListByBookId(bookId).map { it.toDomain() }
+        return metadataCache.getOrPut(bookId) {
+            chapterDao.getChaptersListByBookId(bookId).map { it.toDomain() }
+        }
     }
 
     override suspend fun getChapter(bookId: Long, index: Int): Chapter? {
-        return chapterDao.getChapter(bookId, index)?.toDomain()
+        val bookCache = chapterCache.getOrPut(bookId) { mutableMapOf() }
+        return bookCache.getOrPut(index) {
+            chapterDao.getChapter(bookId, index)?.toDomain() ?: return null
+        }
     }
 
     override suspend fun getChapterById(id: Long): Chapter? {
@@ -33,19 +41,27 @@ class ChapterRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertChapter(chapter: Chapter): Long {
-        return chapterDao.insertChapter(ChapterEntity.fromDomain(chapter))
+        val id = chapterDao.insertChapter(ChapterEntity.fromDomain(chapter))
+        chapterCache[chapter.bookId]?.remove(chapter.index)
+        metadataCache.remove(chapter.bookId)
+        return id
     }
 
     override suspend fun insertChapters(chapters: List<Chapter>) {
         chapterDao.insertChapters(chapters.map { ChapterEntity.fromDomain(it) })
+        chapters.firstOrNull()?.let { metadataCache.remove(it.bookId) }
     }
 
     override suspend fun updateChapter(chapter: Chapter) {
         chapterDao.updateChapter(ChapterEntity.fromDomain(chapter))
+        chapterCache[chapter.bookId]?.remove(chapter.index)
+        metadataCache.remove(chapter.bookId)
     }
 
     override suspend fun deleteChaptersByBookId(bookId: Long) {
         chapterDao.deleteChaptersByBookId(bookId)
+        chapterCache.remove(bookId)
+        metadataCache.remove(bookId)
     }
 
     override suspend fun getChapterCount(bookId: Long): Int {

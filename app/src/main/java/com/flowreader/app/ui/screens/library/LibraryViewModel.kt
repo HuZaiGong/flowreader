@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowreader.app.data.repository.SettingsRepository
+import com.flowreader.app.data.local.DataInitializer
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.repository.BookRepository
@@ -28,7 +29,8 @@ class LibraryViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val chapterRepository: ChapterRepository,
     private val bookParser: BookParser,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val dataInitializer: DataInitializer
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -37,8 +39,15 @@ class LibraryViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
 
     init {
+        initializeDefaultBooks()
         loadBooks()
         loadSettings()
+    }
+
+    private fun initializeDefaultBooks() {
+        viewModelScope.launch {
+            dataInitializer.initializeDefaultBooks()
+        }
     }
 
     private fun loadSettings() {
