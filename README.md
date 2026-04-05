@@ -108,12 +108,32 @@ git clone https://github.com/HuZaiGong/flowreader.git
 ./gradlew assembleRelease
 ```
 
+### 低内存环境构建
+
+如果构建过程中出现 `Gradle build daemon disappeared unexpectedly` 错误（通常发生在内存不足 4GB 的环境），请尝试以下方法：
+
+1. **创建 Swap 空间**（推荐）：
+   ```bash
+   sudo fallocate -l 4G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   ```
+
+2. **或使用更低的内存配置**，修改 `gradle.properties`：
+   ```properties
+   org.gradle.jvmargs=-Xmx1024m -Dfile.encoding=UTF-8
+   org.gradle.parallel=false
+   org.gradle.caching=true
+   ```
+
 ## 要求
 
 - Android SDK 34+
 - Kotlin 1.9+
 - Android Gradle Plugin 8.1+
 - JDK 17
+- 建议可用内存 ≥ 2GB（或配置 Swap）
 
 ## 许可证
 
