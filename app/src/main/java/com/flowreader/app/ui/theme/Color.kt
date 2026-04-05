@@ -70,4 +70,16 @@ object ReaderColors {
 
     val AmoledBackground = Color(0xFF000000)
     val AmoledText = Color(0xFFE0E0E0)
+
+    val EinkPureBackground = Color(0xFFFFFFFF)
+    val EinkPureText = Color(0xFF000000)
+
+    val EinkGrayBackground = Color(0xFFCCCCCC)
+    val EinkGrayText = Color(0xFF333333)
+
+    val EinkWarmBackground = Color(0xFFF5E6D3)
+    val EinkWarmText = Color(0xFF5B4636)
+
+    val HighContrastBackground = Color(0xFF000000)
+    val HighContrastText = Color(0xFFFFFF00)
 }

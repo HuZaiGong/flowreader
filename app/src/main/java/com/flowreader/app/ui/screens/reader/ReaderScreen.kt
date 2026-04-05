@@ -241,6 +241,9 @@ private fun getReaderBackgroundColor(theme: ReaderTheme): Color {
         ReaderTheme.SEPIA, ReaderTheme.EVENING -> ReaderColors.SepiaBackground
         ReaderTheme.PAPER -> ReaderColors.PaperBackground
         ReaderTheme.AMOLED -> ReaderColors.AmoledBackground
+        ReaderTheme.EINK_PURE -> ReaderColors.EinkPureBackground
+        ReaderTheme.EINK_GRAY -> ReaderColors.EinkGrayBackground
+        ReaderTheme.EINK_WARM -> ReaderColors.EinkWarmBackground
     }
 }
 
@@ -251,6 +254,9 @@ private fun getReaderTextColor(theme: ReaderTheme): Color {
         ReaderTheme.SEPIA, ReaderTheme.EVENING -> ReaderColors.SepiaText
         ReaderTheme.PAPER -> ReaderColors.PaperText
         ReaderTheme.AMOLED -> ReaderColors.AmoledText
+        ReaderTheme.EINK_PURE -> ReaderColors.EinkPureText
+        ReaderTheme.EINK_GRAY -> ReaderColors.EinkGrayText
+        ReaderTheme.EINK_WARM -> ReaderColors.EinkWarmText
     }
 }
 

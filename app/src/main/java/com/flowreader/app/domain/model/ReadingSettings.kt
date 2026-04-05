@@ -15,7 +15,10 @@ enum class ReaderTheme {
     MORNING,
     AFTERNOON,
     EVENING,
-    NIGHT
+    NIGHT,
+    EINK_PURE,
+    EINK_GRAY,
+    EINK_WARM
 }
 
 enum class PageMode {
@@ -104,12 +107,36 @@ data class ReadingSettings(
     val controlsHideDelaySeconds: Int = 3,
     val backgroundTexture: BackgroundTexture = BackgroundTexture.SOLID,
     val soundEffect: SoundEffect = SoundEffect.NONE,
-    val wordCount: Int = 0
+    val wordCount: Int = 0,
+    val einkMode: Boolean = false,
+    val einkRefreshMode: EinkRefreshMode = EinkRefreshMode.AUTO,
+    val accessibilityMode: AccessibilityMode = AccessibilityMode.NONE,
+    val highContrastMode: Boolean = false,
+    val largeFontMode: Boolean = false,
+    val simplifyMode: Boolean = false,
+    val dailyReadingGoalMinutes: Int = 30,
+    val weeklyReadingGoalBooks: Int = 1,
+    val enableReadingReminder: Boolean = false,
+    val reminderTime: String = "20:00",
+    val autoNightMode: Boolean = false,
+    val nightModeStartHour: Int = 20,
+    val nightModeEndHour: Int = 6
 )
 
-/**
- * 应用设置
- */
+enum class EinkRefreshMode {
+    AUTO,
+    FULL,
+    PARTIAL,
+    FAST
+}
+
+enum class AccessibilityMode {
+    NONE,
+    LARGE_FONT,
+    HIGH_CONTRAST,
+    SIMPLIFIED
+}
+
 data class AppSettings(
     val theme: ReaderTheme = ReaderTheme.SYSTEM,
     val defaultReadingSettings: ReadingSettings = ReadingSettings(),

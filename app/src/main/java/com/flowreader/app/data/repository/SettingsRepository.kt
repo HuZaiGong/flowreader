@@ -50,6 +50,19 @@ class SettingsRepository @Inject constructor(
         val BACKGROUND_TEXTURE = stringPreferencesKey("background_texture")
         val SOUND_EFFECT = stringPreferencesKey("sound_effect")
         val WORD_COUNT = intPreferencesKey("word_count")
+        val EINK_MODE = booleanPreferencesKey("eink_mode")
+        val EINK_REFRESH_MODE = stringPreferencesKey("eink_refresh_mode")
+        val ACCESSIBILITY_MODE = stringPreferencesKey("accessibility_mode")
+        val HIGH_CONTRAST_MODE = booleanPreferencesKey("high_contrast_mode")
+        val LARGE_FONT_MODE = booleanPreferencesKey("large_font_mode")
+        val SIMPLIFY_MODE = booleanPreferencesKey("simplify_mode")
+        val DAILY_READING_GOAL = intPreferencesKey("daily_reading_goal")
+        val WEEKLY_READING_GOAL = intPreferencesKey("weekly_reading_goal")
+        val ENABLE_READING_REMINDER = booleanPreferencesKey("enable_reading_reminder")
+        val REMINDER_TIME = stringPreferencesKey("reminder_time")
+        val AUTO_NIGHT_MODE = booleanPreferencesKey("auto_night_mode")
+        val NIGHT_MODE_START_HOUR = intPreferencesKey("night_mode_start_hour")
+        val NIGHT_MODE_END_HOUR = intPreferencesKey("night_mode_end_hour")
     }
 
     val appSettings: Flow<AppSettings> = context.dataStore.data
@@ -129,7 +142,28 @@ class SettingsRepository @Inject constructor(
                     } catch (e: Exception) {
                         SoundEffect.NONE
                     },
-                    wordCount = preferences[PreferencesKeys.WORD_COUNT] ?: 0
+                    wordCount = preferences[PreferencesKeys.WORD_COUNT] ?: 0,
+                    einkMode = preferences[PreferencesKeys.EINK_MODE] ?: false,
+                    einkRefreshMode = try {
+                        EinkRefreshMode.valueOf(preferences[PreferencesKeys.EINK_REFRESH_MODE] ?: EinkRefreshMode.AUTO.name)
+                    } catch (e: Exception) {
+                        EinkRefreshMode.AUTO
+                    },
+                    accessibilityMode = try {
+                        AccessibilityMode.valueOf(preferences[PreferencesKeys.ACCESSIBILITY_MODE] ?: AccessibilityMode.NONE.name)
+                    } catch (e: Exception) {
+                        AccessibilityMode.NONE
+                    },
+                    highContrastMode = preferences[PreferencesKeys.HIGH_CONTRAST_MODE] ?: false,
+                    largeFontMode = preferences[PreferencesKeys.LARGE_FONT_MODE] ?: false,
+                    simplifyMode = preferences[PreferencesKeys.SIMPLIFY_MODE] ?: false,
+                    dailyReadingGoalMinutes = preferences[PreferencesKeys.DAILY_READING_GOAL] ?: 30,
+                    weeklyReadingGoalBooks = preferences[PreferencesKeys.WEEKLY_READING_GOAL] ?: 1,
+                    enableReadingReminder = preferences[PreferencesKeys.ENABLE_READING_REMINDER] ?: false,
+                    reminderTime = preferences[PreferencesKeys.REMINDER_TIME] ?: "20:00",
+                    autoNightMode = preferences[PreferencesKeys.AUTO_NIGHT_MODE] ?: false,
+                    nightModeStartHour = preferences[PreferencesKeys.NIGHT_MODE_START_HOUR] ?: 20,
+                    nightModeEndHour = preferences[PreferencesKeys.NIGHT_MODE_END_HOUR] ?: 6
                 ),
                 enableSplashScreen = preferences[PreferencesKeys.ENABLE_SPLASH_SCREEN] ?: true,
                 enableBackupReminder = preferences[PreferencesKeys.ENABLE_BACKUP_REMINDER] ?: true
@@ -266,6 +300,64 @@ class SettingsRepository @Inject constructor(
     suspend fun updateWordCount(count: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.WORD_COUNT] = count
+        }
+    }
+
+    suspend fun updateEinkMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EINK_MODE] = enabled
+        }
+    }
+
+    suspend fun updateEinkRefreshMode(mode: EinkRefreshMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EINK_REFRESH_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateAccessibilityMode(mode: AccessibilityMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ACCESSIBILITY_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateHighContrastMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.HIGH_CONTRAST_MODE] = enabled
+        }
+    }
+
+    suspend fun updateLargeFontMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LARGE_FONT_MODE] = enabled
+        }
+    }
+
+    suspend fun updateSimplifyMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SIMPLIFY_MODE] = enabled
+        }
+    }
+
+    suspend fun updateReadingGoal(dailyMinutes: Int, weeklyBooks: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DAILY_READING_GOAL] = dailyMinutes
+            preferences[PreferencesKeys.WEEKLY_READING_GOAL] = weeklyBooks
+        }
+    }
+
+    suspend fun updateReadingReminder(enabled: Boolean, time: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ENABLE_READING_REMINDER] = enabled
+            preferences[PreferencesKeys.REMINDER_TIME] = time
+        }
+    }
+
+    suspend fun updateAutoNightMode(enabled: Boolean, startHour: Int, endHour: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTO_NIGHT_MODE] = enabled
+            preferences[PreferencesKeys.NIGHT_MODE_START_HOUR] = startHour
+            preferences[PreferencesKeys.NIGHT_MODE_END_HOUR] = endHour
         }
     }
 
