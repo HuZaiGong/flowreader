@@ -35,6 +35,8 @@ class SettingsRepository @Inject constructor(
         val READING_REMINDER_ENABLED = booleanPreferencesKey("reading_reminder_enabled")
         val READING_REMINDER_HOUR = intPreferencesKey("reading_reminder_hour")
         val READING_REMINDER_MINUTE = intPreferencesKey("reading_reminder_minute")
+        val SEARCH_HISTORY = stringPreferencesKey("search_history")
+        val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")
     }
 
     val appSettings: Flow<AppSettings> = context.dataStore.data
@@ -158,4 +160,39 @@ class SettingsRepository @Inject constructor(
             preferences[PreferencesKeys.READING_REMINDER_MINUTE] = minute
         }
     }
+
+    suspend fun addSearchHistory(query: String) {
+        context.dataStore.edit { preferences ->
+            val current = preferences[PreferencesKeys.SEARCH_HISTORY] ?: ""
+            val historyList = if (current.isNotEmpty()) current.split("|").toMutableList() else mutableListOf()
+            if (!historyList.contains(query)) {
+                historyList.add(0, query)
+                if (historyList.size > 10) historyList.removeAt(historyList.lastIndex)
+            }
+            preferences[PreferencesKeys.SEARCH_HISTORY] = historyList.joinToString("|")
+        }
+    }
+
+    fun getSearchHistory(): Flow<List<String>> = context.dataStore.data
+        .map { preferences ->
+            val history = preferences[PreferencesKeys.SEARCH_HISTORY] ?: ""
+            if (history.isNotEmpty()) history.split("|") else emptyList()
+        }
+
+    suspend fun clearSearchHistory() {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.SEARCH_HISTORY] = ""
+        }
+    }
+
+    suspend fun updateDailyReadingGoal(minutes: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] = minutes
+        }
+    }
+
+    fun getDailyReadingGoal(): Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] ?: 30
+        }
 }

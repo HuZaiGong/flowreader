@@ -1,12 +1,16 @@
 package com.flowreader.app.data.local.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.BookFormat
 import java.util.Date
 
-@Entity(tableName = "books")
+@Entity(tableName = "books", indices = [
+    Index(value = ["lastReadTime", "addedTime"]),
+    Index(value = ["categoryId"])
+])
 data class BookEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

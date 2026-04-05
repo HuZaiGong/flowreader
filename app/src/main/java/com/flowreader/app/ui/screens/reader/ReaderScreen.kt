@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -79,7 +80,7 @@ fun ReaderScreen(
 
     val backgroundColor = when (uiState.readingSettings.theme) {
         ReaderTheme.LIGHT -> ReaderColors.LightBackground
-        ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkBackground
+        ReaderTheme.DARK, ReaderTheme.SYSTEM, ReaderTheme.MORNING, ReaderTheme.NOON, ReaderTheme.EVENING, ReaderTheme.NIGHT -> ReaderColors.DarkBackground
         ReaderTheme.SEPIA -> ReaderColors.SepiaBackground
         ReaderTheme.PAPER -> ReaderColors.PaperBackground
         ReaderTheme.AMOLED -> ReaderColors.AmoledBackground
@@ -87,7 +88,7 @@ fun ReaderScreen(
 
     val textColor = when (uiState.readingSettings.theme) {
         ReaderTheme.LIGHT -> ReaderColors.LightText
-        ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkText
+        ReaderTheme.DARK, ReaderTheme.SYSTEM, ReaderTheme.MORNING, ReaderTheme.NOON, ReaderTheme.EVENING, ReaderTheme.NIGHT -> ReaderColors.DarkText
         ReaderTheme.SEPIA -> ReaderColors.SepiaText
         ReaderTheme.PAPER -> ReaderColors.PaperText
         ReaderTheme.AMOLED -> ReaderColors.AmoledText
@@ -104,9 +105,10 @@ fun ReaderScreen(
             )
         } else {
             uiState.currentChapter?.let { chapter ->
-                if (uiState.book?.format == BookFormat.PDF) {
+                val book = uiState.book
+                if (book != null && book.format == BookFormat.PDF) {
                     PdfViewer(
-                        filePath = uiState.book.filePath,
+                        filePath = book.filePath,
                         currentPage = uiState.currentChapterIndex,
                         textColor = textColor,
                         backgroundColor = backgroundColor,
@@ -347,7 +349,7 @@ private fun ReaderControls(
                     value = progress,
                     onValueChange = onProgressChange,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = SliderDefaultsColors(
+                    colors = SliderDefaults.colors(
                         thumbColor = textColor,
                         activeTrackColor = textColor
                     )
@@ -482,7 +484,7 @@ private fun ReaderSettingsDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    PageMode.values().forEach { mode ->
+                    PageMode.entries.forEach { mode ->
                         FilterChip(
                             selected = settings.pageMode == mode,
                             onClick = { onPageModeChange(mode) },
@@ -492,6 +494,8 @@ private fun ReaderSettingsDialog(
                                         PageMode.SLIDE -> "滑动"
                                         PageMode.SIMULATION -> "仿真"
                                         PageMode.NONE -> "无"
+                                        PageMode.CURL -> "卷曲"
+                                        PageMode.SLIDE_OVER -> "滑动覆盖"
                                     }
                                 )
                             }
@@ -652,7 +656,7 @@ private fun PdfViewer(
                 onValueChange = { onPageChange(it.toInt()) },
                 valueRange = 0f..(pageCount - 1).coerceAtLeast(0).toFloat(),
                 modifier = Modifier.fillMaxWidth(),
-                colors = SliderDefaultsColors(
+                colors = SliderDefaults.colors(
                     thumbColor = textColor,
                     activeTrackColor = textColor
                 )

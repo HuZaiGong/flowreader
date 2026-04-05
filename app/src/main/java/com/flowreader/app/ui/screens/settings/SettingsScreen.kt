@@ -25,6 +25,8 @@ fun SettingsScreen(
     var showReaderThemeDialog by remember { mutableStateOf(false) }
     var showPageModeDialog by remember { mutableStateOf(false) }
     var showFontSizeDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var showReadingGoalDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -78,6 +80,15 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsSection(title = "阅读目标") {
+                SettingsItem(
+                    icon = Icons.Default.Flag,
+                    title = "每日阅读时长",
+                    subtitle = "${uiState.dailyReadingGoal} 分钟",
+                    onClick = { showReadingGoalDialog = true }
+                )
+            }
+
             SettingsSection(title = "阅读设置") {
                 SettingsItem(
                     icon = Icons.Default.TextFields,
@@ -118,7 +129,7 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "版本",
-                    subtitle = "11.0.0",
+                    subtitle = "12.0.0",
                     onClick = { showAboutDialog = true }
                 )
 
@@ -147,13 +158,16 @@ fun SettingsScreen(
         }
     }
 
-    var showAboutDialog by remember { mutableStateOf(false) }
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showReaderThemeDialog by remember { mutableStateOf(false) }
-    var showPageModeDialog by remember { mutableStateOf(false) }
-    var showFontSizeDialog by remember { mutableStateOf(false) }
+    if (showReadingGoalDialog) {
+        ReadingGoalDialog(
+            currentGoal = uiState.dailyReadingGoal,
+            onGoalChange = { viewModel.updateDailyReadingGoal(it) },
+            onDismiss = { showReadingGoalDialog = false }
+        )
+    }
 
     if (showThemeDialog) {
+        ThemeSelectionDialog(
             currentTheme = uiState.appTheme,
             onThemeSelect = {
                 viewModel.updateAppTheme(it)
@@ -307,7 +321,7 @@ private fun PageModeDialog(
         title = { Text("翻页模式") },
         text = {
             Column {
-                PageMode.values().forEach { mode ->
+                PageMode.entries.forEach { mode ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -386,6 +400,10 @@ private fun getThemeName(theme: ReaderTheme): String = when (theme) {
     ReaderTheme.SEPIA -> "护眼"
     ReaderTheme.PAPER -> "羊皮纸"
     ReaderTheme.AMOLED -> "夜间"
+    ReaderTheme.MORNING -> "晨读"
+    ReaderTheme.NOON -> "午读"
+    ReaderTheme.EVENING -> "暮读"
+    ReaderTheme.NIGHT -> "夜读"
 }
 
 private fun getReaderThemeName(theme: ReaderTheme): String = when (theme) {
@@ -395,12 +413,69 @@ private fun getReaderThemeName(theme: ReaderTheme): String = when (theme) {
     ReaderTheme.SEPIA -> "护眼"
     ReaderTheme.PAPER -> "羊皮纸"
     ReaderTheme.AMOLED -> "夜间"
+    ReaderTheme.MORNING -> "晨读"
+    ReaderTheme.NOON -> "午读"
+    ReaderTheme.EVENING -> "暮读"
+    ReaderTheme.NIGHT -> "夜读"
 }
 
 private fun getPageModeName(mode: PageMode): String = when (mode) {
     PageMode.SLIDE -> "滑动"
     PageMode.SIMULATION -> "仿真翻页"
     PageMode.NONE -> "无动画"
+    PageMode.CURL -> "卷曲"
+    PageMode.SLIDE_OVER -> "滑动覆盖"
+}
+
+@Composable
+private fun ReadingGoalDialog(
+    currentGoal: Int,
+    onGoalChange: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var goal by remember { mutableIntStateOf(currentGoal) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("每日阅读目标") },
+        text = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "${goal} 分钟",
+                    style = MaterialTheme.typography.headlineMedium
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Slider(
+                    value = goal.toFloat(),
+                    onValueChange = { goal = it.toInt() },
+                    valueRange = 5f..120f,
+                    steps = 22
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("5分钟", style = MaterialTheme.typography.bodySmall)
+                    Text("2小时", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onGoalChange(goal)
+                onDismiss()
+            }) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }
 
 @Composable
@@ -412,7 +487,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
         },
         text = {
             Column {
-                Text("版本: 11.0.0")
+                Text("版本: 12.0.0")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("一款简洁优雅的电子书阅读应用")
                 Spacer(modifier = Modifier.height(8.dp))

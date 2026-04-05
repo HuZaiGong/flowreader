@@ -19,6 +19,7 @@ data class SettingsUiState(
     val readingReminderEnabled: Boolean = false,
     val readingReminderHour: Int = 20,
     val readingReminderMinute: Int = 0,
+    val dailyReadingGoal: Int = 30,
     val exportResult: String? = null,
     val importResult: String? = null
 )
@@ -38,18 +39,22 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            settingsRepository.appSettings.collect { settings ->
-                _uiState.update {
-                    it.copy(
-                        appTheme = settings.theme,
-                        readingSettings = settings.defaultReadingSettings,
-                        isLoading = false,
-                        autoTimeTheme = settings.autoTimeTheme,
-                        readingReminderEnabled = settings.readingReminderEnabled,
-                        readingReminderHour = settings.readingReminderHour,
-                        readingReminderMinute = settings.readingReminderMinute
-                    )
-                }
+            combine(
+                settingsRepository.appSettings,
+                settingsRepository.getDailyReadingGoal()
+            ) { settings, goal ->
+                SettingsUiState(
+                    appTheme = settings.theme,
+                    readingSettings = settings.defaultReadingSettings,
+                    isLoading = false,
+                    autoTimeTheme = settings.autoTimeTheme,
+                    readingReminderEnabled = settings.readingReminderEnabled,
+                    readingReminderHour = settings.readingReminderHour,
+                    readingReminderMinute = settings.readingReminderMinute,
+                    dailyReadingGoal = goal
+                )
+            }.collect { state ->
+                _uiState.value = state
             }
         }
     }
@@ -122,6 +127,12 @@ class SettingsViewModel @Inject constructor(
     fun updateReadingReminder(enabled: Boolean, hour: Int = 20, minute: Int = 0) {
         viewModelScope.launch {
             settingsRepository.updateReadingReminder(enabled, hour, minute)
+        }
+    }
+
+    fun updateDailyReadingGoal(minutes: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateDailyReadingGoal(minutes)
         }
     }
 }

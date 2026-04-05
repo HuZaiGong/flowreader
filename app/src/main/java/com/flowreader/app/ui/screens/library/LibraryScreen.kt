@@ -22,7 +22,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import coil.request.ImageRequest
+import coil.request.CachePolicy
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.ui.theme.FlowReaderTheme
@@ -50,6 +52,12 @@ fun LibraryScreen(
         uris.forEach { uri ->
             uri?.let { viewModel.importBook(it) }
         }
+    }
+
+    val bookPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.importBook(it) }
     }
 
     var showSearchBar by remember { mutableStateOf(false) }
@@ -290,6 +298,8 @@ private fun RecentBookCard(
                             .crossfade(true)
                             .memoryCacheKey(book.coverPath)
                             .diskCacheKey(book.coverPath)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
                             .build(),
                         contentDescription = book.title,
                         modifier = Modifier.fillMaxSize(),
@@ -364,6 +374,8 @@ private fun BookListItem(
                             .crossfade(true)
                             .memoryCacheKey(book.coverPath)
                             .diskCacheKey(book.coverPath)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
                             .build(),
                         contentDescription = book.title,
                         modifier = Modifier.fillMaxSize(),

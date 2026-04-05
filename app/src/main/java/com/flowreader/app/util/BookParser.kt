@@ -29,6 +29,13 @@ sealed class ParseProgress {
     data class Error(val message: String) : ParseProgress()
 }
 
+data class BookParseResult(
+    val book: Book,
+    val chapters: List<Chapter>,
+    val pdfPageCount: Int = 0,
+    val pdfFilePath: String? = null
+)
+
 @Singleton
 class BookParser @Inject constructor(
     @ApplicationContext private val context: Context

@@ -91,12 +91,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        progressSaveJob?.cancel()
-        saveProgressImmediately()
-    }
-
     private fun saveProgressImmediately() {
         val state = _uiState.value
         if (state.chapters.isNotEmpty()) {
