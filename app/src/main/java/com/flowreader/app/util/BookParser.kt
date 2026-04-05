@@ -3,7 +3,9 @@ package com.flowreader.app.util
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import android.os.ParcelFileDescriptor
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.Chapter
@@ -45,6 +47,7 @@ class BookParser @Inject constructor(
             when (format) {
                 BookFormat.EPUB -> parseEpubStream(inputStream, fileName, fileSize)
                 BookFormat.TXT -> parseTxtStream(inputStream, fileName, fileSize)
+                BookFormat.PDF -> parsePdfStream(uri, fileName, fileSize)
                 else -> Result.failure(Exception("不支持的格式: $format"))
             }
         } catch (e: Exception) {
@@ -73,6 +76,12 @@ class BookParser @Inject constructor(
                 BookFormat.TXT -> {
                     emit(ParseProgress.Reading(0, fileSize))
                     val result = parseTxtStream(inputStream, fileName, fileSize)
+                    emit(ParseProgress.Parsing)
+                    result
+                }
+                BookFormat.PDF -> {
+                    emit(ParseProgress.Reading(0, fileSize))
+                    val result = parsePdfStream(uri, fileName, fileSize)
                     emit(ParseProgress.Parsing)
                     result
                 }
@@ -300,9 +309,48 @@ class BookParser @Inject constructor(
             null
         }
     }
-}
 
-data class BookParseResult(
-    val book: Book,
-    val chapters: List<Chapter>
-)
+    private fun parsePdfStream(uri: Uri, fileName: String, fileSize: Long): Result<BookParseResult> {
+        return try {
+            val internalPath = copyFileToInternal(uri)
+                ?: return Result.failure(Exception("无法保存PDF文件"))
+
+            val pageCount = context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                PdfRenderer(pfd).use { renderer ->
+                    renderer.pageCount
+                }
+            } ?: 0
+
+            val title = fileName.removeSuffix(".pdf")
+
+            val chapters = (0 until pageCount).map { pageIndex ->
+                Chapter(
+                    bookId = 0,
+                    index = pageIndex,
+                    title = "第 ${pageIndex + 1} 页",
+                    content = "",
+                    startPosition = pageIndex,
+                    endPosition = pageIndex
+                )
+            }
+
+            Result.success(
+                BookParseResult(
+                    book = Book(
+                        title = title,
+                        author = "未知作者",
+                        filePath = internalPath,
+                        fileSize = fileSize,
+                        format = BookFormat.PDF,
+                        totalChapters = pageCount
+                    ),
+                    chapters = chapters,
+                    pdfPageCount = pageCount,
+                    pdfFilePath = internalPath
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}

@@ -70,19 +70,39 @@ private val LightColorScheme = lightColorScheme(
 fun FlowReaderTheme(
     theme: ReaderTheme = ReaderTheme.SYSTEM,
     dynamicColor: Boolean = true,
+    autoTimeTheme: Boolean = false,
+    timeThemeStartHour: Int = 20,
+    timeThemeEndHour: Int = 6,
     content: @Composable () -> Unit
 ) {
-    val darkTheme = when (theme) {
+    val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+
+    val effectiveTheme = if (autoTimeTheme && theme == ReaderTheme.SYSTEM) {
+        val isNight = if (timeThemeStartHour > timeThemeEndHour) {
+            currentHour >= timeThemeStartHour || currentHour < timeThemeEndHour
+        } else {
+            currentHour >= timeThemeStartHour && currentHour < timeThemeEndHour
+        }
+        if (isNight) ReaderTheme.DARK else ReaderTheme.LIGHT
+    } else {
+        theme
+    }
+
+    val darkTheme = when (effectiveTheme) {
         ReaderTheme.SYSTEM -> isSystemInDarkTheme()
         ReaderTheme.LIGHT -> false
         ReaderTheme.DARK, ReaderTheme.AMOLED -> true
         ReaderTheme.SEPIA, ReaderTheme.PAPER -> false
+        else -> isSystemInDarkTheme()
     }
 
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            when {
+                darkTheme -> dynamicDarkColorScheme(context)
+                else -> dynamicLightColorScheme(context)
+            }
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme

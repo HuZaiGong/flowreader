@@ -2,12 +2,17 @@
 
 package com.flowreader.app.ui.screens.reader
 
+import android.graphics.Bitmap
+import android.graphics.pdf.PdfRenderer
+import android.os.ParcelFileDescriptor
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,6 +28,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +40,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.domain.model.*
 import com.flowreader.app.ui.theme.ReaderColors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,23 +104,33 @@ fun ReaderScreen(
             )
         } else {
             uiState.currentChapter?.let { chapter ->
-                ReaderContent(
-                    chapter = chapter,
-                    settings = uiState.readingSettings,
-                    textColor = textColor,
-                    backgroundColor = backgroundColor,
-                    scrollState = contentScrollState,
-                    onTap = { offset, size ->
-                        val tapZoneWidth = size.width * uiState.readingSettings.tapZoneRatio
-                        val middle = size.width / 2
-                        when {
-                            offset.x < (middle - tapZoneWidth) -> viewModel.goToPreviousChapter()
-                            offset.x > (middle + tapZoneWidth) -> viewModel.goToNextChapter()
-                            else -> viewModel.toggleControls()
-                        }
-                    },
-                    onPositionChanged = { viewModel.updatePosition(it) }
-                )
+                if (uiState.book?.format == BookFormat.PDF) {
+                    PdfViewer(
+                        filePath = uiState.book.filePath,
+                        currentPage = uiState.currentChapterIndex,
+                        textColor = textColor,
+                        backgroundColor = backgroundColor,
+                        onPageChange = { viewModel.goToChapter(it) }
+                    )
+                } else {
+                    ReaderContent(
+                        chapter = chapter,
+                        settings = uiState.readingSettings,
+                        textColor = textColor,
+                        backgroundColor = backgroundColor,
+                        scrollState = contentScrollState,
+                        onTap = { offset, size ->
+                            val tapZoneWidth = size.width * uiState.readingSettings.tapZoneRatio
+                            val middle = size.width / 2
+                            when {
+                                offset.x < (middle - tapZoneWidth) -> viewModel.goToPreviousChapter()
+                                offset.x > (middle + tapZoneWidth) -> viewModel.goToNextChapter()
+                                else -> viewModel.toggleControls()
+                            }
+                        },
+                        onPositionChanged = { viewModel.updatePosition(it) }
+                    )
+                }
             }
 
             AnimatedVisibility(
@@ -131,6 +150,10 @@ fun ReaderScreen(
                     onAddBookmark = {
                         val text = uiState.currentChapter?.content?.take(50) ?: ""
                         viewModel.addBookmark(text)
+                    },
+                    onProgressChange = { progress ->
+                        val chapterIndex = (progress * uiState.chapters.size).toInt().coerceIn(0, uiState.chapters.size - 1)
+                        viewModel.goToChapter(chapterIndex)
                     },
                     textColor = textColor,
                     backgroundColor = backgroundColor
@@ -257,9 +280,12 @@ private fun ReaderControls(
     onSettingsClick: () -> Unit,
     onBookmarkClick: () -> Unit,
     onAddBookmark: () -> Unit,
+    onProgressChange: (Float) -> Unit,
     textColor: Color,
     backgroundColor: Color
 ) {
+    val progress = if (totalChapters > 0) currentChapter.toFloat() / totalChapters else 0f
+
     Box(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = {
@@ -311,18 +337,36 @@ private fun ReaderControls(
                 .align(Alignment.BottomCenter),
             color = backgroundColor.copy(alpha = 0.95f)
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(
-                    text = "$currentChapter / $totalChapters",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = textColor.copy(alpha = 0.7f)
+                Slider(
+                    value = progress,
+                    onValueChange = onProgressChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = SliderDefaultsColors(
+                        thumbColor = textColor,
+                        activeTrackColor = textColor
+                    )
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "$currentChapter / $totalChapters",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "${(progress * 100).toInt()}%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = textColor.copy(alpha = 0.7f)
+                    )
+                }
             }
         }
     }
@@ -506,4 +550,118 @@ private fun BookmarksDialog(
             }
         }
     )
+}
+
+@Composable
+private fun PdfViewer(
+    filePath: String,
+    currentPage: Int,
+    textColor: Color,
+    backgroundColor: Color,
+    onPageChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var pdfBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var pageCount by remember { mutableIntStateOf(0) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
+
+    LaunchedEffect(filePath, currentPage) {
+        withContext(Dispatchers.IO) {
+            try {
+                val file = File(filePath)
+                ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
+                    PdfRenderer(pfd).use { renderer ->
+                        pageCount = renderer.pageCount
+                        if (currentPage in 0 until pageCount) {
+                            renderer.openPage(currentPage).use { page ->
+                                val bitmap = Bitmap.createBitmap(
+                                    page.width * 2,
+                                    page.height * 2,
+                                    Bitmap.Config.ARGB_8888
+                                )
+                                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                pdfBitmap = bitmap
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { offset ->
+                        val tapZoneWidth = size.width * 0.3f
+                        val middle = size.width / 2
+                        when {
+                            offset.x < tapZoneWidth && currentPage > 0 -> onPageChange(currentPage - 1)
+                            offset.x > size.width - tapZoneWidth && currentPage < pageCount - 1 -> onPageChange(currentPage + 1)
+                            else -> { }
+                        }
+                    }
+                )
+            }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, zoom, _ ->
+                    scale = (scale * zoom).coerceIn(0.5f, 3f)
+                    offsetX += pan.x
+                    offsetY += pan.y
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        pdfBitmap?.let { bitmap ->
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "PDF第${currentPage + 1}页",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY
+                    )
+            )
+        } ?: Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = textColor)
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(backgroundColor.copy(alpha = 0.8f))
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Slider(
+                value = currentPage.toFloat(),
+                onValueChange = { onPageChange(it.toInt()) },
+                valueRange = 0f..(pageCount - 1).coerceAtLeast(0).toFloat(),
+                modifier = Modifier.fillMaxWidth(),
+                colors = SliderDefaultsColors(
+                    thumbColor = textColor,
+                    activeTrackColor = textColor
+                )
+            )
+            Text(
+                text = "${currentPage + 1} / $pageCount",
+                style = MaterialTheme.typography.bodySmall,
+                color = textColor
+            )
+        }
+    }
 }

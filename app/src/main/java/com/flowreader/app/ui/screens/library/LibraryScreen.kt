@@ -38,13 +38,22 @@ fun LibraryScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
-    val bookPickerLauncher = rememberLauncherForActivityResult(
+    val singleBookPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { viewModel.importBook(it) }
     }
 
+    val multipleBookPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        uris.forEach { uri ->
+            uri?.let { viewModel.importBook(it) }
+        }
+    }
+
     var showSearchBar by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
 
     FlowReaderTheme(theme = uiState.appTheme) {
         Scaffold(
@@ -72,8 +81,66 @@ fun LibraryScreen(
                             IconButton(onClick = { showSearchBar = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "搜索")
                             }
-                            IconButton(onClick = { bookPickerLauncher.launch(arrayOf("*/*")) }) {
-                                Icon(Icons.Default.Add, contentDescription = "添加书籍")
+                            Box {
+                                IconButton(onClick = { showSortMenu = true }) {
+                                    Icon(Icons.Default.Sort, contentDescription = "排序")
+                                }
+                                DropdownMenu(
+                                    expanded = showSortMenu,
+                                    onDismissRequest = { showSortMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("按添加时间") },
+                                        onClick = {
+                                            viewModel.updateSortOrder(SortOrder.ADDED_TIME)
+                                            showSortMenu = false
+                                        },
+                                        leadingIcon = {
+                                            if (uiState.sortOrder == SortOrder.ADDED_TIME) {
+                                                Icon(Icons.Default.Check, contentDescription = null)
+                                            }
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("按阅读时间") },
+                                        onClick = {
+                                            viewModel.updateSortOrder(SortOrder.LAST_READ)
+                                            showSortMenu = false
+                                        },
+                                        leadingIcon = {
+                                            if (uiState.sortOrder == SortOrder.LAST_READ) {
+                                                Icon(Icons.Default.Check, contentDescription = null)
+                                            }
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("按书名") },
+                                        onClick = {
+                                            viewModel.updateSortOrder(SortOrder.TITLE)
+                                            showSortMenu = false
+                                        },
+                                        leadingIcon = {
+                                            if (uiState.sortOrder == SortOrder.TITLE) {
+                                                Icon(Icons.Default.Check, contentDescription = null)
+                                            }
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("按作者") },
+                                        onClick = {
+                                            viewModel.updateSortOrder(SortOrder.AUTHOR)
+                                            showSortMenu = false
+                                        },
+                                        leadingIcon = {
+                                            if (uiState.sortOrder == SortOrder.AUTHOR) {
+                                                Icon(Icons.Default.Check, contentDescription = null)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { multipleBookPickerLauncher.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }) {
+                                Icon(Icons.Default.Add, contentDescription = "批量添加书籍")
                             }
                             IconButton(onClick = onSettingsClick) {
                                 Icon(Icons.Default.Settings, contentDescription = "设置")

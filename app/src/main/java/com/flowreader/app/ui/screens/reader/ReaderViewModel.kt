@@ -7,6 +7,7 @@ import com.flowreader.app.domain.model.*
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
+import com.flowreader.app.domain.repository.ReadingStatsRepository
 import com.flowreader.app.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -27,7 +28,9 @@ data class ReaderUiState(
     val showChapterList: Boolean = false,
     val showSettings: Boolean = false,
     val showBookmarks: Boolean = false,
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val todayReadTime: Long = 0,
+    val todayReadPages: Int = 0
 )
 
 @HiltViewModel
@@ -36,7 +39,8 @@ class ReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val chapterRepository: ChapterRepository,
     private val bookmarkRepository: BookmarkRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val readingStatsRepository: ReadingStatsRepository
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
@@ -45,11 +49,46 @@ class ReaderViewModel @Inject constructor(
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
     private var progressSaveJob: Job? = null
+    private var statsUpdateJob: Job? = null
     private val progressDebounceMs = 3000L
+
+    private var sessionStartTime: Long = 0
+    private var sessionReadPages: Int = 0
 
     init {
         loadBook()
         loadSettings()
+        loadTodayStats()
+    }
+
+    private fun loadTodayStats() {
+        viewModelScope.launch {
+            val readTime = readingStatsRepository.getTodayReadTime()
+            val readPages = readingStatsRepository.getTodayReadPages()
+            _uiState.update {
+                it.copy(todayReadTime = readTime, todayReadPages = readPages)
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        progressSaveJob?.cancel()
+        saveProgressImmediately()
+        saveReadingStats()
+    }
+
+    private fun saveReadingStats() {
+        val sessionTime = (System.currentTimeMillis() - sessionStartTime) / 1000
+        if (sessionTime > 0 && sessionReadPages > 0) {
+            viewModelScope.launch {
+                readingStatsRepository.updateTodayStats(
+                    bookId = bookId,
+                    readPages = sessionReadPages,
+                    readTimeSeconds = sessionTime
+                )
+            }
+        }
     }
 
     override fun onCleared() {

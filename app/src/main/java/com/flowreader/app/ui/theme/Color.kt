@@ -70,4 +70,16 @@ object ReaderColors {
 
     val AmoledBackground = Color(0xFF000000)
     val AmoledText = Color(0xFFE0E0E0)
+
+    val MorningBackground = Color(0xFFFFF8E7)
+    val MorningText = Color(0xFF4A3F35)
+
+    val NoonBackground = Color(0xFFFFFFFF)
+    val NoonText = Color(0xFF1C1B1F)
+
+    val EveningBackground = Color(0xFFFFF0E0)
+    val EveningText = Color(0xFF4A3525)
+
+    val NightBackground = Color(0xFF0D1117)
+    val NightText = Color(0xFF8B949E)
 }

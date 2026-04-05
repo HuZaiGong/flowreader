@@ -15,13 +15,21 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class SortOrder {
+    ADDED_TIME,
+    LAST_READ,
+    TITLE,
+    AUTHOR
+}
+
 data class LibraryUiState(
     val books: List<Book> = emptyList(),
     val recentlyRead: List<Book> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
-    val appTheme: ReaderTheme = ReaderTheme.SYSTEM
+    val appTheme: ReaderTheme = ReaderTheme.SYSTEM,
+    val sortOrder: SortOrder = SortOrder.ADDED_TIME
 )
 
 @HiltViewModel
@@ -37,6 +45,7 @@ class LibraryViewModel @Inject constructor(
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
+    private val _sortOrder = MutableStateFlow(SortOrder.ADDED_TIME)
 
     init {
         initializeDefaultBooks()
@@ -65,12 +74,19 @@ class LibraryViewModel @Inject constructor(
             combine(
                 bookRepository.getAllBooks(),
                 bookRepository.getRecentlyReadBooks(5),
-                _searchQuery.debounce(300)
-            ) { allBooks, recentlyRead, query ->
+                _searchQuery.debounce(300),
+                _sortOrder
+            ) { allBooks, recentlyRead, query, sortOrder ->
+                val sortedBooks = when (sortOrder) {
+                    SortOrder.ADDED_TIME -> allBooks.sortedByDescending { it.addedTime }
+                    SortOrder.LAST_READ -> allBooks.sortedByDescending { it.lastReadTime ?: it.addedTime }
+                    SortOrder.TITLE -> allBooks.sortedBy { it.title }
+                    SortOrder.AUTHOR -> allBooks.sortedBy { it.author }
+                }
                 val filteredBooks = if (query.isBlank()) {
-                    allBooks
+                    sortedBooks
                 } else {
-                    allBooks.filter {
+                    sortedBooks.filter {
                         it.title.contains(query, ignoreCase = true) ||
                         it.author.contains(query, ignoreCase = true)
                     }
@@ -87,6 +103,11 @@ class LibraryViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun updateSortOrder(order: SortOrder) {
+        _sortOrder.value = order
+        _uiState.update { it.copy(sortOrder = order) }
     }
 
     fun updateSearchQuery(query: String) {

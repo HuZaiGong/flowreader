@@ -52,11 +52,29 @@ fun SettingsScreen(
                     onClick = { showThemeDialog = true }
                 )
 
+                SettingsSwitch(
+                    icon = Icons.Default.BrightnessAuto,
+                    title = "自动夜间模式",
+                    subtitle = "根据时间自动切换深色/浅色",
+                    checked = uiState.autoTimeTheme,
+                    onCheckedChange = { viewModel.updateAutoTimeTheme(it) }
+                )
+
                 SettingsItem(
                     icon = Icons.Default.Brightness6,
                     title = "阅读主题",
                     subtitle = getReaderThemeName(uiState.readingSettings.theme),
                     onClick = { showReaderThemeDialog = true }
+                )
+            }
+
+            SettingsSection(title = "提醒") {
+                SettingsSwitch(
+                    icon = Icons.Default.Notifications,
+                    title = "每日阅读提醒",
+                    subtitle = "提醒时间: ${uiState.readingReminderHour}:${String.format("%02d", uiState.readingReminderMinute)}",
+                    checked = uiState.readingReminderEnabled,
+                    onCheckedChange = { viewModel.updateReadingReminder(it) }
                 )
             }
 
@@ -100,15 +118,42 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "版本",
-                    subtitle = "1.0.0",
-                    onClick = {}
+                    subtitle = "11.0.0",
+                    onClick = { showAboutDialog = true }
+                )
+
+                SettingsSwitch(
+                    icon = Icons.Default.Backup,
+                    title = "备份数据",
+                    subtitle = "导出书籍和阅读进度",
+                    checked = false,
+                    onCheckedChange = { if (it) { viewModel.exportData() } }
+                )
+
+                SettingsSwitch(
+                    icon = Icons.Default.Restore,
+                    title = "恢复数据",
+                    subtitle = "从备份文件导入",
+                    checked = false,
+                    onCheckedChange = { if (it) { viewModel.importData() } }
                 )
             }
         }
+
+        if (showAboutDialog) {
+            AboutDialog(
+                onDismiss = { showAboutDialog = false }
+            )
+        }
     }
 
+    var showAboutDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showReaderThemeDialog by remember { mutableStateOf(false) }
+    var showPageModeDialog by remember { mutableStateOf(false) }
+    var showFontSizeDialog by remember { mutableStateOf(false) }
+
     if (showThemeDialog) {
-        ThemeSelectionDialog(
             currentTheme = uiState.appTheme,
             onThemeSelect = {
                 viewModel.updateAppTheme(it)
@@ -191,11 +236,13 @@ private fun SettingsItem(
 private fun SettingsSwitch(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
+    subtitle: String = "",
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
     ListItem(
         headlineContent = { Text(title) },
+        supportingContent = if (subtitle.isNotEmpty()) {{ Text(subtitle) }} else null,
         leadingContent = {
             Icon(imageVector = icon, contentDescription = null)
         },
@@ -354,4 +401,35 @@ private fun getPageModeName(mode: PageMode): String = when (mode) {
     PageMode.SLIDE -> "滑动"
     PageMode.SIMULATION -> "仿真翻页"
     PageMode.NONE -> "无动画"
+}
+
+@Composable
+private fun AboutDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text("关于心流阅读")
+        },
+        text = {
+            Column {
+                Text("版本: 11.0.0")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("一款简洁优雅的电子书阅读应用")
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("感谢以下开源项目:")
+                Text("- Jetpack Compose", style = MaterialTheme.typography.bodySmall)
+                Text("- Room Database", style = MaterialTheme.typography.bodySmall)
+                Text("- Hilt", style = MaterialTheme.typography.bodySmall)
+                Text("- Coil", style = MaterialTheme.typography.bodySmall)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("作者: HuZaiGong", style = MaterialTheme.typography.bodySmall)
+                Text("GitHub: github.com/HuZaiGong/flowreader", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
 }
