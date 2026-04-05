@@ -90,11 +90,93 @@ fun SettingsScreen(
                 )
             }
 
+            SettingsSection(title = "E Ink 设备") {
+                SettingsSwitch(
+                    icon = Icons.Default.Tablet,
+                    title = "E Ink 模式",
+                    checked = uiState.readingSettings.einkMode,
+                    onCheckedChange = { viewModel.updateEinkMode(it) }
+                )
+
+                SettingsItem(
+                    icon = Icons.Default.Refresh,
+                    title = "刷新模式",
+                    subtitle = getEinkRefreshModeName(uiState.readingSettings.einkRefreshMode),
+                    onClick = { }
+                )
+            }
+
+            SettingsSection(title = "无障碍功能") {
+                SettingsSwitch(
+                    icon = Icons.Default.TextIncrease,
+                    title = "大字模式",
+                    checked = uiState.readingSettings.largeFontMode,
+                    onCheckedChange = { viewModel.updateLargeFontMode(it) }
+                )
+
+                SettingsSwitch(
+                    icon = Icons.Default.Contrast,
+                    title = "高对比度",
+                    checked = uiState.readingSettings.highContrastMode,
+                    onCheckedChange = { viewModel.updateHighContrastMode(it) }
+                )
+
+                SettingsSwitch(
+                    icon = Icons.Default.Layers,
+                    title = "简化模式",
+                    checked = uiState.readingSettings.simplifyMode,
+                    onCheckedChange = { viewModel.updateSimplifyMode(it) }
+                )
+            }
+
+            SettingsSection(title = "阅读目标") {
+                SettingsItem(
+                    icon = Icons.Default.Flag,
+                    title = "每日阅读时长",
+                    subtitle = "${uiState.readingSettings.dailyReadingGoalMinutes} 分钟",
+                    onClick = { }
+                )
+
+                SettingsItem(
+                    icon = Icons.Default.MenuBook,
+                    title = "每周阅读书籍",
+                    subtitle = "${uiState.readingSettings.weeklyReadingGoalBooks} 本",
+                    onClick = { }
+                )
+            }
+
+            SettingsSection(title = "夜间模式") {
+                SettingsSwitch(
+                    icon = Icons.Default.DarkMode,
+                    title = "自动夜间模式",
+                    checked = uiState.readingSettings.autoNightMode,
+                    onCheckedChange = { }
+                )
+            }
+
+            SettingsSection(title = "提醒") {
+                SettingsSwitch(
+                    icon = Icons.Default.Notifications,
+                    title = "阅读提醒",
+                    checked = uiState.readingSettings.enableReadingReminder,
+                    onCheckedChange = { }
+                )
+
+                if (uiState.readingSettings.enableReadingReminder) {
+                    SettingsItem(
+                        icon = Icons.Default.Schedule,
+                        title = "提醒时间",
+                        subtitle = uiState.readingSettings.reminderTime,
+                        onClick = { }
+                    )
+                }
+            }
+
             SettingsSection(title = "关于") {
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "版本",
-                    subtitle = "1.0.0",
+                    subtitle = "9.1.0-pre.1",
                     onClick = {}
                 )
             }
@@ -333,6 +415,13 @@ private fun getThemeName(theme: ReaderTheme): String = when (theme) {
     ReaderTheme.SEPIA -> "护眼"
     ReaderTheme.PAPER -> "羊皮纸"
     ReaderTheme.AMOLED -> "夜间"
+    ReaderTheme.MORNING -> "晨读"
+    ReaderTheme.AFTERNOON -> "午读"
+    ReaderTheme.EVENING -> "暮读"
+    ReaderTheme.NIGHT -> "夜读"
+    ReaderTheme.EINK_PURE -> "E Ink纯墨"
+    ReaderTheme.EINK_GRAY -> "E Ink灰度"
+    ReaderTheme.EINK_WARM -> "E Ink暖色"
 }
 
 private fun getReaderThemeName(theme: ReaderTheme): String = when (theme) {
@@ -342,10 +431,24 @@ private fun getReaderThemeName(theme: ReaderTheme): String = when (theme) {
     ReaderTheme.SEPIA -> "护眼"
     ReaderTheme.PAPER -> "羊皮纸"
     ReaderTheme.AMOLED -> "夜间"
+    ReaderTheme.MORNING -> "晨读"
+    ReaderTheme.AFTERNOON -> "午读"
+    ReaderTheme.EVENING -> "暮读"
+    ReaderTheme.NIGHT -> "夜读"
+    ReaderTheme.EINK_PURE -> "E Ink纯墨"
+    ReaderTheme.EINK_GRAY -> "E Ink灰度"
+    ReaderTheme.EINK_WARM -> "E Ink暖色"
 }
 
 private fun getPageModeName(mode: PageMode): String = when (mode) {
     PageMode.SLIDE -> "滑动"
     PageMode.SIMULATION -> "仿真翻页"
     PageMode.NONE -> "无动画"
+}
+
+private fun getEinkRefreshModeName(mode: EinkRefreshMode): String = when (mode) {
+    EinkRefreshMode.AUTO -> "自动"
+    EinkRefreshMode.FULL -> "全局刷新"
+    EinkRefreshMode.PARTIAL -> "局部刷新"
+    EinkRefreshMode.FAST -> "快速刷新"
 }

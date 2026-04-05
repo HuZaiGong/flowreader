@@ -3,6 +3,7 @@ package com.flowreader.app.data.repository
 import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.entity.BookEntity
 import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.BookStatus
 import com.flowreader.app.domain.repository.BookRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -22,6 +23,24 @@ class BookRepositoryImpl @Inject constructor(
 
     override fun getBooksByCategory(categoryId: Long): Flow<List<Book>> {
         return bookDao.getBooksByCategory(categoryId).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun getBooksByStatus(status: BookStatus): Flow<List<Book>> {
+        return bookDao.getBooksByStatus(status.name).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun getFavoriteBooks(): Flow<List<Book>> {
+        return bookDao.getFavoriteBooks().map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override fun getCurrentlyReading(): Flow<List<Book>> {
+        return bookDao.getCurrentlyReading().map { entities ->
             entities.map { it.toDomain() }
         }
     }
@@ -64,5 +83,35 @@ class BookRepositoryImpl @Inject constructor(
 
     override suspend fun updateReadingProgress(bookId: Long, chapter: Int, position: Int, progress: Float) {
         bookDao.updateReadingProgress(bookId, chapter, position, progress)
+    }
+
+    override suspend fun updateBookStatus(bookId: Long, status: BookStatus) {
+        bookDao.updateBookStatus(bookId, status.name)
+    }
+
+    override suspend fun updateFavoriteStatus(bookId: Long, isFavorite: Boolean) {
+        bookDao.updateFavoriteStatus(bookId, isFavorite)
+    }
+
+    override suspend fun updateTags(bookId: Long, tags: List<String>) {
+        bookDao.updateTags(bookId, tags.joinToString(","))
+    }
+
+    override fun getBooksByTag(tag: String): Flow<List<Book>> {
+        return bookDao.getBooksByTag(tag).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
+    override suspend fun getBookCountByStatus(status: BookStatus): Int {
+        return bookDao.getBookCountByStatus(status.name)
+    }
+
+    override suspend fun updateCategory(bookId: Long, categoryId: Long?) {
+        bookDao.updateCategory(bookId, categoryId)
+    }
+
+    override suspend fun updateBookStats(bookId: Long, wordCount: Int, estimatedMinutes: Int) {
+        bookDao.updateBookStats(bookId, wordCount, estimatedMinutes)
     }
 }

@@ -87,4 +87,73 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.updateReadingSettings(currentSettings.copy(screenTimeoutMinutes = minutes))
         }
     }
+
+    fun updateEinkMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(einkMode = enabled))
+        }
+    }
+
+    fun updateEinkRefreshMode(mode: EinkRefreshMode) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(einkRefreshMode = mode))
+        }
+    }
+
+    fun updateAccessibilityMode(mode: AccessibilityMode) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(accessibilityMode = mode))
+        }
+    }
+
+    fun updateHighContrastMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(highContrastMode = enabled))
+        }
+    }
+
+    fun updateLargeFontMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(largeFontMode = enabled))
+        }
+    }
+
+    fun updateSimplifyMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(simplifyMode = enabled))
+        }
+    }
+
+    fun updateReadingGoal(dailyMinutes: Int, weeklyBooks: Int) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(
+                dailyReadingGoalMinutes = dailyMinutes,
+                weeklyReadingGoalBooks = weeklyBooks
+            ))
+        }
+    }
+
+    fun updateAutoNightMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(autoNightMode = enabled))
+        }
+    }
+
+    fun updateReadingReminder(enabled: Boolean, time: String) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(
+                enableReadingReminder = enabled,
+                reminderTime = time
+            ))
+        }
+    }
 }

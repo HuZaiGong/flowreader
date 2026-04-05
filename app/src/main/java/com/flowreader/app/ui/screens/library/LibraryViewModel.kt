@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowreader.app.data.repository.SettingsRepository
 import com.flowreader.app.data.local.DataInitializer
 import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.BookStatus
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.ChapterRepository
@@ -18,7 +19,10 @@ import javax.inject.Inject
 data class LibraryUiState(
     val books: List<Book> = emptyList(),
     val recentlyRead: List<Book> = emptyList(),
+    val currentlyReading: List<Book> = emptyList(),
     val searchQuery: String = "",
+    val selectedStatus: BookStatus? = null,
+    val showFavoritesOnly: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val appTheme: ReaderTheme = ReaderTheme.SYSTEM
@@ -37,6 +41,8 @@ class LibraryViewModel @Inject constructor(
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
+    private val _selectedStatus = MutableStateFlow<BookStatus?>(null)
+    private val _showFavoritesOnly = MutableStateFlow(false)
 
     init {
         initializeDefaultBooks()
@@ -65,23 +71,44 @@ class LibraryViewModel @Inject constructor(
             combine(
                 bookRepository.getAllBooks(),
                 bookRepository.getRecentlyReadBooks(5),
-                _searchQuery.debounce(300)
-            ) { allBooks, recentlyRead, query ->
-                val filteredBooks = if (query.isBlank()) {
-                    allBooks
-                } else {
-                    allBooks.filter {
+                bookRepository.getCurrentlyReading()
+            ) { allBooks, recentlyRead, currentlyReading ->
+                Triple(allBooks, recentlyRead, currentlyReading)
+            }.combine(_searchQuery) { booksData, query ->
+                val (allBooks, recentlyRead, currentlyReading) = booksData
+                var filteredBooks = allBooks
+
+                if (query.isNotBlank()) {
+                    filteredBooks = filteredBooks.filter {
                         it.title.contains(query, ignoreCase = true) ||
                         it.author.contains(query, ignoreCase = true)
                     }
                 }
-                Triple(filteredBooks, recentlyRead, query)
-            }.collect { (books, recentlyRead, query) ->
+
+                Triple(filteredBooks, recentlyRead, currentlyReading)
+            }.combine(_selectedStatus) { booksData, status ->
+                val (filteredBooks, recentlyRead, currentlyReading) = booksData
+                var finalBooks = filteredBooks
+                if (status != null) {
+                    finalBooks = finalBooks.filter { it.status == status }
+                }
+                Triple(finalBooks, recentlyRead, currentlyReading)
+            }.combine(_showFavoritesOnly) { booksData, favoritesOnly ->
+                val (filteredBooks, recentlyRead, currentlyReading) = booksData
+                var finalBooks = filteredBooks
+                if (favoritesOnly) {
+                    finalBooks = finalBooks.filter { it.isFavorite }
+                }
+                Triple(finalBooks, recentlyRead, currentlyReading)
+            }.collect { (books, recentlyRead, currentlyReading) ->
                 _uiState.update {
                     it.copy(
                         books = books,
                         recentlyRead = recentlyRead,
-                        searchQuery = query,
+                        currentlyReading = currentlyReading,
+                        searchQuery = _searchQuery.value,
+                        selectedStatus = _selectedStatus.value,
+                        showFavoritesOnly = _showFavoritesOnly.value,
                         isLoading = false
                     )
                 }
@@ -92,6 +119,16 @@ class LibraryViewModel @Inject constructor(
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
         _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun filterByStatus(status: BookStatus?) {
+        _selectedStatus.value = status
+        _uiState.update { it.copy(selectedStatus = status) }
+    }
+
+    fun toggleFavoritesOnly() {
+        _showFavoritesOnly.value = !_showFavoritesOnly.value
+        _uiState.update { it.copy(showFavoritesOnly = _showFavoritesOnly.value) }
     }
 
     fun importBook(uri: Uri) {
@@ -121,6 +158,18 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    fun updateBookStatus(bookId: Long, status: BookStatus) {
+        viewModelScope.launch {
+            bookRepository.updateBookStatus(bookId, status)
+        }
+    }
+
+    fun toggleFavorite(bookId: Long, isFavorite: Boolean) {
+        viewModelScope.launch {
+            bookRepository.updateFavoriteStatus(bookId, isFavorite)
         }
     }
 

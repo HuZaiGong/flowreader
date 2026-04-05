@@ -13,6 +13,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 data class ReaderUiState(
@@ -47,6 +48,7 @@ class ReaderViewModel @Inject constructor(
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
 
     private var progressSaveJob: Job? = null
+    private var autoHideJob: Job? = null
     private val progressDebounceMs = 3000L
 
     init {
@@ -57,6 +59,7 @@ class ReaderViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         progressSaveJob?.cancel()
+        autoHideJob?.cancel()
         saveProgressImmediately()
     }
 
@@ -86,10 +89,26 @@ class ReaderViewModel @Inject constructor(
     private fun loadSettings() {
         viewModelScope.launch {
             settingsRepository.appSettings.collect { settings ->
+                val effectiveTheme = if (settings.defaultReadingSettings.autoTimeTheme) {
+                    getAutoTimeTheme(settings.defaultReadingSettings.theme)
+                } else {
+                    settings.defaultReadingSettings.theme
+                }
+                
                 _uiState.update {
-                    it.copy(readingSettings = settings.defaultReadingSettings)
+                    it.copy(readingSettings = settings.defaultReadingSettings.copy(theme = effectiveTheme))
                 }
             }
+        }
+    }
+
+    private fun getAutoTimeTheme(fallback: ReaderTheme): ReaderTheme {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        return when (hour) {
+            in 6..8 -> ReaderTheme.MORNING
+            in 9..16 -> ReaderTheme.AFTERNOON
+            in 17..19 -> ReaderTheme.EVENING
+            else -> ReaderTheme.NIGHT
         }
     }
 
@@ -171,6 +190,20 @@ class ReaderViewModel @Inject constructor(
 
     fun toggleControls() {
         _uiState.update { it.copy(showControls = !it.showControls) }
+        
+        if (_uiState.value.readingSettings.controlsAutoHide && _uiState.value.showControls) {
+            scheduleControlsAutoHide()
+        }
+    }
+
+    private fun scheduleControlsAutoHide() {
+        autoHideJob?.cancel()
+        autoHideJob = viewModelScope.launch {
+            delay(_uiState.value.readingSettings.controlsHideDelaySeconds * 1000L)
+            if (_uiState.value.showControls) {
+                _uiState.update { it.copy(showControls = false) }
+            }
+        }
     }
 
     fun showChapterList(show: Boolean) {
@@ -218,6 +251,55 @@ class ReaderViewModel @Inject constructor(
         }
         viewModelScope.launch {
             settingsRepository.updatePageMode(mode)
+        }
+    }
+
+    fun updateAutoTimeTheme(enabled: Boolean) {
+        _uiState.update {
+            val newTheme = if (enabled) getAutoTimeTheme(it.readingSettings.theme) else ReaderTheme.LIGHT
+            it.copy(readingSettings = it.readingSettings.copy(autoTimeTheme = enabled, theme = newTheme))
+        }
+        viewModelScope.launch {
+            settingsRepository.updateAutoTimeTheme(enabled)
+        }
+    }
+
+    fun updateTapZoneConfig(config: TapZoneConfig) {
+        _uiState.update {
+            it.copy(readingSettings = it.readingSettings.copy(tapZoneConfig = config))
+        }
+        viewModelScope.launch {
+            settingsRepository.updateTapZoneConfig(config)
+        }
+    }
+
+    fun updateParagraphSpacing(preset: ParagraphSpacing) {
+        _uiState.update {
+            it.copy(readingSettings = it.readingSettings.copy(
+                paragraphSpacingPreset = preset,
+                paragraphSpacing = preset.value
+            ))
+        }
+        viewModelScope.launch {
+            settingsRepository.updateParagraphSpacingPreset(preset)
+        }
+    }
+
+    fun updateFirstLineIndent(enabled: Boolean) {
+        _uiState.update {
+            it.copy(readingSettings = it.readingSettings.copy(firstLineIndent = enabled))
+        }
+        viewModelScope.launch {
+            settingsRepository.updateFirstLineIndent(enabled)
+        }
+    }
+
+    fun updateJustifyText(enabled: Boolean) {
+        _uiState.update {
+            it.copy(readingSettings = it.readingSettings.copy(justifyText = enabled))
+        }
+        viewModelScope.launch {
+            settingsRepository.updateJustifyText(enabled)
         }
     }
 
