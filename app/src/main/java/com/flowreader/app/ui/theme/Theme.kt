@@ -74,9 +74,8 @@ fun FlowReaderTheme(
 ) {
     val darkTheme = when (theme) {
         ReaderTheme.SYSTEM -> isSystemInDarkTheme()
-        ReaderTheme.LIGHT -> false
-        ReaderTheme.DARK, ReaderTheme.AMOLED -> true
-        ReaderTheme.SEPIA, ReaderTheme.PAPER -> false
+        ReaderTheme.LIGHT, ReaderTheme.MORNING, ReaderTheme.AFTERNOON, ReaderTheme.SEPIA, ReaderTheme.PAPER -> false
+        ReaderTheme.DARK, ReaderTheme.EVENING, ReaderTheme.NIGHT, ReaderTheme.AMOLED -> true
     }
 
     val colorScheme = when {

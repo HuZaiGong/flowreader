@@ -168,7 +168,9 @@ class BookParser @Inject constructor(
                         description = "",
                         fileSize = fileSize,
                         format = BookFormat.EPUB,
-                        totalChapters = chapters.size
+                        totalChapters = chapters.size,
+                        totalWordCount = calculateWordCount(bodyText),
+                        estimatedReadTimeMinutes = calculateEstimatedReadTime(calculateWordCount(bodyText))
                     ),
                     chapters = chapters
                 )
@@ -249,7 +251,9 @@ class BookParser @Inject constructor(
                         filePath = "",
                         fileSize = fileSize,
                         format = BookFormat.TXT,
-                        totalChapters = chapters.size
+                        totalChapters = chapters.size,
+                        totalWordCount = calculateWordCount(text),
+                        estimatedReadTimeMinutes = calculateEstimatedReadTime(calculateWordCount(text))
                     ),
                     chapters = chapters
                 )
@@ -306,3 +310,15 @@ data class BookParseResult(
     val book: Book,
     val chapters: List<Chapter>
 )
+
+fun calculateWordCount(text: String): Int {
+    return text.filter { char ->
+        (char.code in 0x4E00..0x9FFF) ||
+        (char.code in 0x3400..0x4DBF) ||
+        char.isLetterOrDigit()
+    }.length
+}
+
+fun calculateEstimatedReadTime(wordCount: Int, wordsPerMinute: Int = 200): Int {
+    return if (wordCount > 0) (wordCount / wordsPerMinute) else 0
+}

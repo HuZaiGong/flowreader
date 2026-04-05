@@ -24,6 +24,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.BookStatus
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.ui.theme.FlowReaderTheme
 import java.io.File
@@ -44,6 +45,7 @@ fun LibraryScreen(
     }
 
     var showSearchBar by remember { mutableStateOf(false) }
+    var showStatusFilter by remember { mutableStateOf(false) }
 
     FlowReaderTheme(theme = uiState.appTheme) {
         Scaffold(
@@ -70,6 +72,9 @@ fun LibraryScreen(
                         actions = {
                             IconButton(onClick = { showSearchBar = true }) {
                                 Icon(Icons.Default.Search, contentDescription = "搜索")
+                            }
+                            IconButton(onClick = { showStatusFilter = true }) {
+                                Icon(Icons.Default.FilterList, contentDescription = "筛选")
                             }
                             IconButton(onClick = { bookPickerLauncher.launch(arrayOf("*/*")) }) {
                                 Icon(Icons.Default.Add, contentDescription = "添加书籍")
@@ -154,6 +159,17 @@ fun LibraryScreen(
                 }
             }
         }
+    }
+
+    if (showStatusFilter) {
+        StatusFilterDialog(
+            currentStatus = uiState.selectedStatus,
+            onStatusSelect = {
+                viewModel.filterByStatus(it)
+                showStatusFilter = false
+            },
+            onDismiss = { showStatusFilter = false }
+        )
     }
 }
 
@@ -340,6 +356,14 @@ private fun BookListItem(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
+                if (book.estimatedReadTimeMinutes > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "预计${book.estimatedReadTimeMinutes / 60}小时${book.estimatedReadTimeMinutes % 60}分钟",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
                 if (book.readingProgress > 0) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
@@ -393,4 +417,55 @@ private fun BookListItem(
             }
         )
     }
+}
+
+@Composable
+private fun StatusFilterDialog(
+    currentStatus: BookStatus?,
+    onStatusSelect: (BookStatus?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("筛选书籍") },
+        text = {
+            Column {
+                ListItem(
+                    headlineContent = { Text("全部") },
+                    leadingContent = {
+                        RadioButton(
+                            selected = currentStatus == null,
+                            onClick = { onStatusSelect(null) }
+                        )
+                    },
+                    modifier = Modifier.clickable { onStatusSelect(null) }
+                )
+                BookStatus.values().forEach { status ->
+                    ListItem(
+                        headlineContent = { Text(getStatusName(status)) },
+                        leadingContent = {
+                            RadioButton(
+                                selected = currentStatus == status,
+                                onClick = { onStatusSelect(status) }
+                            )
+                        },
+                        modifier = Modifier.clickable { onStatusSelect(status) }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
+}
+
+private fun getStatusName(status: BookStatus): String = when (status) {
+    BookStatus.READING -> "正在阅读"
+    BookStatus.WANT_TO_READ -> "想读"
+    BookStatus.FINISHED -> "已读完"
+    BookStatus.ABANDONED -> "弃读"
+    BookStatus.COLLECTION -> "收藏"
 }

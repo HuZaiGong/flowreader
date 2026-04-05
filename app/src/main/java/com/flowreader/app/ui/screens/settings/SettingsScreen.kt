@@ -333,6 +333,10 @@ private fun getThemeName(theme: ReaderTheme): String = when (theme) {
     ReaderTheme.SEPIA -> "护眼"
     ReaderTheme.PAPER -> "羊皮纸"
     ReaderTheme.AMOLED -> "夜间"
+    ReaderTheme.MORNING -> "晨读"
+    ReaderTheme.AFTERNOON -> "午读"
+    ReaderTheme.EVENING -> "暮读"
+    ReaderTheme.NIGHT -> "夜读"
 }
 
 private fun getReaderThemeName(theme: ReaderTheme): String = when (theme) {
@@ -342,6 +346,10 @@ private fun getReaderThemeName(theme: ReaderTheme): String = when (theme) {
     ReaderTheme.SEPIA -> "护眼"
     ReaderTheme.PAPER -> "羊皮纸"
     ReaderTheme.AMOLED -> "夜间"
+    ReaderTheme.MORNING -> "晨读"
+    ReaderTheme.AFTERNOON -> "午读"
+    ReaderTheme.EVENING -> "暮读"
+    ReaderTheme.NIGHT -> "夜读"
 }
 
 private fun getPageModeName(mode: PageMode): String = when (mode) {

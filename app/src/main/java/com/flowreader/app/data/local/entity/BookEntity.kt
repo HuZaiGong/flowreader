@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.BookFormat
+import com.flowreader.app.domain.model.BookStatus
 import java.util.Date
 
 @Entity(tableName = "books")
@@ -23,7 +24,13 @@ data class BookEntity(
     val readingProgress: Float = 0f,
     val lastReadTime: Long? = null,
     val addedTime: Long = System.currentTimeMillis(),
-    val categoryId: Long? = null
+    val categoryId: Long? = null,
+    val status: String = "READING",
+    val isFavorite: Boolean = false,
+    val tags: String = "",
+    val totalWordCount: Int = 0,
+    val readWordCount: Int = 0,
+    val estimatedReadTimeMinutes: Int = 0
 ) {
     fun toDomain(): Book = Book(
         id = id,
@@ -40,7 +47,13 @@ data class BookEntity(
         readingProgress = readingProgress,
         lastReadTime = lastReadTime?.let { Date(it) },
         addedTime = Date(addedTime),
-        categoryId = categoryId
+        categoryId = categoryId,
+        status = try { BookStatus.valueOf(status) } catch (e: Exception) { BookStatus.READING },
+        isFavorite = isFavorite,
+        tags = if (tags.isBlank()) emptyList() else tags.split(","),
+        totalWordCount = totalWordCount,
+        readWordCount = readWordCount,
+        estimatedReadTimeMinutes = estimatedReadTimeMinutes
     )
 
     companion object {
@@ -59,7 +72,13 @@ data class BookEntity(
             readingProgress = book.readingProgress,
             lastReadTime = book.lastReadTime?.time,
             addedTime = book.addedTime.time,
-            categoryId = book.categoryId
+            categoryId = book.categoryId,
+            status = book.status.name,
+            isFavorite = book.isFavorite,
+            tags = book.tags.joinToString(","),
+            totalWordCount = book.totalWordCount,
+            readWordCount = book.readWordCount,
+            estimatedReadTimeMinutes = book.estimatedReadTimeMinutes
         )
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,6 +18,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.ScrollState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +30,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +40,7 @@ import com.flowreader.app.domain.model.*
 import com.flowreader.app.ui.theme.ReaderColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +61,8 @@ fun ReaderScreen(
     fun resetAutoHide() {
         controlsAutoHideJob?.cancel()
         controlsAutoHideJob = viewModel.scope.launch {
-            delay(5000)
+            val delayMs = uiState.readingSettings.controlsHideDelaySeconds * 1000L
+            delay(delayMs)
             if (uiState.showControls) {
                 viewModel.toggleControls()
             }
@@ -78,29 +84,17 @@ fun ReaderScreen(
 
     LaunchedEffect(uiState.readingSettings.theme) {
         when (uiState.readingSettings.theme) {
-            ReaderTheme.AMOLED -> activity?.window?.decorView?.setBackgroundColor(Color.Black.toArgb())
+            ReaderTheme.AMOLED, ReaderTheme.NIGHT -> activity?.window?.decorView?.setBackgroundColor(Color.Black.toArgb())
             else -> activity?.window?.decorView?.setBackgroundColor(Color.Transparent.toArgb())
         }
     }
 
     val backgroundColor = remember(uiState.readingSettings.theme) {
-        when (uiState.readingSettings.theme) {
-            ReaderTheme.LIGHT -> ReaderColors.LightBackground
-            ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkBackground
-            ReaderTheme.SEPIA -> ReaderColors.SepiaBackground
-            ReaderTheme.PAPER -> ReaderColors.PaperBackground
-            ReaderTheme.AMOLED -> ReaderColors.AmoledBackground
-        }
+        getReaderBackgroundColor(uiState.readingSettings.theme)
     }
 
     val textColor = remember(uiState.readingSettings.theme) {
-        when (uiState.readingSettings.theme) {
-            ReaderTheme.LIGHT -> ReaderColors.LightText
-            ReaderTheme.DARK, ReaderTheme.SYSTEM -> ReaderColors.DarkText
-            ReaderTheme.SEPIA -> ReaderColors.SepiaText
-            ReaderTheme.PAPER -> ReaderColors.PaperText
-            ReaderTheme.AMOLED -> ReaderColors.AmoledText
-        }
+        getReaderTextColor(uiState.readingSettings.theme)
     }
 
     Box(
@@ -121,16 +115,26 @@ fun ReaderScreen(
                     backgroundColor = backgroundColor,
                     scrollState = contentScrollState,
                     onTap = { offset, size ->
-                        val tapZoneWidth = size.width * uiState.readingSettings.tapZoneRatio
-                        val middle = size.width / 2
+                        val tapZone = uiState.readingSettings.tapZoneConfig
+                        val leftBound = size.width * tapZone.leftRatio
+                        val rightBound = size.width * (1 - tapZone.rightRatio)
+                        
                         when {
-                            offset.x < (middle - tapZoneWidth) -> viewModel.goToPreviousChapter()
-                            offset.x > (middle + tapZoneWidth) -> viewModel.goToNextChapter()
-                            else -> {
-                                viewModel.toggleControls()
-                                resetAutoHide()
-                            }
+                            offset.x < leftBound -> handleGestureAction(viewModel, tapZone.leftAction)
+                            offset.x > rightBound -> handleGestureAction(viewModel, tapZone.rightAction)
+                            else -> handleGestureAction(viewModel, tapZone.middleAction)
                         }
+                        resetAutoHide()
+                    },
+                    onDoubleFingerSwipe = { isUp ->
+                        val useGestures = uiState.readingSettings.doubleFingerGesture
+                        val action = if (isUp) {
+                            if (useGestures) GestureAction.NEXT_PAGE else GestureAction.PREVIOUS_PAGE
+                        } else {
+                            if (useGestures) GestureAction.PREVIOUS_PAGE else GestureAction.NEXT_PAGE
+                        }
+                        handleGestureAction(viewModel, action)
+                        resetAutoHide()
                     },
                     onPositionChanged = { viewModel.updatePosition(it) }
                 )
@@ -138,8 +142,8 @@ fun ReaderScreen(
 
             AnimatedVisibility(
                 visible = uiState.showControls,
-                enter = fadeIn(),
-                exit = fadeOut()
+                enter = fadeIn() + slideInVertically(initialOffsetY = { -it }),
+                exit = fadeOut() + slideOutVertically(targetOffsetY = { -it })
             ) {
                 ReaderControls(
                     bookTitle = uiState.book?.title ?: "",
@@ -196,6 +200,10 @@ fun ReaderScreen(
                     onLineSpacingChange = { viewModel.updateLineSpacing(it) },
                     onThemeChange = { viewModel.updateReaderTheme(it) },
                     onPageModeChange = { viewModel.updatePageMode(it) },
+                    onAutoTimeThemeChange = { viewModel.updateAutoTimeTheme(it) },
+                    onParagraphSpacingChange = { viewModel.updateParagraphSpacing(it) },
+                    onFirstLineIndentChange = { viewModel.updateFirstLineIndent(it) },
+                    onJustifyTextChange = { viewModel.updateJustifyText(it) },
                     onDismiss = { viewModel.showSettings(false) },
                     textColor = textColor,
                     backgroundColor = backgroundColor
@@ -213,6 +221,36 @@ fun ReaderScreen(
                 )
             }
         }
+    }
+}
+
+private fun handleGestureAction(viewModel: ReaderViewModel, action: GestureAction) {
+    when (action) {
+        GestureAction.PREVIOUS_PAGE -> viewModel.goToPreviousChapter()
+        GestureAction.NEXT_PAGE -> viewModel.goToNextChapter()
+        GestureAction.SHOW_MENU -> viewModel.toggleControls()
+        GestureAction.SHOW_SETTINGS -> viewModel.showSettings(true)
+        GestureAction.SHOW_BOOKMARKS -> viewModel.showBookmarks(true)
+    }
+}
+
+private fun getReaderBackgroundColor(theme: ReaderTheme): Color {
+    return when (theme) {
+        ReaderTheme.LIGHT, ReaderTheme.MORNING, ReaderTheme.AFTERNOON -> ReaderColors.LightBackground
+        ReaderTheme.DARK, ReaderTheme.SYSTEM, ReaderTheme.NIGHT -> ReaderColors.DarkBackground
+        ReaderTheme.SEPIA, ReaderTheme.EVENING -> ReaderColors.SepiaBackground
+        ReaderTheme.PAPER -> ReaderColors.PaperBackground
+        ReaderTheme.AMOLED -> ReaderColors.AmoledBackground
+    }
+}
+
+private fun getReaderTextColor(theme: ReaderTheme): Color {
+    return when (theme) {
+        ReaderTheme.LIGHT, ReaderTheme.MORNING, ReaderTheme.AFTERNOON -> ReaderColors.LightText
+        ReaderTheme.DARK, ReaderTheme.SYSTEM, ReaderTheme.NIGHT -> ReaderColors.DarkText
+        ReaderTheme.SEPIA, ReaderTheme.EVENING -> ReaderColors.SepiaText
+        ReaderTheme.PAPER -> ReaderColors.PaperText
+        ReaderTheme.AMOLED -> ReaderColors.AmoledText
     }
 }
 
@@ -281,6 +319,7 @@ private fun ReaderContent(
     backgroundColor: Color,
     scrollState: ScrollState,
     onTap: (offset: androidx.compose.ui.geometry.Offset, size: androidx.compose.ui.geometry.Size) -> Unit,
+    onDoubleFingerSwipe: (isUp: Boolean) -> Unit,
     onPositionChanged: (Int) -> Unit
 ) {
     LaunchedEffect(scrollState.value) {
@@ -303,6 +342,13 @@ private fun ReaderContent(
                     }
                 )
             }
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, _, _ ->
+                    if (abs(pan.y) > 50) {
+                        onDoubleFingerSwipe(pan.y < 0)
+                    }
+                }
+            }
     ) {
         Column(
             modifier = Modifier
@@ -317,7 +363,8 @@ private fun ReaderContent(
                 text = chapter.title,
                 style = MaterialTheme.typography.headlineSmall.copy(
                     fontSize = (settings.fontSize + 4).sp,
-                    lineHeight = (settings.fontSize * settings.lineSpacing + 8).sp
+                    lineHeight = (settings.fontSize * settings.lineSpacing + 8).sp,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Default
                 ),
                 color = textColor,
                 modifier = Modifier.padding(bottom = 24.dp)
@@ -326,15 +373,22 @@ private fun ReaderContent(
             val paragraphs = chapter.content.split("\n\n")
             paragraphs.forEach { paragraph ->
                 if (paragraph.isNotBlank()) {
+                    val displayText = if (settings.firstLineIndent) {
+                        "    ${paragraph.trim()}"
+                    } else {
+                        paragraph.trim()
+                    }
+                    
                     Text(
-                        text = paragraph.trim(),
+                        text = displayText,
                         style = MaterialTheme.typography.bodyLarge.copy(
                             fontSize = settings.fontSize.sp,
                             lineHeight = (settings.fontSize * settings.lineSpacing).sp,
-                            textAlign = TextAlign.Justify
+                            textAlign = if (settings.justifyText) TextAlign.Justify else TextAlign.Start,
+                            fontFamily = androidx.compose.ui.text.font.FontFamily.Default
                         ),
                         color = textColor,
-                        modifier = Modifier.padding(bottom = settings.paragraphSpacing.toInt().dp)
+                        modifier = Modifier.padding(bottom = (settings.fontSize * settings.paragraphSpacing).toInt().dp)
                     )
                 }
             }
@@ -381,7 +435,7 @@ private fun ReaderControls(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "返回", tint = textColor)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = textColor)
                 }
             },
             actions = {
@@ -389,7 +443,7 @@ private fun ReaderControls(
                     Icon(Icons.Default.Brightness6, contentDescription = "亮度", tint = textColor)
                 }
                 IconButton(onClick = onChapterClick) {
-                    Icon(Icons.Default.List, contentDescription = "目录", tint = textColor)
+                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = "目录", tint = textColor)
                 }
                 IconButton(onClick = onBookmarkClick) {
                     Icon(Icons.Default.Bookmark, contentDescription = "书签", tint = textColor)
@@ -482,6 +536,10 @@ private fun ReaderSettingsDialog(
     onLineSpacingChange: (Float) -> Unit,
     onThemeChange: (ReaderTheme) -> Unit,
     onPageModeChange: (PageMode) -> Unit,
+    onAutoTimeThemeChange: (Boolean) -> Unit,
+    onParagraphSpacingChange: (ParagraphSpacing) -> Unit,
+    onFirstLineIndentChange: (Boolean) -> Unit,
+    onJustifyTextChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     textColor: Color,
     backgroundColor: Color
@@ -510,29 +568,76 @@ private fun ReaderSettingsDialog(
                     steps = 14
                 )
 
-                Text("阅读主题", style = MaterialTheme.typography.bodyMedium)
+                Text("段落间距", style = MaterialTheme.typography.bodyMedium)
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    ReaderTheme.values().filter { it != ReaderTheme.SYSTEM }.forEach { theme ->
+                    ParagraphSpacing.values().take(4).forEach { preset ->
+                        FilterChip(
+                            selected = settings.paragraphSpacingPreset == preset,
+                            onClick = { onParagraphSpacingChange(preset) },
+                            label = { Text(preset.displayName, style = MaterialTheme.typography.labelSmall) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("首行缩进", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = settings.firstLineIndent,
+                        onCheckedChange = onFirstLineIndentChange
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("两端对齐", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = settings.justifyText,
+                        onCheckedChange = onJustifyTextChange
+                    )
+                }
+
+                Text("阅读主题", style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    listOf(
+                        ReaderTheme.LIGHT to "浅",
+                        ReaderTheme.DARK to "深",
+                        ReaderTheme.SEPIA to "护眼",
+                        ReaderTheme.PAPER to "羊皮",
+                        ReaderTheme.AMOLED to "夜间"
+                    ).forEach { (theme, label) ->
                         FilterChip(
                             selected = settings.theme == theme,
                             onClick = { onThemeChange(theme) },
-                            label = {
-                                Text(
-                                    when (theme) {
-                                        ReaderTheme.LIGHT -> "浅"
-                                        ReaderTheme.DARK -> "深"
-                                        ReaderTheme.SEPIA -> "护眼"
-                                        ReaderTheme.PAPER -> "羊皮"
-                                        ReaderTheme.AMOLED -> "夜间"
-                                        else -> ""
-                                    }
-                                )
-                            }
+                            label = { Text(label) },
+                            modifier = Modifier.weight(1f)
                         )
                     }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("时光模式 (自动)", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = settings.autoTimeTheme,
+                        onCheckedChange = onAutoTimeThemeChange
+                    )
                 }
 
                 Text("翻页模式", style = MaterialTheme.typography.bodyMedium)

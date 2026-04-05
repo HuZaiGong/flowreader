@@ -2,6 +2,7 @@ package com.flowreader.app.domain.repository
 
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
+import com.flowreader.app.domain.model.BookStatus
 import com.flowreader.app.domain.model.Category
 import com.flowreader.app.domain.model.Chapter
 import kotlinx.coroutines.flow.Flow
@@ -9,15 +10,25 @@ import kotlinx.coroutines.flow.Flow
 interface BookRepository {
     fun getAllBooks(): Flow<List<Book>>
     fun getBooksByCategory(categoryId: Long): Flow<List<Book>>
+    fun getBooksByStatus(status: BookStatus): Flow<List<Book>>
+    fun getFavoriteBooks(): Flow<List<Book>>
+    fun getCurrentlyReading(): Flow<List<Book>>
     fun getRecentlyReadBooks(limit: Int = 10): Flow<List<Book>>
     fun searchBooks(query: String): Flow<List<Book>>
+    fun getBooksByTag(tag: String): Flow<List<Book>>
     suspend fun getBookById(id: Long): Book?
     suspend fun getBookByPath(filePath: String): Book?
+    suspend fun getBookCountByStatus(status: BookStatus): Int
     suspend fun insertBook(book: Book): Long
     suspend fun updateBook(book: Book)
     suspend fun deleteBook(book: Book)
     suspend fun deleteBookById(id: Long)
     suspend fun updateReadingProgress(bookId: Long, chapter: Int, position: Int, progress: Float)
+    suspend fun updateBookStatus(bookId: Long, status: BookStatus)
+    suspend fun updateFavoriteStatus(bookId: Long, isFavorite: Boolean)
+    suspend fun updateTags(bookId: Long, tags: List<String>)
+    suspend fun updateCategory(bookId: Long, categoryId: Long?)
+    suspend fun updateBookStats(bookId: Long, wordCount: Int, estimatedMinutes: Int)
 }
 
 interface ChapterRepository {
