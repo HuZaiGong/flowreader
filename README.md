@@ -1,23 +1,24 @@
 # FlowReader 心流阅读
 
-一款简洁优雅的 Android 电子书阅读应用，支持 EPUB、TXT 格式，提供沉浸式的阅读体验。
+一款简洁优雅的 Android 电子书阅读应用，基于 Jetpack Compose 构建，支持 EPUB、TXT 格式，提供沉浸式的阅读体验。
 
-## 功能特性
+## 特性
 
 ### 📚 书库管理
 - 导入本地书籍（EPUB、TXT）
-- 书架展示，分类浏览
+- 书架展示与分类浏览
 - 最近阅读记录
-- 阅读进度自动保存
-- 书籍删除管理
+- 阅读进度自动保存（3秒延迟写入）
+- 书籍搜索与删除管理
 
 ### 📖 阅读体验
-- **多种阅读主题**: 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）
-- **字体大小调节**: 12sp - 32sp
-- **行间距调整**: 1.0 - 2.5
+- **5种阅读主题**: 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）
+- **字体大小**: 12sp - 32sp 可调
+- **行间距**: 1.0 - 2.5 可调
 - **翻页模式**: 滑动、仿真、无动画
+- **智能点击区域**: 左30%上一页，中间呼出菜单，右30%下一页
+- **章节位置记忆**: 切换章节自动恢复滚动位置
 - **保持屏幕常亮**
-- 支持左右tap翻页
 
 ### 🔖 书签功能
 - 随时添加书签
@@ -34,63 +35,68 @@
 - 默认阅读设置
 - 简体中文界面
 
-## 技术架构
+## 性能优化
 
-- **UI**: Jetpack Compose
-- **依赖注入**: Hilt
-- **数据库**: Room
-- **图片加载**: Coil
-- **架构模式**: MVVM + Clean Architecture
+- **流式书籍解析**: 支持进度回调，大文件不再卡顿
+- **图片缓存优化**: 内存+磁盘双缓存，滚动更流畅
+- **进度延迟写入**: 3秒 debounce 减少数据库写入
+- **UI 渲染优化**: 功能栏悬浮设计，内容区无遮挡
+
+## 技术栈
+
+| 类别 | 技术 |
+|------|------|
+| UI | Jetpack Compose + Material 3 |
+| 架构 | MVVM + Clean Architecture |
+| 依赖注入 | Hilt |
+| 数据库 | Room |
+| 图片加载 | Coil |
+| 异步 | Kotlin Coroutines + Flow |
+| 导航 | Navigation Compose |
 
 ## 项目结构
 
 ```
-app/
-├── src/main/java/com/flowreader/app/
-│   ├── data/              # 数据层
-│   │   ├── local/         # Room 数据库
-│   │   │   ├── dao/       # Data Access Objects
-│   │   │   └── entity/   # 数据实体
-│   │   └── repository/    # 仓库实现
-│   ├── di/                # Hilt 依赖注入模块
-│   ├── domain/            # 领域层
-│   │   ├── model/         # 领域模型
-│   │   └── repository/    # 仓库接口
-│   ├── ui/                # 表现层
-│   │   ├── screens/       # 页面
-│   │   │   ├── library/   # 书库
-│   │   │   ├── reader/    # 阅读器
-│   │   │   ├── bookdetail/# 书籍详情
-│   │   │   └── settings/  # 设置
-│   │   └── theme/         # 主题样式
-│   └── util/              # 工具类
+app/src/main/java/com/flowreader/app/
+├── data/                      # 数据层
+│   ├── local/                 # Room 数据库
+│   │   ├── dao/               # Data Access Objects
+│   │   └── entity/            # 数据实体
+│   └── repository/            # 仓库实现
+├── di/                        # Hilt 依赖注入
+├── domain/                    # 领域层
+│   ├── model/                 # 领域模型
+│   └── repository/            # 仓库接口
+├── ui/                        # 表现层
+│   ├── screens/               # 页面
+│   │   ├── library/           # 书库
+│   │   ├── reader/            # 阅读器
+│   │   ├── bookdetail/        # 书籍详情
+│   │   └── settings/          # 设置
+│   ├── theme/                 # 主题样式
+│   └── Navigation.kt          # 导航配置
+└── util/                      # 工具类
 ```
 
 ## 支持格式
 
 | 格式 | 状态 |
 |------|------|
-| EPUB | ✅ 支持 |
-| TXT  | ✅ 支持 |
+| EPUB | ✅ 已支持 |
+| TXT  | ✅ 已支持 |
 | PDF  | ⏳ 规划中 |
 
-## 主题预览
-
-- **浅色模式**: 简洁明亮的日常阅读
-- **深色模式**: 低亮度的夜间阅读
-- **护眼模式**: 温和的棕黄色调，减轻眼睛疲劳
-- **羊皮纸模式**: 复古纸张质感
-- **纯黑模式**: AMOLED 屏幕省电首选
-
-## 编译运行
+## 构建
 
 ```bash
 # 克隆项目
 git clone https://github.com/HuZaiGong/flowreader.git
 
-# 打开 Android Studio
-# 等待 Gradle 同步完成
-# 运行到模拟器或设备
+# 构建 Debug APK
+./gradlew assembleDebug
+
+# 构建 Release APK
+./gradlew assembleRelease
 ```
 
 ## 要求
@@ -98,6 +104,7 @@ git clone https://github.com/HuZaiGong/flowreader.git
 - Android SDK 34+
 - Kotlin 1.9+
 - Android Gradle Plugin 8.1+
+- JDK 17
 
 ## 许可证
 
