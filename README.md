@@ -48,6 +48,13 @@
 ### 💾 数据管理
 - 书籍和阅读进度备份
 - 从备份文件恢复数据
+- **云端同步**: 阅读进度、书签和设置多设备同步
+
+### 🔐 账户系统
+- 邮箱注册/登录
+- Google一键登录
+- 密码重置
+- 账户删除
 
 ### ⚙️ 个性化设置
 - 应用主题跟随系统
@@ -74,6 +81,7 @@
 | 图片加载 | Coil |
 | 异步 | Kotlin Coroutines + Flow |
 | 导航 | Navigation Compose |
+| 后端 | Firebase Auth + Firestore |
 
 ## 项目结构
 
@@ -137,6 +145,11 @@ git clone https://github.com/HuZaiGong/flowreader.git
 ## 更新日志
 
 ### v12.0.0
+- 新增账户系统（邮箱注册登录、Google登录）
+- 新增云端同步功能
+  - 阅读进度同步
+  - 书签同步
+  - 设置同步
 - 新增 Material You 动态颜色支持
 - 性能优化：启动速度、内存占用优化
 - 深色主题对比度优化
