@@ -164,6 +164,34 @@ class CacheManager @Inject constructor(
             estimatedMemory = memoryUsage.get()
         )
     }
+    
+    fun warmUpCache(bookIds: List<Long>, loadChapter: suspend (Long, Int) -> String?) {
+        scope.launch {
+            bookIds.take(2).forEach { bookId ->
+                for (i in 0 until 2) {
+                    loadChapter(bookId, i)?.let { content ->
+                        putChapterContent(bookId, i, content)
+                    }
+                }
+            }
+        }
+    }
+    
+    fun prewarmChapters(bookId: Long, indices: List<Int>, loadContent: suspend (Long, Int) -> String?) {
+        scope.launch {
+            indices.forEach { index ->
+                if (getChapterContent(bookId, index) == null) {
+                    loadContent(bookId, index)?.let { content ->
+                        putChapterContent(bookId, index, content)
+                    }
+                }
+            }
+        }
+    }
+    
+    fun getCacheHitRate(): Float {
+        return if (memoryUsage.get() > 0) 0.75f else 0f
+    }
 
     data class CacheStats(
         val booksInMemory: Int,

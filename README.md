@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-33.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-34.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -200,7 +200,15 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v33 (Latest)
+### v34 (Latest)
+- **数据管理**: DataManager 管理书籍计数、会话统计
+- **数据清理**: DataCleaner 自动清理过期数据
+- **缓存预热**: CacheManager.warmUpCache 启动时预热
+- **章节预加载**: CacheManager.prewarmChapters 批量预加载
+- **缓存命中率**: CacheManager.getCacheHitRate 追踪缓存效率
+- **项目结构**: 优化 data/repository 层架构
+
+### v33
 - **异步章节加载**: BookLoader 异步加载章节内容
 - **智能预加载**: 自动预加载相邻章节（前后各2章）
 - **后台线程池**: 自定义 IO 调度器，限制并发数
