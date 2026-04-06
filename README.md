@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-32.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-33.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -200,7 +200,15 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v32 (Latest)
+### v33 (Latest)
+- **异步章节加载**: BookLoader 异步加载章节内容
+- **智能预加载**: 自动预加载相邻章节（前后各2章）
+- **后台线程池**: 自定义 IO 调度器，限制并发数
+- **文本分页**: TextPaginator 实现内容分页
+- **内存缓存**: ChapterRepository 内存缓存 contentCache
+- **并发优化**: 多章节并行加载优化
+
+### v32
 - **R8 优化增强**: isMinifyEnabled + isShrinkResources 完整配置
 - **ProGuard 规则完善**: 涵盖 Room、Hilt、Readium、JSoup、Compose 等库
 - **布局优化**: 分析 ReaderContent、Settings、BookDetail 等页面布局

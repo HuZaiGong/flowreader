@@ -64,7 +64,8 @@ class ReaderViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val cacheManager: CacheManager,
-    private val memoryManager: MemoryManager
+    private val memoryManager: MemoryManager,
+    private val bookLoader: com.flowreader.app.util.BookLoader
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
@@ -280,6 +281,18 @@ class ReaderViewModel @Inject constructor(
             }
             
             calculateReadingPrediction()
+            preloadAdjacentChapters(index, state.chapters.size)
+        }
+    }
+    
+    private fun preloadAdjacentChapters(currentIndex: Int, totalChapters: Int) {
+        viewModelScope.launch {
+            bookLoader.preloadChapters(
+                bookId = bookId,
+                currentIndex = currentIndex,
+                totalChapters = totalChapters,
+                loadContent = { bid, idx -> chapterRepository.getChapterContent(bid, idx) }
+            )
         }
     }
 
