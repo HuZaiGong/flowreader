@@ -3,6 +3,7 @@ package com.flowreader.app.di
 import android.content.Context
 import androidx.room.Room
 import com.flowreader.app.data.local.AppDatabase
+import com.flowreader.app.data.local.dao.AnnotationDao
 import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.dao.BookmarkDao
 import com.flowreader.app.data.local.dao.CategoryDao
@@ -46,6 +47,10 @@ object DatabaseModule {
 
     @Provides
     @Singleton
+    fun provideAnnotationDao(database: AppDatabase): AnnotationDao = database.annotationDao()
+
+    @Provides
+    @Singleton
     fun provideCategoryDao(database: AppDatabase): CategoryDao = database.categoryDao()
 
     @Provides
@@ -68,6 +73,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindBookmarkRepository(impl: BookmarkRepositoryImpl): BookmarkRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAnnotationRepository(impl: AnnotationRepositoryImpl): AnnotationRepository
 
     @Binds
     @Singleton

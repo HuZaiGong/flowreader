@@ -2,6 +2,7 @@
 
 package com.flowreader.app.ui.screens.reader
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -12,6 +13,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -43,7 +45,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.flowreader.app.domain.model.*
+import com.flowreader.app.domain.model.Annotation
+import com.flowreader.app.domain.model.AnnotationColor
+import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.BookFormat
+import com.flowreader.app.domain.model.Bookmark
+import com.flowreader.app.domain.model.Chapter
+import com.flowreader.app.domain.model.PageMode
+import com.flowreader.app.domain.model.ReaderTheme
+import com.flowreader.app.domain.model.ReadingSettings
 import com.flowreader.app.ui.theme.ReaderColors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -134,7 +144,10 @@ fun ReaderScreen(
                                 else -> viewModel.toggleControls()
                             }
                         },
-                        onPositionChanged = { viewModel.updatePosition(it) }
+                        onPositionChanged = { viewModel.updatePosition(it) },
+                        onTextSelected = { text, start, end ->
+                            viewModel.addAnnotation(text, start, end)
+                        }
                     )
                 }
             }
@@ -157,6 +170,8 @@ fun ReaderScreen(
                         val text = uiState.currentChapter?.content?.take(50) ?: ""
                         viewModel.addBookmark(text)
                     },
+                    onAnnotationClick = { viewModel.showAnnotations(true) },
+                    onShareClick = { viewModel.shareProgress() },
                     onProgressChange = { progress ->
                         val chapterIndex = (progress * uiState.chapters.size).toInt().coerceIn(0, uiState.chapters.size - 1)
                         viewModel.goToChapter(chapterIndex)
@@ -200,6 +215,29 @@ fun ReaderScreen(
                     backgroundColor = backgroundColor
                 )
             }
+
+            if (uiState.showAnnotations) {
+                AnnotationsDialog(
+                    annotations = uiState.annotations.filter { it.chapterIndex == uiState.currentChapterIndex },
+                    onAnnotationSelect = { viewModel.goToChapter(it.chapterIndex) },
+                    onAnnotationDelete = { viewModel.deleteAnnotation(it.id) },
+                    onAnnotationNoteUpdate = { id, note -> viewModel.updateAnnotationNote(id, note) },
+                    onDismiss = { viewModel.showAnnotations(false) },
+                    textColor = textColor,
+                    backgroundColor = backgroundColor
+                )
+            }
+
+            uiState.shareText?.let { shareText ->
+                ShareProgressDialog(
+                    shareText = shareText,
+                    onDismiss = { viewModel.clearShareText() },
+                    onShare = { intent ->
+                        context.startActivity(intent)
+                        viewModel.clearShareText()
+                    }
+                )
+            }
         }
     }
 }
@@ -212,8 +250,14 @@ private fun ReaderContent(
     backgroundColor: Color,
     scrollState: ScrollState,
     onTap: (offset: androidx.compose.ui.geometry.Offset, size: androidx.compose.ui.geometry.Size) -> Unit,
-    onPositionChanged: (Int) -> Unit
+    onPositionChanged: (Int) -> Unit,
+    onTextSelected: (String, Int, Int) -> Unit = { _, _, _ -> }
 ) {
+    var showHighlightMenu by remember { mutableStateOf(false) }
+    var selectedText by remember { mutableStateOf("") }
+    var selectionStart by remember { mutableIntStateOf(0) }
+    var selectionEnd by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(scrollState.value) {
         onPositionChanged(scrollState.value)
     }
@@ -231,6 +275,9 @@ private fun ReaderContent(
                                 size.height.toFloat()
                             )
                         )
+                    },
+                    onLongPress = { offset ->
+                        showHighlightMenu = true
                     }
                 )
             }
@@ -244,8 +291,7 @@ private fun ReaderContent(
                     .verticalScroll(scrollState)
                     .padding(
                         horizontal = 20.dp,
-                        vertical = 80.dp
-                    )
+                        vertical = 80.dp)
             ) {
                 Text(
                     text = chapter.title,
@@ -258,7 +304,7 @@ private fun ReaderContent(
                 )
 
                 val paragraphs = chapter.content.split("\n\n")
-                paragraphs.forEach { paragraph ->
+                paragraphs.forEachIndexed { index, paragraph ->
                     if (paragraph.isNotBlank()) {
                         Text(
                             text = paragraph.trim(),
@@ -268,12 +314,96 @@ private fun ReaderContent(
                                 textAlign = TextAlign.Justify
                             ),
                             color = textColor,
-                            modifier = Modifier.padding(bottom = settings.paragraphSpacing.toInt().dp)
+                            modifier = Modifier
+                                .padding(bottom = settings.paragraphSpacing.toInt().dp)
+                                .combinedClickable(
+                                    onClick = { },
+                                    onLongClick = {
+                                        selectedText = paragraph.trim().take(100)
+                                        selectionStart = 0
+                                        selectionEnd = selectedText.length
+                                        showHighlightMenu = true
+                                    }
+                                )
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(100.dp))
+            }
+        }
+
+        if (showHighlightMenu) {
+            HighlightMenu(
+                onDismiss = { showHighlightMenu = false },
+                onHighlight = { color ->
+                    onTextSelected(selectedText, selectionStart, selectionEnd)
+                    showHighlightMenu = false
+                },
+                textColor = textColor,
+                backgroundColor = backgroundColor
+            )
+        }
+    }
+}
+
+@Composable
+private fun HighlightMenu(
+    onDismiss: () -> Unit,
+    onHighlight: (AnnotationColor) -> Unit,
+    textColor: Color,
+    backgroundColor: Color
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onDismiss() })
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = backgroundColor.copy(alpha = 0.95f),
+            shadowElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "添加高亮",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = textColor,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    AnnotationColor.entries.forEach { color ->
+                        IconButton(
+                            onClick = { onHighlight(color) },
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    Color(color.colorValue),
+                                    RoundedCornerShape(8.dp)
+                                )
+                        ) {
+                            Icon(
+                                Icons.Default.Check,
+                                contentDescription = color.name,
+                                tint = Color.Black
+                            )
+                        }
+                    }
+                }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    Text("取消", color = textColor)
+                }
             }
         }
     }
@@ -290,6 +420,8 @@ private fun ReaderControls(
     onSettingsClick: () -> Unit,
     onBookmarkClick: () -> Unit,
     onAddBookmark: () -> Unit,
+    onAnnotationClick: () -> Unit,
+    onShareClick: () -> Unit,
     onProgressChange: (Float) -> Unit,
     textColor: Color,
     backgroundColor: Color
@@ -331,6 +463,12 @@ private fun ReaderControls(
                 IconButton(onClick = onAddBookmark) {
                     Icon(Icons.Default.BookmarkBorder, contentDescription = "添加书签", tint = textColor)
                 }
+                IconButton(onClick = onAnnotationClick) {
+                    Icon(Icons.Default.Highlight, contentDescription = "高亮/笔记", tint = textColor)
+                }
+                IconButton(onClick = onShareClick) {
+                    Icon(Icons.Default.Share, contentDescription = "分享进度", tint = textColor)
+                }
                 IconButton(onClick = onSettingsClick) {
                     Icon(Icons.Default.Settings, contentDescription = "设置", tint = textColor)
                 }
@@ -364,15 +502,25 @@ private fun ReaderControls(
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "$currentChapter / $totalChapters",
                         style = MaterialTheme.typography.bodySmall,
                         color = textColor.copy(alpha = 0.7f)
                     )
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 12.dp)
+                            .height(4.dp),
+                        color = textColor,
+                        trackColor = textColor.copy(alpha = 0.2f)
+                    )
                     Text(
-                        text = "${(progress * 100).toInt()}%",
+                        text = "${String.format("%.1f", progress * 100)}%",
                         style = MaterialTheme.typography.bodySmall,
                         color = textColor.copy(alpha = 0.7f)
                     )
@@ -676,4 +824,153 @@ private fun PdfViewer(
             )
         }
     }
+}
+
+@Composable
+private fun AnnotationsDialog(
+    annotations: List<Annotation>,
+    onAnnotationSelect: (Annotation) -> Unit,
+    onAnnotationDelete: (Annotation) -> Unit,
+    onAnnotationNoteUpdate: (Long, String) -> Unit,
+    onDismiss: () -> Unit,
+    textColor: Color,
+    backgroundColor: Color
+) {
+    var editingNoteId by remember { mutableStateOf<Long?>(null) }
+    var editingNoteText by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("高亮与笔记") },
+        text = {
+            if (annotations.isEmpty()) {
+                Text("暂无高亮或笔记\n\n选中文字后点击高亮按钮添加")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.heightIn(max = 400.dp)
+                ) {
+                    items(annotations.size) { index ->
+                        val annotation = annotations[index]
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = annotation.selectedText,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            },
+                            supportingContent = {
+                                if (annotation.note.isNotBlank()) {
+                                    Text(
+                                        text = "笔记: ${annotation.note}",
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            },
+                            leadingContent = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .background(
+                                            Color(annotation.color.colorValue),
+                                            RoundedCornerShape(4.dp)
+                                        )
+                                )
+                            },
+                            trailingContent = {
+                                Row {
+                                    IconButton(onClick = {
+                                        editingNoteId = annotation.id
+                                        editingNoteText = annotation.note
+                                    }) {
+                                        Icon(Icons.Default.Edit, contentDescription = "编辑笔记")
+                                    }
+                                    IconButton(onClick = { onAnnotationDelete(annotation) }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "删除")
+                                    }
+                                }
+                            },
+                            modifier = Modifier.clickable { onAnnotationSelect(annotation) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        }
+    )
+
+    if (editingNoteId != null) {
+        AlertDialog(
+            onDismissRequest = { editingNoteId = null },
+            title = { Text("编辑笔记") },
+            text = {
+                OutlinedTextField(
+                    value = editingNoteText,
+                    onValueChange = { editingNoteText = it },
+                    label = { Text("笔记内容") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 5
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    editingNoteId?.let { id ->
+                        onAnnotationNoteUpdate(id, editingNoteText)
+                    }
+                    editingNoteId = null
+                }) {
+                    Text("保存")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingNoteId = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ShareProgressDialog(
+    shareText: String,
+    onDismiss: () -> Unit,
+    onShare: (Intent) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("分享阅读进度") },
+        text = {
+            Column {
+                Text(
+                    text = shareText,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val sendIntent = Intent().apply {
+                    action = Intent.ACTION_SEND
+                    putExtra(Intent.EXTRA_TEXT, shareText)
+                    type = "text/plain"
+                }
+                val shareIntent = Intent.createChooser(sendIntent, "分享到")
+                onShare(shareIntent)
+            }) {
+                Text("分享")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
 }

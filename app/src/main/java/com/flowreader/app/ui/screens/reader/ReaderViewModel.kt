@@ -3,7 +3,16 @@ package com.flowreader.app.ui.screens.reader
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.flowreader.app.domain.model.*
+import com.flowreader.app.domain.model.Annotation
+import com.flowreader.app.domain.model.AnnotationColor
+import com.flowreader.app.domain.model.AnnotationType
+import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.Bookmark
+import com.flowreader.app.domain.model.Chapter
+import com.flowreader.app.domain.model.PageMode
+import com.flowreader.app.domain.model.ReaderTheme
+import com.flowreader.app.domain.model.ReadingSettings
+import com.flowreader.app.domain.repository.AnnotationRepository
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
@@ -24,13 +33,16 @@ data class ReaderUiState(
     val currentPosition: Int = 0,
     val readingSettings: ReadingSettings = ReadingSettings(),
     val bookmarks: List<Bookmark> = emptyList(),
+    val annotations: List<Annotation> = emptyList(),
     val showControls: Boolean = true,
     val showChapterList: Boolean = false,
     val showSettings: Boolean = false,
     val showBookmarks: Boolean = false,
+    val showAnnotations: Boolean = false,
     val isLoading: Boolean = true,
     val todayReadTime: Long = 0,
-    val todayReadPages: Int = 0
+    val todayReadPages: Int = 0,
+    val shareText: String? = null
 )
 
 @HiltViewModel
@@ -39,6 +51,7 @@ class ReaderViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val chapterRepository: ChapterRepository,
     private val bookmarkRepository: BookmarkRepository,
+    private val annotationRepository: AnnotationRepository,
     private val settingsRepository: SettingsRepository,
     private val readingStatsRepository: ReadingStatsRepository
 ) : ViewModel() {
@@ -131,6 +144,7 @@ class ReaderViewModel @Inject constructor(
             val book = bookRepository.getBookById(bookId)
             val chapters = chapterRepository.getChaptersListByBookId(bookId)
             val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
+            val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
 
             if (book != null && chapters.isNotEmpty()) {
                 val currentChapterIndex = book.currentChapter.coerceIn(0, chapters.size - 1)
@@ -144,6 +158,7 @@ class ReaderViewModel @Inject constructor(
                         currentChapterIndex = currentChapterIndex,
                         currentPosition = book.currentPosition,
                         bookmarks = bookmarks,
+                        annotations = annotations,
                         isLoading = false
                     )
                 }
@@ -278,5 +293,76 @@ class ReaderViewModel @Inject constructor(
 
     fun goToBookmark(bookmark: Bookmark) {
         goToChapter(bookmark.chapterIndex)
+    }
+
+    fun addAnnotation(
+        selectedText: String,
+        startPosition: Int,
+        endPosition: Int,
+        note: String = "",
+        color: AnnotationColor = AnnotationColor.YELLOW,
+        type: AnnotationType = AnnotationType.HIGHLIGHT
+    ) {
+        val state = _uiState.value
+        val annotation = Annotation(
+            bookId = bookId,
+            chapterIndex = state.currentChapterIndex,
+            startPosition = startPosition,
+            endPosition = endPosition,
+            selectedText = selectedText,
+            note = note,
+            color = color,
+            type = type
+        )
+
+        viewModelScope.launch {
+            annotationRepository.insertAnnotation(annotation)
+            val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
+            _uiState.update { it.copy(annotations = annotations) }
+        }
+    }
+
+    fun updateAnnotationNote(annotationId: Long, note: String) {
+        viewModelScope.launch {
+            val annotation = annotationRepository.getAnnotationById(annotationId)
+            annotation?.let {
+                annotationRepository.updateAnnotation(it.copy(note = note, modifiedTime = java.util.Date()))
+                val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
+                _uiState.update { it.copy(annotations = annotations) }
+            }
+        }
+    }
+
+    fun deleteAnnotation(annotationId: Long) {
+        viewModelScope.launch {
+            annotationRepository.deleteAnnotationById(annotationId)
+            val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
+            _uiState.update { it.copy(annotations = annotations) }
+        }
+    }
+
+    fun showAnnotations(show: Boolean) {
+        _uiState.update { it.copy(showAnnotations = show, showControls = !show) }
+    }
+
+    fun shareProgress() {
+        val state = _uiState.value
+        val book = state.book ?: return
+        val progress = if (state.chapters.isNotEmpty()) {
+            (state.currentChapterIndex + 1).toFloat() / state.chapters.size
+        } else 0f
+
+        val shareText = buildString {
+            append("📖 《${book.title}》\n")
+            append("📑 当前章节: ${state.currentChapter?.title ?: "未知"}\n")
+            append("📊 阅读进度: ${String.format("%.1f", progress * 100)}%\n")
+            append("🔖 第${state.currentChapterIndex + 1}章/共${state.chapters.size}章\n")
+            append("\n来自心流阅读")
+        }
+        _uiState.update { it.copy(shareText = shareText) }
+    }
+
+    fun clearShareText() {
+        _uiState.update { it.copy(shareText = null) }
     }
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -21,9 +22,11 @@ import com.flowreader.app.ui.screens.bookdetail.BookDetailScreen
 import com.flowreader.app.ui.screens.library.LibraryScreen
 import com.flowreader.app.ui.screens.reader.ReaderScreen
 import com.flowreader.app.ui.screens.settings.SettingsScreen
+import com.flowreader.app.ui.screens.stats.StatsScreen
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
     object Library : Screen("library", "书架", Icons.Default.LibraryBooks)
+    object Stats : Screen("stats", "统计", Icons.Default.BarChart)
     object BookDetail : Screen("book_detail/{bookId}", "书籍详情") {
         fun createRoute(bookId: Long) = "book_detail/$bookId"
     }
@@ -33,7 +36,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object Settings : Screen("settings", "设置", Icons.Default.Settings)
 }
 
-private val bottomNavItems = listOf(Screen.Library, Screen.Settings)
+private val bottomNavItems = listOf(Screen.Library, Screen.Stats, Screen.Settings)
 
 @Composable
 fun FlowReaderNavHost() {
@@ -82,6 +85,12 @@ fun FlowReaderNavHost() {
                     onSettingsClick = {
                         navController.navigate(Screen.Settings.route)
                     }
+                )
+            }
+
+            composable(Screen.Stats.route) {
+                StatsScreen(
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 

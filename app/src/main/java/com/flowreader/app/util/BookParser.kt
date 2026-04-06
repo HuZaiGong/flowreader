@@ -52,9 +52,18 @@ class BookParser @Inject constructor(
             val fileSize = getFileSize(uri)
 
             when (format) {
-                BookFormat.EPUB -> parseEpubStream(inputStream, fileName, fileSize)
+                BookFormat.EPUB -> {
+                    val coverInputStream = context.contentResolver.openInputStream(uri)
+                        ?: inputStream
+                    val coverPath = extractEpubCover(coverInputStream, fileName.removeSuffix(".epub"))
+                    val result = parseEpubStream(inputStream, fileName, fileSize)
+                    result.map { it.copy(book = it.book.copy(coverPath = coverPath)) }
+                }
                 BookFormat.TXT -> parseTxtStream(inputStream, fileName, fileSize)
-                BookFormat.PDF -> parsePdfStream(uri, fileName, fileSize)
+                BookFormat.PDF -> {
+                    val result = parsePdfStream(uri, fileName, fileSize)
+                    result.map { it.copy(book = it.book.copy(coverPath = extractPdfCover(uri))) }
+                }
                 else -> Result.failure(Exception("不支持的格式: $format"))
             }
         } catch (e: Exception) {
@@ -187,6 +196,90 @@ class BookParser @Inject constructor(
             )
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private fun extractEpubCover(inputStream: InputStream, bookTitle: String): String? {
+        return try {
+            val tempFile = File(context.cacheDir, "temp_epub_${System.currentTimeMillis()}.zip")
+            inputStream.use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            ZipInputStream(FileInputStream(tempFile)).use { zipInput ->
+                var entry = zipInput.nextEntry
+                var coverImage: ByteArray? = null
+                var coverName: String? = null
+
+                while (entry != null) {
+                    val lowerName = entry.name.lowercase()
+                    if (lowerName.contains("cover") && (lowerName.endsWith(".jpg") || lowerName.endsWith(".png") || lowerName.endsWith(".jpeg"))) {
+                        coverImage = zipInput.readBytes()
+                        coverName = entry.name
+                        entry = zipInput.nextEntry
+                    } else if (lowerName.endsWith(".opf")) {
+                        val opfContent = zipInput.bufferedReader().readText()
+                        val coverMeta = Regex("item[^>]*href=\"([^\"]+cover[^\"]*\\.(jpg|png|jpeg))\"", RegexOption.IGNORE_CASE)
+                            .find(opfContent)
+                        if (coverMeta != null) {
+                            val coverPath = coverMeta.groupValues[1]
+                            val zip = java.util.zip.ZipFile(tempFile)
+                            val coverEntry = zip.getEntry(coverPath)
+                            if (coverEntry != null) {
+                                coverImage = zip.getInputStream(coverEntry).readBytes()
+                            }
+                            zip.close()
+                        }
+                    }
+                    entry = zipInput.nextEntry
+                }
+
+                if (tempFile.exists()) {
+                    tempFile.delete()
+                }
+
+                coverImage?.let { saveCoverImage(it, bookTitle) }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun extractPdfCover(uri: Uri): String? {
+        return try {
+            context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                PdfRenderer(pfd).use { renderer ->
+                    if (renderer.pageCount > 0) {
+                        renderer.openPage(0).use { page ->
+                            val bitmap = Bitmap.createBitmap(
+                                page.width * 2,
+                                page.height * 2,
+                                Bitmap.Config.ARGB_8888
+                            )
+                            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+
+                            val coversDir = File(context.filesDir, "covers")
+                            if (!coversDir.exists()) {
+                                coversDir.mkdirs()
+                            }
+
+                            val fileName = "pdf_cover_${System.currentTimeMillis()}.jpg"
+                            val file = File(coversDir, fileName)
+
+                            FileOutputStream(file).use { fos ->
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, fos)
+                            }
+
+                            bitmap.recycle()
+                            file.absolutePath
+                        }
+                    } else null
+                }
+            }
+        } catch (e: Exception) {
+            null
         }
     }
 

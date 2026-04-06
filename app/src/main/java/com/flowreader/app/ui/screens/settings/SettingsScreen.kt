@@ -27,6 +27,7 @@ fun SettingsScreen(
     var showFontSizeDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showReadingGoalDialog by remember { mutableStateOf(false) }
+    var showGestureDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -95,6 +96,13 @@ fun SettingsScreen(
                     title = "字体大小",
                     subtitle = "${uiState.readingSettings.fontSize}sp",
                     onClick = { showFontSizeDialog = true }
+                )
+
+                SettingsItem(
+                    icon = Icons.Default.Gesture,
+                    title = "手势自定义",
+                    subtitle = "配置阅读手势",
+                    onClick = { showGestureDialog = true }
                 )
 
                 SettingsItem(
@@ -201,6 +209,16 @@ fun SettingsScreen(
                 viewModel.updateFontSize(it)
             },
             onDismiss = { showFontSizeDialog = false }
+        )
+    }
+
+    if (showGestureDialog) {
+        GestureSettingsDialog(
+            gestureSettings = uiState.readingSettings.gestureSettings,
+            onGestureChange = { gestureSettings ->
+                viewModel.updateGestureSettings(gestureSettings)
+            },
+            onDismiss = { showGestureDialog = false }
         )
     }
 }
@@ -501,4 +519,131 @@ private fun AboutDialog(onDismiss: () -> Unit) {
             }
         }
     )
+}
+
+@Composable
+private fun GestureSettingsDialog(
+    gestureSettings: GestureSettings,
+    onGestureChange: (GestureSettings) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var localSettings by remember { mutableStateOf(gestureSettings) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("手势自定义") },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                GestureRow(
+                    label = "左侧点击",
+                    value = localSettings.leftTapAction,
+                    onValueChange = { localSettings = localSettings.copy(leftTapAction = it) }
+                )
+                GestureRow(
+                    label = "中间点击",
+                    value = localSettings.middleTapAction,
+                    onValueChange = { localSettings = localSettings.copy(middleTapAction = it) }
+                )
+                GestureRow(
+                    label = "右侧点击",
+                    value = localSettings.rightTapAction,
+                    onValueChange = { localSettings = localSettings.copy(rightTapAction = it) }
+                )
+                GestureRow(
+                    label = "左滑",
+                    value = localSettings.swipeLeftAction,
+                    onValueChange = { localSettings = localSettings.copy(swipeLeftAction = it) }
+                )
+                GestureRow(
+                    label = "右滑",
+                    value = localSettings.swipeRightAction,
+                    onValueChange = { localSettings = localSettings.copy(swipeRightAction = it) }
+                )
+                GestureRow(
+                    label = "双击",
+                    value = localSettings.doubleTapAction,
+                    onValueChange = { localSettings = localSettings.copy(doubleTapAction = it) }
+                )
+                GestureRow(
+                    label = "长按",
+                    value = localSettings.longPressAction,
+                    onValueChange = { localSettings = localSettings.copy(longPressAction = it) }
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("边缘手势")
+                    Switch(
+                        checked = localSettings.edgeGestureEnabled,
+                        onCheckedChange = { localSettings = localSettings.copy(edgeGestureEnabled = it) }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                onGestureChange(localSettings)
+                onDismiss()
+            }) {
+                Text("确定")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        }
+    )
+}
+
+@Composable
+private fun GestureRow(
+    label: String,
+    value: GestureAction,
+    onValueChange: (GestureAction) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        var expanded by remember { mutableStateOf(false) }
+        Box {
+            TextButton(onClick = { expanded = true }) {
+                Text(getGestureActionName(value))
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                GestureAction.entries.forEach { action ->
+                    DropdownMenuItem(
+                        text = { Text(getGestureActionName(action)) },
+                        onClick = {
+                            onValueChange(action)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun getGestureActionName(action: GestureAction): String = when (action) {
+    GestureAction.PREVIOUS_PAGE -> "上一页"
+    GestureAction.NEXT_PAGE -> "下一页"
+    GestureAction.TOGGLE_CONTROLS -> "显示/隐藏控制栏"
+    GestureAction.SHOW_SETTINGS -> "显示设置"
+    GestureAction.SHOW_BOOKMARKS -> "显示书签"
+    GestureAction.SHOW_TOC -> "显示目录"
+    GestureAction.ADD_BOOKMARK -> "添加书签"
+    GestureAction.NONE -> "无"
 }

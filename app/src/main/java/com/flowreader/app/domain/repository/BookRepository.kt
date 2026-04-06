@@ -1,5 +1,6 @@
 package com.flowreader.app.domain.repository
 
+import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Category
@@ -40,6 +41,20 @@ interface BookmarkRepository {
     suspend fun deleteBookmark(bookmark: Bookmark)
     suspend fun deleteBookmarkById(id: Long)
     suspend fun deleteBookmarksByBookId(bookId: Long)
+}
+
+interface AnnotationRepository {
+    fun getAnnotationsByBookId(bookId: Long): Flow<List<Annotation>>
+    suspend fun getAnnotationsListByBookId(bookId: Long): List<Annotation>
+    fun getAnnotationsByChapter(bookId: Long, chapterIndex: Int): Flow<List<Annotation>>
+    suspend fun getAnnotationsListByChapter(bookId: Long, chapterIndex: Int): List<Annotation>
+    suspend fun getAnnotationById(id: Long): Annotation?
+    suspend fun insertAnnotation(annotation: Annotation): Long
+    suspend fun updateAnnotation(annotation: Annotation)
+    suspend fun deleteAnnotation(annotation: Annotation)
+    suspend fun deleteAnnotationById(id: Long)
+    suspend fun deleteAnnotationsByBookId(bookId: Long)
+    suspend fun searchAnnotations(bookId: Long, query: String): List<Annotation>
 }
 
 interface CategoryRepository {

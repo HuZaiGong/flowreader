@@ -170,4 +170,11 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.updateDailyReadingGoal(minutes)
         }
     }
+
+    fun updateGestureSettings(gestureSettings: GestureSettings) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateReadingSettings(currentSettings.copy(gestureSettings = gestureSettings))
+        }
+    }
 }
