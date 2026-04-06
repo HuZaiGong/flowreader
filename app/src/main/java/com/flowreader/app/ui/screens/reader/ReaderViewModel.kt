@@ -18,12 +18,15 @@ import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingStatsRepository
 import com.flowreader.app.data.repository.SettingsRepository
+import com.flowreader.app.util.CacheManager
+import com.flowreader.app.util.MemoryManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.roundToInt
 
 data class ReaderUiState(
     val book: Book? = null,
@@ -42,7 +45,13 @@ data class ReaderUiState(
     val isLoading: Boolean = true,
     val todayReadTime: Long = 0,
     val todayReadPages: Int = 0,
-    val shareText: String? = null
+    val shareText: String? = null,
+    val estimatedTimeRemaining: Long = 0,
+    val readingSpeed: Float = 0f,
+    val sessionReadTime: Long = 0,
+    val showEyeProtectionReminder: Boolean = false,
+    val dailyGoalProgress: Float = 0f,
+    val suggestedBreakTime: Long = 0
 )
 
 @HiltViewModel
@@ -54,8 +63,8 @@ class ReaderViewModel @Inject constructor(
     private val annotationRepository: AnnotationRepository,
     private val settingsRepository: SettingsRepository,
     private val readingStatsRepository: ReadingStatsRepository,
-    private val cacheManager: com.flowreader.app.util.CacheManager,
-    private val memoryManager: com.flowreader.app.util.MemoryManager
+    private val cacheManager: CacheManager,
+    private val memoryManager: MemoryManager
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
@@ -65,23 +74,39 @@ class ReaderViewModel @Inject constructor(
 
     private var progressSaveJob: Job? = null
     private var statsUpdateJob: Job? = null
+    private var eyeProtectionJob: Job? = null
+    private var predictionJob: Job? = null
     private val progressDebounceMs = 3000L
-
+    
     private var sessionStartTime: Long = 0
     private var sessionReadPages: Int = 0
+    private var sessionCharactersRead: Int = 0
+    private var lastPositionUpdateTime: Long = 0
+    private var lastPosition: Int = 0
+    
+    private val eyeProtectionIntervalMs = 20 * 60 * 1000L
+    private val defaultDailyGoalMinutes = 30
 
     init {
         loadBook()
         loadSettings()
         loadTodayStats()
+        startEyeProtectionTimer()
     }
 
     private fun loadTodayStats() {
         viewModelScope.launch {
             val readTime = readingStatsRepository.getTodayReadTime()
             val readPages = readingStatsRepository.getTodayReadPages()
+            val dailyGoal = settingsRepository.getDailyReadingGoal().first()
+            val goalProgress = if (dailyGoal > 0) (readTime.toFloat() / (dailyGoal * 60)).coerceIn(0f, 1f) else 0f
+            
             _uiState.update {
-                it.copy(todayReadTime = readTime, todayReadPages = readPages)
+                it.copy(
+                    todayReadTime = readTime, 
+                    todayReadPages = readPages,
+                    dailyGoalProgress = goalProgress
+                )
             }
         }
     }
@@ -89,6 +114,8 @@ class ReaderViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         progressSaveJob?.cancel()
+        eyeProtectionJob?.cancel()
+        predictionJob?.cancel()
         saveProgressImmediately()
         saveReadingStats()
     }
@@ -157,6 +184,9 @@ class ReaderViewModel @Inject constructor(
                     meta.copy(content = content)
                 }
 
+                sessionStartTime = System.currentTimeMillis()
+                lastPositionUpdateTime = sessionStartTime
+
                 _uiState.update {
                     it.copy(
                         book = book,
@@ -169,6 +199,8 @@ class ReaderViewModel @Inject constructor(
                         isLoading = false
                     )
                 }
+                
+                calculateReadingPrediction()
             } else {
                 _uiState.update { it.copy(isLoading = false) }
             }
@@ -246,163 +278,230 @@ class ReaderViewModel @Inject constructor(
                     showChapterList = false
                 )
             }
+            
+            calculateReadingPrediction()
         }
     }
 
     fun updatePosition(position: Int) {
+        val state = _uiState.value
+        val now = System.currentTimeMillis()
+        
+        if (lastPositionUpdateTime > 0) {
+            val timeDelta = now - lastPositionUpdateTime
+            val positionDelta = position - lastPosition
+            
+            if (timeDelta > 0 && positionDelta > 0) {
+                val charsPerSecond = positionDelta.toFloat() / (timeDelta / 1000f)
+                val charsPerMinute = charsPerSecond * 60
+                
+                val currentSpeed = state.readingSpeed
+                val alpha = 0.3f
+                val newSpeed = if (currentSpeed > 0) {
+                    alpha * charsPerMinute + (1 - alpha) * currentSpeed
+                } else {
+                    charsPerMinute
+                }
+                
+                _uiState.update { it.copy(readingSpeed = newSpeed) }
+            }
+        }
+        
+        lastPositionUpdateTime = now
+        lastPosition = position
+        
+        sessionCharactersRead += position
+        
+        val progress = if (state.chapters.isNotEmpty()) {
+            (state.currentChapterIndex.toFloat() + position.toFloat() / state.chapters.getOrNull(state.currentChapterIndex)?.content?.length?.coerceAtLeast(1)!!) / state.chapters.size
+        } else 0f
+
         _uiState.update { it.copy(currentPosition = position) }
+        debouncedSaveProgress(state.currentChapterIndex, position, progress)
+        
+        calculateReadingPrediction()
+    }
 
-        val state = _uiState.value
-        if (state.chapters.isNotEmpty()) {
-            val progress = (state.currentChapterIndex.toFloat() + 1) / state.chapters.size
-            debouncedSaveProgress(state.currentChapterIndex, position, progress)
+    private fun calculateReadingPrediction() {
+        predictionJob?.cancel()
+        predictionJob = viewModelScope.launch {
+            val state = _uiState.value
+            
+            var remainingChars = 0
+            for (i in state.currentChapterIndex until state.chapters.size) {
+                val chapter = state.chapters.getOrNull(i) ?: continue
+                if (i == state.currentChapterIndex) {
+                    remainingChars += (chapter.content.length - state.currentPosition).coerceAtLeast(0)
+                } else {
+                    remainingChars += chapter.content.length
+                }
+            }
+            
+            val speed = state.readingSpeed.coerceAtLeast(100f)
+            val estimatedMinutes = (remainingChars / speed).roundToInt()
+            val sessionTime = (System.currentTimeMillis() - sessionStartTime) / 1000 / 60
+            val suggestedBreakMinutes = if (sessionTime >= 45) 15 else if (sessionTime >= 30) 10 else 0
+            
+            _uiState.update {
+                it.copy(
+                    estimatedTimeRemaining = estimatedMinutes.toLong(),
+                    sessionReadTime = sessionTime,
+                    suggestedBreakTime = suggestedBreakMinutes.toLong()
+                )
+            }
         }
     }
 
-    fun toggleControls() {
-        _uiState.update { it.copy(showControls = !it.showControls) }
-    }
-
-    fun showChapterList(show: Boolean) {
-        _uiState.update { it.copy(showChapterList = show, showControls = !show) }
-    }
-
-    fun showSettings(show: Boolean) {
-        _uiState.update { it.copy(showSettings = show, showControls = !show) }
-    }
-
-    fun showBookmarks(show: Boolean) {
-        _uiState.update { it.copy(showBookmarks = show, showControls = !show) }
-    }
-
-    fun updateFontSize(size: Int) {
-        _uiState.update {
-            it.copy(readingSettings = it.readingSettings.copy(fontSize = size))
-        }
-        viewModelScope.launch {
-            settingsRepository.updateFontSize(size)
+    private fun startEyeProtectionTimer() {
+        eyeProtectionJob?.cancel()
+        eyeProtectionJob = viewModelScope.launch {
+            while (true) {
+                delay(eyeProtectionIntervalMs)
+                _uiState.update { it.copy(showEyeProtectionReminder = true) }
+            }
         }
     }
 
-    fun updateLineSpacing(spacing: Float) {
-        _uiState.update {
-            it.copy(readingSettings = it.readingSettings.copy(lineSpacing = spacing))
-        }
-        viewModelScope.launch {
-            settingsRepository.updateLineSpacing(spacing)
-        }
-    }
-
-    fun updateReaderTheme(theme: ReaderTheme) {
-        _uiState.update {
-            it.copy(readingSettings = it.readingSettings.copy(theme = theme))
-        }
-        viewModelScope.launch {
-            settingsRepository.updateReaderTheme(theme)
-        }
-    }
-
-    fun updatePageMode(mode: PageMode) {
-        _uiState.update {
-            it.copy(readingSettings = it.readingSettings.copy(pageMode = mode))
-        }
-        viewModelScope.launch {
-            settingsRepository.updatePageMode(mode)
-        }
-    }
-
-    fun addBookmark(text: String) {
-        val state = _uiState.value
-        val bookmark = Bookmark(
-            bookId = bookId,
-            chapterIndex = state.currentChapterIndex,
-            position = state.currentPosition,
-            text = text
-        )
-
-        viewModelScope.launch {
-            bookmarkRepository.insertBookmark(bookmark)
-            val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
-            _uiState.update { it.copy(bookmarks = bookmarks) }
-        }
-    }
-
-    fun deleteBookmark(bookmarkId: Long) {
-        viewModelScope.launch {
-            bookmarkRepository.deleteBookmarkById(bookmarkId)
-            val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
-            _uiState.update { it.copy(bookmarks = bookmarks) }
-        }
+    fun dismissEyeProtectionReminder() {
+        _uiState.update { it.copy(showEyeProtectionReminder = false) }
+        startEyeProtectionTimer()
     }
 
     fun goToBookmark(bookmark: Bookmark) {
         goToChapter(bookmark.chapterIndex)
     }
 
-    fun addAnnotation(
-        selectedText: String,
-        startPosition: Int,
-        endPosition: Int,
-        note: String = "",
-        color: AnnotationColor = AnnotationColor.YELLOW,
-        type: AnnotationType = AnnotationType.HIGHLIGHT
-    ) {
-        val state = _uiState.value
-        val annotation = Annotation(
-            bookId = bookId,
-            chapterIndex = state.currentChapterIndex,
-            startPosition = startPosition,
-            endPosition = endPosition,
-            selectedText = selectedText,
-            note = note,
-            color = color,
-            type = type
-        )
-
+    fun addBookmark(text: String) {
         viewModelScope.launch {
-            annotationRepository.insertAnnotation(annotation)
-            val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
-            _uiState.update { it.copy(annotations = annotations) }
+            val state = _uiState.value
+            val bookmark = Bookmark(
+                bookId = bookId,
+                chapterIndex = state.currentChapterIndex,
+                text = text,
+                position = state.currentPosition
+            )
+            bookmarkRepository.insertBookmark(bookmark)
+            _uiState.update { it.copy(bookmarks = it.bookmarks + bookmark) }
         }
     }
 
-    fun updateAnnotationNote(annotationId: Long, note: String) {
+    fun deleteBookmark(bookmark: Bookmark) {
         viewModelScope.launch {
-            val annotation = annotationRepository.getAnnotationById(annotationId)
+            bookmarkRepository.deleteBookmark(bookmark)
+            _uiState.update { it.copy(bookmarks = it.bookmarks.filter { it.id != bookmark.id }) }
+        }
+    }
+
+    fun addAnnotation(text: String, start: Int, end: Int) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val annotation = Annotation(
+                bookId = bookId,
+                chapterIndex = state.currentChapterIndex,
+                selectedText = text,
+                startPosition = start,
+                endPosition = end,
+                color = AnnotationColor.YELLOW,
+                note = ""
+            )
+            annotationRepository.insertAnnotation(annotation)
+            _uiState.update { it.copy(annotations = it.annotations + annotation) }
+        }
+    }
+
+    fun deleteAnnotation(annotation: Annotation) {
+        viewModelScope.launch {
+            annotationRepository.deleteAnnotation(annotation)
+            _uiState.update { it.copy(annotations = it.annotations.filter { it.id != annotation.id }) }
+        }
+    }
+
+    fun updateAnnotationNote(id: Long, note: String) {
+        viewModelScope.launch {
+            val annotation = _uiState.value.annotations.find { it.id == id }
             annotation?.let {
-                annotationRepository.updateAnnotation(it.copy(note = note, modifiedTime = java.util.Date()))
-                val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
-                _uiState.update { it.copy(annotations = annotations) }
+                annotationRepository.updateAnnotation(it.copy(note = note))
+                _uiState.update { state ->
+                    state.copy(
+                        annotations = state.annotations.map { a ->
+                            if (a.id == id) a.copy(note = note) else a
+                        }
+                    )
+                }
             }
         }
     }
 
-    fun deleteAnnotation(annotationId: Long) {
-        viewModelScope.launch {
-            annotationRepository.deleteAnnotationById(annotationId)
-            val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
-            _uiState.update { it.copy(annotations = annotations) }
-        }
+    fun showChapterList(show: Boolean) {
+        _uiState.update { it.copy(showChapterList = show) }
+    }
+
+    fun showSettings(show: Boolean) {
+        _uiState.update { it.copy(showSettings = show) }
+    }
+
+    fun showBookmarks(show: Boolean) {
+        _uiState.update { it.copy(showBookmarks = show) }
     }
 
     fun showAnnotations(show: Boolean) {
-        _uiState.update { it.copy(showAnnotations = show, showControls = !show) }
+        _uiState.update { it.copy(showAnnotations = show) }
+    }
+
+    fun toggleControls() {
+        _uiState.update { it.copy(showControls = !it.showControls) }
+    }
+
+    fun updateFontSize(size: Int) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            val newSettings = currentSettings.copy(fontSize = size)
+            settingsRepository.updateReadingSettings(newSettings)
+            _uiState.update { it.copy(readingSettings = newSettings) }
+        }
+    }
+
+    fun updateLineSpacing(spacing: Float) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            val newSettings = currentSettings.copy(lineSpacing = spacing)
+            settingsRepository.updateReadingSettings(newSettings)
+            _uiState.update { it.copy(readingSettings = newSettings) }
+        }
+    }
+
+    fun updateReaderTheme(theme: ReaderTheme) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            val newSettings = currentSettings.copy(theme = theme)
+            settingsRepository.updateReadingSettings(newSettings)
+            _uiState.update { it.copy(readingSettings = newSettings) }
+        }
+    }
+
+    fun updatePageMode(mode: PageMode) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            val newSettings = currentSettings.copy(pageMode = mode)
+            settingsRepository.updateReadingSettings(newSettings)
+            _uiState.update { it.copy(readingSettings = newSettings) }
+        }
     }
 
     fun shareProgress() {
         val state = _uiState.value
         val book = state.book ?: return
+        val chapter = state.currentChapter ?: return
+        
         val progress = if (state.chapters.isNotEmpty()) {
-            (state.currentChapterIndex + 1).toFloat() / state.chapters.size
-        } else 0f
+            ((state.currentChapterIndex + 1).toFloat() / state.chapters.size * 100).roundToInt()
+        } else 0
 
-        val shareText = buildString {
-            append("📖 《${book.title}》\n")
-            append("📑 当前章节: ${state.currentChapter?.title ?: "未知"}\n")
-            append("📊 阅读进度: ${String.format("%.1f", progress * 100)}%\n")
-            append("🔖 第${state.currentChapterIndex + 1}章/共${state.chapters.size}章\n")
-            append("\n来自心流阅读")
-        }
+        val shareText = "📚 正在阅读《${book.title}》\n" +
+                "第 ${state.currentChapterIndex + 1} 章：${chapter.title}\n" +
+                "进度：$progress%\n\n" +
+                "#心流阅读 #FlowReader"
+
         _uiState.update { it.copy(shareText = shareText) }
     }
 

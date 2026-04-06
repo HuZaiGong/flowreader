@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-28.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-29.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -198,7 +198,20 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v28 (Latest)
+### v29 (Latest)
+- **UI组件拆分重构**: ReaderScreen拆分为独立组件模块
+- **新增ReaderContent**: 独立的阅读内容渲染组件
+- **新增PdfViewer**: 独立的PDF渲染组件
+- **新增ReaderControls**: 独立的阅读控制栏组件
+- **新增Dialog组件**: 各对话框独立模块化
+- **智能阅读预测**: 基于阅读速度预测剩余阅读时间
+- **阅读速度跟踪**: 实时计算阅读速度(字/分钟)
+- **护眼提醒**: 每20分钟提醒用户休息眼睛
+- **阅读目标进度**: 显示每日阅读目标完成进度
+- **建议休息时间**: 根据阅读时长建议休息时间
+- **代码模块化**: 提升可维护性和可测试性
+
+### v28
 - **内存管理优化**: 新增MemoryManager，实时监控内存状态和压力级别
 - **智能缓存管理**: 新增CacheManager，实现LRU缓存和自动内存回收
 - **章节内容缓存**: 缓存已加载章节内容，减少重复数据库查询
