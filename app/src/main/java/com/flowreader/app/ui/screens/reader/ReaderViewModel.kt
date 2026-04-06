@@ -144,18 +144,21 @@ class ReaderViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true) }
 
             val book = bookRepository.getBookById(bookId)
-            val chapters = chapterRepository.getChaptersListByBookId(bookId)
+            val chapterMetadata = chapterRepository.getChapterMetadataList(bookId)
             val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
             val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
 
-            if (book != null && chapters.isNotEmpty()) {
-                val currentChapterIndex = book.currentChapter.coerceIn(0, chapters.size - 1)
-                val currentChapter = chapters.getOrNull(currentChapterIndex)
+            if (book != null && chapterMetadata.isNotEmpty()) {
+                val currentChapterIndex = book.currentChapter.coerceIn(0, chapterMetadata.size - 1)
+                val currentChapter = chapterMetadata.getOrNull(currentChapterIndex)?.let { meta ->
+                    val content = chapterRepository.getChapterContent(bookId, currentChapterIndex) ?: ""
+                    meta.copy(content = content)
+                }
 
                 _uiState.update {
                     it.copy(
                         book = book,
-                        chapters = chapters,
+                        chapters = chapterMetadata,
                         currentChapter = currentChapter,
                         currentChapterIndex = currentChapterIndex,
                         currentPosition = book.currentPosition,
@@ -166,6 +169,27 @@ class ReaderViewModel @Inject constructor(
                 }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
+            }
+        }
+    }
+
+    private fun loadChapterContent(index: Int) {
+        viewModelScope.launch {
+            val content = chapterRepository.getChapterContent(bookId, index)
+            content?.let {
+                val state = _uiState.value
+                val updatedChapter = state.chapters.getOrNull(index)?.copy(content = it)
+                if (updatedChapter != null) {
+                    val updatedChapters = state.chapters.toMutableList().apply {
+                        if (index < size) set(index, updatedChapter)
+                    }
+                    _uiState.update {
+                        it.copy(
+                            chapters = updatedChapters,
+                            currentChapter = if (index == it.currentChapterIndex) updatedChapter else it.currentChapter
+                        )
+                    }
+                }
             }
         }
     }
@@ -187,7 +211,23 @@ class ReaderViewModel @Inject constructor(
     fun goToChapter(index: Int) {
         val state = _uiState.value
         if (index in state.chapters.indices) {
-            val chapter = state.chapters[index]
+            val existingChapter = state.chapters[index]
+            val chapterToUse = if (existingChapter.content.isNotEmpty()) {
+                existingChapter
+            } else {
+                viewModelScope.launch {
+                    val content = chapterRepository.getChapterContent(bookId, index) ?: ""
+                    val updated = existingChapter.copy(content = content)
+                    val updatedChapters = state.chapters.toMutableList().apply {
+                        if (index < size) set(index, updated)
+                    }
+                    _uiState.update {
+                        it.copy(chapters = updatedChapters)
+                    }
+                }
+                existingChapter
+            }
+
             val progress = if (state.chapters.isNotEmpty()) {
                 (index.toFloat() + 1) / state.chapters.size
             } else 0f
@@ -198,7 +238,7 @@ class ReaderViewModel @Inject constructor(
 
             _uiState.update {
                 it.copy(
-                    currentChapter = chapter,
+                    currentChapter = chapterToUse,
                     currentChapterIndex = index,
                     currentPosition = 0,
                     showChapterList = false

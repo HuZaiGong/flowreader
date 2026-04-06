@@ -9,6 +9,9 @@ interface BookDao {
     @Query("SELECT * FROM books ORDER BY lastReadTime DESC, addedTime DESC")
     fun getAllBooks(): Flow<List<BookEntity>>
 
+    @Query("SELECT * FROM books ORDER BY lastReadTime DESC, addedTime DESC LIMIT :limit OFFSET :offset")
+    suspend fun getBooksPaged(offset: Int, limit: Int): List<BookEntity>
+
     @Query("SELECT * FROM books WHERE categoryId = :categoryId ORDER BY addedTime DESC")
     fun getBooksByCategory(categoryId: Long): Flow<List<BookEntity>>
 
@@ -38,4 +41,7 @@ interface BookDao {
 
     @Query("UPDATE books SET currentChapter = :chapter, currentPosition = :position, readingProgress = :progress, lastReadTime = :time WHERE id = :bookId")
     suspend fun updateReadingProgress(bookId: Long, chapter: Int, position: Int, progress: Float, time: Long = System.currentTimeMillis())
+
+    @Query("SELECT COUNT(*) FROM books")
+    suspend fun getBookCount(): Int
 }

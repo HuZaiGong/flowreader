@@ -105,6 +105,22 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    fun loadMoreBooks() {
+        val currentCount = _uiState.value.books.size
+        viewModelScope.launch {
+            val moreBooks = bookRepository.getBooksPaged(currentCount, PAGE_SIZE)
+            if (moreBooks.isNotEmpty()) {
+                _uiState.update {
+                    it.copy(books = it.books + moreBooks)
+                }
+            }
+        }
+    }
+
+    companion object {
+        private const val PAGE_SIZE = 20
+    }
+
     fun updateSortOrder(order: SortOrder) {
         _sortOrder.value = order
         _uiState.update { it.copy(sortOrder = order) }

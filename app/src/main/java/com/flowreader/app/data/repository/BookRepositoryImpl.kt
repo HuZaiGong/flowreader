@@ -20,6 +20,14 @@ class BookRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getBooksPaged(offset: Int, limit: Int): List<Book> {
+        return bookDao.getBooksPaged(offset, limit).map { it.toDomain() }
+    }
+
+    override suspend fun getBookCount(): Int {
+        return bookDao.getBookCount()
+    }
+
     override fun getBooksByCategory(categoryId: Long): Flow<List<Book>> {
         return bookDao.getBooksByCategory(categoryId).map { entities ->
             entities.map { it.toDomain() }

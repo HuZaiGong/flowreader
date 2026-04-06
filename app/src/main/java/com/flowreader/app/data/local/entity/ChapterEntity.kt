@@ -53,3 +53,12 @@ data class ChapterEntity(
         )
     }
 }
+
+data class ChapterMetadata(
+    val id: Long,
+    val bookId: Long,
+    val index: Int,
+    val title: String,
+    val startPosition: Int,
+    val endPosition: Int
+)

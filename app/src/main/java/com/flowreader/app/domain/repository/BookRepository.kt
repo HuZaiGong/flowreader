@@ -12,6 +12,8 @@ interface BookRepository {
     fun getBooksByCategory(categoryId: Long): Flow<List<Book>>
     fun getRecentlyReadBooks(limit: Int = 10): Flow<List<Book>>
     fun searchBooks(query: String): Flow<List<Book>>
+    suspend fun getBooksPaged(offset: Int, limit: Int): List<Book>
+    suspend fun getBookCount(): Int
     suspend fun getBookById(id: Long): Book?
     suspend fun getBookByPath(filePath: String): Book?
     suspend fun insertBook(book: Book): Long
@@ -24,7 +26,9 @@ interface BookRepository {
 interface ChapterRepository {
     fun getChaptersByBookId(bookId: Long): Flow<List<Chapter>>
     suspend fun getChaptersListByBookId(bookId: Long): List<Chapter>
+    suspend fun getChapterMetadataList(bookId: Long): List<Chapter>
     suspend fun getChapter(bookId: Long, index: Int): Chapter?
+    suspend fun getChapterContent(bookId: Long, index: Int): String?
     suspend fun getChapterById(id: Long): Chapter?
     suspend fun insertChapter(chapter: Chapter): Long
     suspend fun insertChapters(chapters: List<Chapter>)
