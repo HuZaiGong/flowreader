@@ -1,8 +1,21 @@
 # FlowReader 心流阅读
 
-一款简洁优雅的 Android 电子书阅读应用，基于 Jetpack Compose 构建，支持 EPUB、TXT、PDF 格式，提供沉浸式的阅读体验。
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
+  <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
+  <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
+  <img src="https://img.shields.io/badge/MinSDK-34+-red?style=flat" alt="MinSDK">
+</p>
 
-## 特性
+<p align="center">
+  <b>一款简洁优雅的 Android 电子书阅读应用</b><br>
+  基于 Jetpack Compose 构建 | 支持 EPUB、TXT、PDF 格式<br>
+  提供沉浸式的阅读体验
+</p>
+
+---
+
+## ✨ 特性亮点
 
 ### 📚 书库管理
 - 预装精品图书（神秘复苏、诡秘之主）
@@ -15,21 +28,24 @@
 - 书籍排序（按添加时间/阅读时间/书名/作者）
 
 ### 📖 阅读体验
-- **5种阅读主题**: 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）
-- **字体大小**: 12sp - 32sp 可调
-- **行间距**: 1.0 - 2.5 可调
-- **翻页模式**: 滑动、仿真、无动画
-- **智能点击区域**: 左30%上一页，中间呼出菜单，右30%下一页
-- **章节位置记忆**: 切换章节自动恢复滚动位置
-- **底部可拖拽进度条**: 快速跳转章节
-- **保持屏幕常亮**
-- **时间自动夜间模式**: 根据时间自动切换深色/浅色主题
-- **PDF支持**: PDF格式流畅阅读，支持缩放和拖拽翻页
+| 功能 | 说明 |
+|------|------|
+| **阅读主题** | 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）|
+| **字体大小** | 12sp - 32sp 可调 |
+| **行间距** | 1.0 - 2.5 可调 |
+| **翻页模式** | 滑动、仿真、无动画 |
+| **点击区域** | 左30%上一页，中间呼出菜单，右30%下一页 |
+| **章节记忆** | 切换章节自动恢复滚动位置 |
+| **进度条** | 底部可拖拽，快速跳转章节 |
+| **屏幕常亮** | 阅读时保持屏幕常亮 |
+| **自动夜间模式** | 根据时间自动切换深色/浅色主题 |
+| **PDF支持** | 流畅阅读，支持缩放和拖拽翻页 |
 
 ### 📊 阅读统计
 - 每日阅读时长统计
 - 每日阅读页数统计
 - 阅读进度自动记录
+- 阅读目标设置（每日阅读时长目标）
 
 ### 🔖 书签功能
 - 随时添加书签
@@ -48,22 +64,29 @@
 ### 💾 数据管理
 - 书籍和阅读进度备份
 - 从备份文件恢复数据
+- 阅读记录导出
 
 ### ⚙️ 个性化设置
-- 应用主题跟随系统
+- 应用主题跟随系统（Material You 动态颜色）
 - 默认阅读设置
 - 简体中文界面
 
-## 性能优化
+---
 
-- **章节内存缓存**: 智能缓存已读取章节，减少数据库查询
-- **流式书籍解析**: 支持进度回调，大文件不再卡顿
-- **图片缓存优化**: 内存+磁盘双缓存，滚动更流畅
-- **进度延迟写入**: 3秒 debounce 减少数据库写入
-- **UI 渲染优化**: 功能栏悬浮设计，内容区无遮挡
-- **PDF流式渲染**: 大型PDF文件流畅加载
+## 🚀 性能优化
 
-## 技术栈
+| 优化项 | 说明 |
+|--------|------|
+| 章节内存缓存 | 智能缓存已读取章节，减少数据库查询 |
+| 流式书籍解析 | 支持进度回调，大文件不再卡顿 |
+| 图片缓存优化 | 内存+磁盘双缓存，滚动更流畅 |
+| 进度延迟写入 | 3秒 debounce 减少数据库写入 |
+| UI 渲染优化 | 功能栏悬浮设计，内容区无遮挡 |
+| PDF流式渲染 | 大型PDF文件流畅加载 |
+
+---
+
+## 🛠️ 技术栈
 
 | 类别 | 技术 |
 |------|------|
@@ -75,7 +98,9 @@
 | 异步 | Kotlin Coroutines + Flow |
 | 导航 | Navigation Compose |
 
-## 项目结构
+---
+
+## 📂 项目结构
 
 ```
 app/src/main/java/com/flowreader/app/
@@ -99,7 +124,9 @@ app/src/main/java/com/flowreader/app/
 └── util/                      # 工具类
 ```
 
-## 支持格式
+---
+
+## 📋 支持格式
 
 | 格式 | 状态 |
 |------|------|
@@ -107,18 +134,25 @@ app/src/main/java/com/flowreader/app/
 | TXT  | ✅ 已支持 |
 | PDF  | ✅ 已支持 |
 
-## 预装图书
+---
+
+## 📚 预装图书
 
 应用首次启动时会自动导入以下图书：
 
 - **神秘复苏** - 作者：我会睡觉
 - **诡秘之主** - 作者：爱潜水的乌贼
 
-## 构建
+---
+
+## 📲 构建
 
 ```bash
 # 克隆项目
 git clone https://github.com/HuZaiGong/flowreader.git
+
+# 进入项目目录
+cd flowreader
 
 # 构建 Debug APK
 ./gradlew assembleDebug
@@ -127,14 +161,19 @@ git clone https://github.com/HuZaiGong/flowreader.git
 ./gradlew assembleRelease
 ```
 
-## 要求
+### 环境要求
 
 - Android SDK 34+
 - Kotlin 1.9+
 - Android Gradle Plugin 8.1+
 - JDK 17
 
-## 更新日志
+---
+
+## 📝 更新日志
+
+### v15 (Latest)
+- Latest release version
 
 ### v12.0.0
 - 新增阅读目标设置（每日阅读时长目标）
@@ -143,7 +182,6 @@ git clone https://github.com/HuZaiGong/flowreader.git
 - 性能优化：图片缓存优化
 - 性能优化：书籍解析流式处理
 - UI优化：阅读进度百分比显示增强
-- 版本号更新
 
 ### v11.0.0
 - 新增 PDF 格式支持
@@ -161,6 +199,18 @@ git clone https://github.com/HuZaiGong/flowreader.git
 - 深色主题对比度优化
 - AMOLED纯黑模式增强
 
-## 许可证
+---
 
-MIT License
+## 📄 许可证
+
+本项目基于 [GNU General Public License v3.0](LICENSE) 开源。
+
+---
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=HuZaiGong/flowreader&type=Date)](https://star-history.com/#HuZaiGong/flowreader&Date)
+
+---
+
+<p align="center"> Made with ❤️ by HuZaiGong </p>
