@@ -57,7 +57,13 @@ data class GestureSettings(
     val swipeLeftAction: GestureAction = GestureAction.NEXT_PAGE,
     val swipeRightAction: GestureAction = GestureAction.PREVIOUS_PAGE,
     val doubleTapAction: GestureAction = GestureAction.SHOW_SETTINGS,
-    val longPressAction: GestureAction = GestureAction.ADD_BOOKMARK
+    val longPressAction: GestureAction = GestureAction.ADD_BOOKMARK,
+    val edgeGestureEnabled: Boolean = true,
+    val leftEdgeWidth: Int = 20,
+    val rightEdgeWidth: Int = 20,
+    val edgeSwipeThreshold: Int = 100,
+    val enableSystemGestureExclusion: Boolean = true,
+    val preventSystemBackGesture: Boolean = true
 )
 
 enum class BackgroundTexture(val displayName: String) {

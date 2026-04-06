@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/MinSDK-34+-red?style=flat" alt="MinSDK">
+  <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
 <p align="center">
@@ -33,13 +33,14 @@
 | **阅读主题** | 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）|
 | **字体大小** | 12sp - 32sp 可调 |
 | **行间距** | 1.0 - 2.5 可调 |
-| **翻页模式** | 滑动、仿真、无动画 |
+| **翻页模式** | 滑动、仿真、无动画、卷曲、滑动覆盖 |
 | **点击区域** | 左30%上一页，中间呼出菜单，右30%下一页 |
 | **章节记忆** | 切换章节自动恢复滚动位置 |
 | **进度条** | 底部可拖拽，快速跳转章节 |
 | **屏幕常亮** | 阅读时保持屏幕常亮 |
 | **自动夜间模式** | 根据时间自动切换深色/浅色主题 |
 | **PDF支持** | 流畅阅读，支持缩放和拖拽翻页 |
+| **边缘手势** | 自定义边缘滑动区域，避免与系统返回手势冲突 |
 
 ### 📊 阅读统计
 - 每日阅读时长统计
@@ -56,6 +57,22 @@
 - 章节目录展示
 - 快速跳转章节
 - 当前章节指示
+
+### ✏️ 笔记与批注 (新增)
+- 文字高亮划线
+- 添加想法/批注
+- 多种高亮颜色（黄、绿、蓝、粉、橙）
+- 笔记导出功能
+
+### 🔍 全文搜索 (新增)
+- 单本书籍内全文检索
+- 搜索结果高亮显示
+- 快速跳转到搜索位置
+
+### 🔊 文本朗读 (新增)
+- 接入系统TTS语音引擎
+- 支持调节语速和音调
+- 中英文语音识别
 
 ### ⏰ 提醒功能
 - 每日阅读提醒
@@ -83,6 +100,7 @@
 | 进度延迟写入 | 3秒 debounce 减少数据库写入 |
 | UI 渲染优化 | 功能栏悬浮设计，内容区无遮挡 |
 | PDF流式渲染 | 大型PDF文件流畅加载 |
+| Readium引擎 | 接入Readium成熟EPUB渲染引擎 |
 
 ---
 
@@ -93,10 +111,11 @@
 | UI | Jetpack Compose + Material 3 |
 | 架构 | MVVM + Clean Architecture |
 | 依赖注入 | Hilt |
-| 数据库 | Room |
+| 数据库 | Room + SQLite FTS5 |
 | 图片加载 | Coil |
 | 异步 | Kotlin Coroutines + Flow |
 | 导航 | Navigation Compose |
+| EPUB渲染 | Readium Kotlin Toolkit |
 
 ---
 
@@ -122,6 +141,9 @@ app/src/main/java/com/flowreader/app/
 │   ├── theme/                 # 主题样式
 │   └── Navigation.kt          # 导航配置
 └── util/                      # 工具类
+    ├── BookParser.kt          # 书籍解析
+    ├── TtsManager.kt          # TTS文本朗读
+    └── FullTextSearch.kt       # 全文搜索
 ```
 
 ---
@@ -130,7 +152,7 @@ app/src/main/java/com/flowreader/app/
 
 | 格式 | 状态 |
 |------|------|
-| EPUB | ✅ 已支持 |
+| EPUB | ✅ 已支持（Readium引擎）|
 | TXT  | ✅ 已支持 |
 | PDF  | ✅ 已支持 |
 
@@ -172,7 +194,15 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v15 (Latest)
+### v17 (Latest)
+- 新增 Readium Kotlin Toolkit EPUB渲染引擎，支持复杂CSS/排版
+- 新增边缘手势识别设置，解决滑动翻页与系统返回手势冲突
+- 新增笔记/批注功能（划线、想法、导出）
+- 新增全文搜索（单本书籍内FTS检索）
+- 新增TTS文本朗读功能
+- 性能优化：提升大型书籍解析速度
+
+### v15
 - Latest release version
 
 ### v12.0.0

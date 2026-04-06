@@ -13,8 +13,8 @@ android {
         applicationId = "com.flowreader.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 12
-        versionName = "12.0.0"
+        versionCode = 17
+        versionName = "17.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -34,6 +34,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Enable core library desugaring for Readium
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "17"
@@ -52,6 +54,9 @@ android {
 }
 
 dependencies {
+    // Core library desugaring
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
     // Core Android
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
@@ -100,6 +105,12 @@ dependencies {
 
     // JSoup for HTML parsing
     implementation("org.jsoup:jsoup:1.16.2")
+
+    // Readium Kotlin Toolkit for advanced EPUB rendering
+    implementation("org.readium.kotlin-toolkit:readium-shared:3.1.2")
+    implementation("org.readium.kotlin-toolkit:readium-streamer:3.1.2")
+    implementation("org.readium.kotlin-toolkit:readium-navigator:3.1.2")
+    implementation("org.readium.kotlin-toolkit:readium-opds:3.1.2")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
