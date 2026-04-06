@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.flowreader.app.data.repository.SettingsRepository
 import com.flowreader.app.data.local.DataInitializer
 import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.Category
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.repository.BookRepository
+import com.flowreader.app.domain.repository.CategoryRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.util.BookParser
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,6 +27,8 @@ enum class SortOrder {
 data class LibraryUiState(
     val books: List<Book> = emptyList(),
     val recentlyRead: List<Book> = emptyList(),
+    val categories: List<Category> = emptyList(),
+    val selectedCategoryId: Long? = null,
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
@@ -36,6 +40,7 @@ data class LibraryUiState(
 class LibraryViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val chapterRepository: ChapterRepository,
+    private val categoryRepository: CategoryRepository,
     private val bookParser: BookParser,
     private val settingsRepository: SettingsRepository,
     private val dataInitializer: DataInitializer
@@ -46,11 +51,13 @@ class LibraryViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
     private val _sortOrder = MutableStateFlow(SortOrder.ADDED_TIME)
+    private val _selectedCategoryId = MutableStateFlow<Long?>(null)
 
     init {
         initializeDefaultBooks()
         loadBooks()
         loadSettings()
+        loadCategories()
     }
 
     private fun initializeDefaultBooks() {
@@ -67,6 +74,14 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    private fun loadCategories() {
+        viewModelScope.launch {
+            categoryRepository.getAllCategories().collect { categories ->
+                _uiState.update { it.copy(categories = categories) }
+            }
+        }
+    }
+
     private fun loadBooks() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -75,15 +90,22 @@ class LibraryViewModel @Inject constructor(
                 bookRepository.getAllBooks(),
                 bookRepository.getRecentlyReadBooks(5),
                 _searchQuery.debounce(300),
-                _sortOrder
-            ) { allBooks, recentlyRead, query, sortOrder ->
-                val sortedBooks = when (sortOrder) {
-                    SortOrder.ADDED_TIME -> allBooks.sortedByDescending { it.addedTime }
-                    SortOrder.LAST_READ -> allBooks.sortedByDescending { it.lastReadTime ?: it.addedTime }
-                    SortOrder.TITLE -> allBooks.sortedBy { it.title }
-                    SortOrder.AUTHOR -> allBooks.sortedBy { it.author }
+                _sortOrder,
+                _selectedCategoryId
+            ) { allBooks, recentlyRead, query, sortOrder, categoryId ->
+                var filteredBooks = allBooks
+                
+                if (categoryId != null) {
+                    filteredBooks = filteredBooks.filter { it.categoryId == categoryId }
                 }
-                val filteredBooks = if (query.isBlank()) {
+                
+                val sortedBooks = when (sortOrder) {
+                    SortOrder.ADDED_TIME -> filteredBooks.sortedByDescending { it.addedTime }
+                    SortOrder.LAST_READ -> filteredBooks.sortedByDescending { it.lastReadTime ?: it.addedTime }
+                    SortOrder.TITLE -> filteredBooks.sortedBy { it.title }
+                    SortOrder.AUTHOR -> filteredBooks.sortedBy { it.author }
+                }
+                val filteredByQuery = if (query.isBlank()) {
                     sortedBooks
                 } else {
                     sortedBooks.filter {
@@ -91,7 +113,7 @@ class LibraryViewModel @Inject constructor(
                         it.author.contains(query, ignoreCase = true)
                     }
                 }
-                Triple(filteredBooks, recentlyRead, query)
+                Triple(filteredByQuery, recentlyRead, query)
             }.collect { (books, recentlyRead, query) ->
                 _uiState.update {
                     it.copy(
@@ -101,6 +123,33 @@ class LibraryViewModel @Inject constructor(
                         isLoading = false
                     )
                 }
+            }
+        }
+    }
+
+    fun selectCategory(categoryId: Long?) {
+        _selectedCategoryId.value = categoryId
+        _uiState.update { it.copy(selectedCategoryId = categoryId) }
+    }
+
+    fun addCategory(name: String) {
+        viewModelScope.launch {
+            val category = Category(name = name)
+            categoryRepository.insertCategory(category)
+        }
+    }
+
+    fun deleteCategory(category: Category) {
+        viewModelScope.launch {
+            categoryRepository.deleteCategory(category)
+        }
+    }
+
+    fun updateBookCategory(bookId: Long, categoryId: Long?) {
+        viewModelScope.launch {
+            val book = bookRepository.getBookById(bookId)
+            book?.let {
+                bookRepository.updateBook(it.copy(categoryId = categoryId))
             }
         }
     }
