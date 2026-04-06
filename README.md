@@ -194,10 +194,13 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v18 (Latest)
-- 修复 GitHub Actions 构建环境问题
-- 优化 Android SDK 配置
-- 更新版本号至 18.0.0
+### v19 (Latest)
+- 修复 Kotlin/Compose 版本兼容性问题
+- 更新 Android Gradle Plugin 至 8.6.0
+- 更新 Kotlin 至 2.0.21
+- 更新 Gradle 至 8.7
+- 更新 compileSdk/targetSdk 至 35
+- 使用新版 Compose Compiler Plugin 替代旧版配置
 
 ### v17
 - 新增 Readium Kotlin Toolkit EPUB渲染引擎，支持复杂CSS/排版

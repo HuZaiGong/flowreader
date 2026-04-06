@@ -84,6 +84,7 @@ class FullTextSearch @Inject constructor(
     ): List<FtsSearchResult> = withContext(Dispatchers.IO) {
         val results = mutableListOf<FtsSearchResult>()
         
+        val queryArgs = arrayOf(bookId.toString(), "$query*", maxResults.toString())
         val cursor = database?.rawQuery(
             """
             SELECT chapter_index, chapter_title, snippet(book_content_fts, 3, '<<', '>>', '...', 30) as matched_text
@@ -92,7 +93,7 @@ class FullTextSearch @Inject constructor(
             ORDER BY rank
             LIMIT ?
             """.trimIndent(),
-            arrayOf(bookId, "$query*", maxResults)
+            queryArgs
         )
         
         cursor?.use {
@@ -111,7 +112,7 @@ class FullTextSearch @Inject constructor(
     }
 
     suspend fun deleteBookContent(bookId: Long) = withContext(Dispatchers.IO) {
-        database?.execSQL("DELETE FROM book_content WHERE book_id = ?", arrayOf(bookId))
+        database?.execSQL("DELETE FROM book_content WHERE book_id = ?", arrayOf(bookId.toString()))
     }
 
     fun close() {

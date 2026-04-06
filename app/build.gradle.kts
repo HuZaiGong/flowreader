@@ -1,20 +1,21 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
 }
 
 android {
     namespace = "com.flowreader.app"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.flowreader.app"
         minSdk = 26
-        targetSdk = 34
-        versionCode = 18
-        versionName = "18.0.0"
+        targetSdk = 35
+        versionCode = 19
+        versionName = "19.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,9 +43,6 @@ android {
     }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"
     }
     packaging {
         resources {
