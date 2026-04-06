@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-23.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-24.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -195,13 +195,17 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v23 (Latest)
-- 新增底部导航栏（书架、设置）
-- 新增文本选择功能（长按选中文本）
-- 修复设置页面备份/恢复按钮（改为点击触发）
-- 优化导入/导出功能实现
+### v24 (Latest)
+- **性能优化 v2**: 数据库索引优化，查询性能提升
+- **ViewModel优化**: 使用`first()`替代`collect`加载设置，减少不必要的Flow收集
+- **UI渲染优化**: 使用`derivedStateOf`缓存计算值，避免每次重组时重新计算
+- **图片缓存优化**: 启用Coil内存和磁盘缓存策略
+- **手势自定义**: 新增手势设置UI（左侧/中间/右侧点击、双击、长按动作配置）
+- **封面自动提取**: EPUB和PDF格式自动提取封面图片
+- **阅读统计**: 新增统计页面，展示今日/累计阅读数据
+- **阅读进度分享**: 一键分享当前阅读进度到社交平台
 
-### v22
+### v23
 - 新增多语言支持（中文、英语、日语、韩语）
 - 性能优化：章节内存缓存
 - 性能优化：数据库查询优化

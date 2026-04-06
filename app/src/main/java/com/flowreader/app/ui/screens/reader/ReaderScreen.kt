@@ -258,6 +258,13 @@ private fun ReaderContent(
     var selectionStart by remember { mutableIntStateOf(0) }
     var selectionEnd by remember { mutableIntStateOf(0) }
 
+    val paragraphs by remember(chapter.content) {
+        derivedStateOf { chapter.content.split("\n\n") }
+    }
+
+    val fontSizeValue = settings.fontSize
+    val lineSpacingValue = settings.lineSpacing
+
     LaunchedEffect(scrollState.value) {
         onPositionChanged(scrollState.value)
     }
@@ -296,21 +303,20 @@ private fun ReaderContent(
                 Text(
                     text = chapter.title,
                     style = MaterialTheme.typography.headlineSmall.copy(
-                        fontSize = (settings.fontSize + 4).sp,
-                        lineHeight = (settings.fontSize * settings.lineSpacing + 8).sp
+                        fontSize = (fontSizeValue + 4).sp,
+                        lineHeight = (fontSizeValue * lineSpacingValue + 8).sp
                     ),
                     color = textColor,
                     modifier = Modifier.padding(bottom = 24.dp)
                 )
 
-                val paragraphs = chapter.content.split("\n\n")
-                paragraphs.forEachIndexed { index, paragraph ->
+                paragraphs.forEach { paragraph ->
                     if (paragraph.isNotBlank()) {
                         Text(
                             text = paragraph.trim(),
                             style = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = settings.fontSize.sp,
-                                lineHeight = (settings.fontSize * settings.lineSpacing).sp,
+                                fontSize = fontSizeValue.sp,
+                                lineHeight = (fontSizeValue * lineSpacingValue).sp,
                                 textAlign = TextAlign.Justify
                             ),
                             color = textColor,

@@ -9,7 +9,9 @@ import java.util.Date
 
 @Entity(tableName = "books", indices = [
     Index(value = ["lastReadTime", "addedTime"]),
-    Index(value = ["categoryId"])
+    Index(value = ["categoryId"]),
+    Index(value = ["title"]),
+    Index(value = ["author"])
 ])
 data class BookEntity(
     @PrimaryKey(autoGenerate = true)

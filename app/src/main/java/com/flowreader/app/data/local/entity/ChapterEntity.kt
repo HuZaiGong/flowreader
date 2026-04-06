@@ -16,7 +16,10 @@ import com.flowreader.app.domain.model.Chapter
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("bookId")]
+    indices = [
+        Index(value = ["bookId"]),
+        Index(value = ["bookId", "index"], unique = true)
+    ]
 )
 data class ChapterEntity(
     @PrimaryKey(autoGenerate = true)

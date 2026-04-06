@@ -129,11 +129,13 @@ class ReaderViewModel @Inject constructor(
 
     private fun loadSettings() {
         viewModelScope.launch {
-            settingsRepository.appSettings.collect { settings ->
-                _uiState.update {
-                    it.copy(readingSettings = settings.defaultReadingSettings)
+            settingsRepository.appSettings
+                .first()
+                .let { settings ->
+                    _uiState.update {
+                        it.copy(readingSettings = settings.defaultReadingSettings)
+                    }
                 }
-            }
         }
     }
 

@@ -37,7 +37,40 @@ class SettingsRepository @Inject constructor(
         val READING_REMINDER_MINUTE = intPreferencesKey("reading_reminder_minute")
         val SEARCH_HISTORY = stringPreferencesKey("search_history")
         val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")
+        val GESTURE_LEFT_TAP = stringPreferencesKey("gesture_left_tap")
+        val GESTURE_MIDDLE_TAP = stringPreferencesKey("gesture_middle_tap")
+        val GESTURE_RIGHT_TAP = stringPreferencesKey("gesture_right_tap")
+        val GESTURE_SWIPE_LEFT = stringPreferencesKey("gesture_swipe_left")
+        val GESTURE_SWIPE_RIGHT = stringPreferencesKey("gesture_swipe_right")
+        val GESTURE_DOUBLE_TAP = stringPreferencesKey("gesture_double_tap")
+        val GESTURE_LONG_PRESS = stringPreferencesKey("gesture_long_press")
+        val GESTURE_EDGE_ENABLED = booleanPreferencesKey("gesture_edge_enabled")
     }
+
+    private fun getGestureSettings(preferences: Preferences): GestureSettings = GestureSettings(
+        leftTapAction = preferences[PreferencesKeys.GESTURE_LEFT_TAP]?.let { 
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE } 
+        } ?: GestureAction.PREVIOUS_PAGE,
+        middleTapAction = preferences[PreferencesKeys.GESTURE_MIDDLE_TAP]?.let { 
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.TOGGLE_CONTROLS } 
+        } ?: GestureAction.TOGGLE_CONTROLS,
+        rightTapAction = preferences[PreferencesKeys.GESTURE_RIGHT_TAP]?.let { 
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE } 
+        } ?: GestureAction.NEXT_PAGE,
+        swipeLeftAction = preferences[PreferencesKeys.GESTURE_SWIPE_LEFT]?.let { 
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE } 
+        } ?: GestureAction.NEXT_PAGE,
+        swipeRightAction = preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT]?.let { 
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE } 
+        } ?: GestureAction.PREVIOUS_PAGE,
+        doubleTapAction = preferences[PreferencesKeys.GESTURE_DOUBLE_TAP]?.let { 
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.SHOW_SETTINGS } 
+        } ?: GestureAction.SHOW_SETTINGS,
+        longPressAction = preferences[PreferencesKeys.GESTURE_LONG_PRESS]?.let { 
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.ADD_BOOKMARK } 
+        } ?: GestureAction.ADD_BOOKMARK,
+        edgeGestureEnabled = preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] ?: true
+    )
 
     val appSettings: Flow<AppSettings> = context.dataStore.data
         .catch { exception ->
@@ -74,7 +107,8 @@ class SettingsRepository @Inject constructor(
                         PageMode.SLIDE
                     },
                     keepScreenOn = preferences[PreferencesKeys.KEEP_SCREEN_ON] ?: true,
-                    screenTimeoutMinutes = preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] ?: 0
+                    screenTimeoutMinutes = preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] ?: 0,
+                    gestureSettings = getGestureSettings(preferences)
                 ),
                 autoTimeTheme = preferences[PreferencesKeys.AUTO_TIME_THEME] ?: false,
                 timeThemeStartHour = preferences[PreferencesKeys.TIME_THEME_START_HOUR] ?: 20,
@@ -195,4 +229,17 @@ class SettingsRepository @Inject constructor(
         .map { preferences ->
             preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] ?: 30
         }
+
+    suspend fun updateGestureSettings(settings: GestureSettings) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.GESTURE_LEFT_TAP] = settings.leftTapAction.name
+            preferences[PreferencesKeys.GESTURE_MIDDLE_TAP] = settings.middleTapAction.name
+            preferences[PreferencesKeys.GESTURE_RIGHT_TAP] = settings.rightTapAction.name
+            preferences[PreferencesKeys.GESTURE_SWIPE_LEFT] = settings.swipeLeftAction.name
+            preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT] = settings.swipeRightAction.name
+            preferences[PreferencesKeys.GESTURE_DOUBLE_TAP] = settings.doubleTapAction.name
+            preferences[PreferencesKeys.GESTURE_LONG_PRESS] = settings.longPressAction.name
+            preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] = settings.edgeGestureEnabled
+        }
+    }
 }
