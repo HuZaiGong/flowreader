@@ -194,7 +194,12 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v17 (Latest)
+### v18 (Latest)
+- 修复 GitHub Actions 构建环境问题
+- 优化 Android SDK 配置
+- 更新版本号至 18.0.0
+
+### v17
 - 新增 Readium Kotlin Toolkit EPUB渲染引擎，支持复杂CSS/排版
 - 新增边缘手势识别设置，解决滑动翻页与系统返回手势冲突
 - 新增笔记/批注功能（划线、想法、导出）
