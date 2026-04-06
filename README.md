@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-24.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-28.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -95,13 +95,16 @@
 
 | 优化项 | 说明 |
 |--------|------|
+| 智能内存管理 | MemoryManager实时监控内存压力，自动调节缓存策略 |
+| LRU缓存管理 | CacheManager实现LRU缓存，自动淘汰低优先级缓存 |
 | 章节内存缓存 | 智能缓存已读取章节，减少数据库查询 |
 | 流式书籍解析 | 支持进度回调，大文件不再卡顿 |
 | 图片缓存优化 | 内存+磁盘双缓存，滚动更流畅 |
 | 进度延迟写入 | 3秒 debounce 减少数据库写入 |
 | UI 渲染优化 | 功能栏悬浮设计，内容区无遮挡 |
 | PDF流式渲染 | 大型PDF文件流畅加载 |
-| Readium引擎 | 接入Readium成熟EPUB渲染引擎 |
+| Lazy Loading | 章节内容按需加载，首屏加载更快 |
+| 分页加载 | 支持书籍列表分页加载，减少内存占用 |
 
 ---
 
@@ -195,17 +198,33 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v24 (Latest)
-- **性能优化 v2**: 数据库索引优化，查询性能提升
-- **ViewModel优化**: 使用`first()`替代`collect`加载设置，减少不必要的Flow收集
-- **UI渲染优化**: 使用`derivedStateOf`缓存计算值，避免每次重组时重新计算
-- **图片缓存优化**: 启用Coil内存和磁盘缓存策略
-- **手势自定义**: 新增手势设置UI（左侧/中间/右侧点击、双击、长按动作配置）
-- **封面自动提取**: EPUB和PDF格式自动提取封面图片
-- **阅读统计**: 新增统计页面，展示今日/累计阅读数据
-- **阅读进度分享**: 一键分享当前阅读进度到社交平台
+### v28 (Latest)
+- **内存管理优化**: 新增MemoryManager，实时监控内存状态和压力级别
+- **智能缓存管理**: 新增CacheManager，实现LRU缓存和自动内存回收
+- **章节内容缓存**: 缓存已加载章节内容，减少重复数据库查询
+- **分页加载支持**: 新增getBooksPaged()支持分页加载书籍列表
+- **Lazy Loading**: 章节内容按需加载，首屏加载更快
 
-### v23
+### v27
+- 性能优化：章节内容Lazy Loading，减少首次加载时间
+- 新增内容缓存机制，避免重复解析
+- 新增分页加载支持
+
+### v26
+- 性能优化：数据库版本升级到v2，添加复合索引
+- ViewModel优化：使用first()替代collect加载设置
+- UI渲染优化：使用derivedStateOf缓存计算值
+- 手势设置持久化到DataStore
+
+### v25
+- 新增文本高亮/笔记功能
+- 新增阅读进度条
+- 新增阅读统计页面
+- 新增书籍封面自动提取
+- 新增手势自定义UI
+- 新增阅读进度分享
+
+### v24
 - 新增多语言支持（中文、英语、日语、韩语）
 - 性能优化：章节内存缓存
 - 性能优化：数据库查询优化

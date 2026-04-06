@@ -53,7 +53,9 @@ class ReaderViewModel @Inject constructor(
     private val bookmarkRepository: BookmarkRepository,
     private val annotationRepository: AnnotationRepository,
     private val settingsRepository: SettingsRepository,
-    private val readingStatsRepository: ReadingStatsRepository
+    private val readingStatsRepository: ReadingStatsRepository,
+    private val cacheManager: com.flowreader.app.util.CacheManager,
+    private val memoryManager: com.flowreader.app.util.MemoryManager
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
