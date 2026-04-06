@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-30.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-32.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -200,7 +200,19 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v30 (Latest)
+### v32 (Latest)
+- **R8 优化增强**: isMinifyEnabled + isShrinkResources 完整配置
+- **ProGuard 规则完善**: 涵盖 Room、Hilt、Readium、JSoup、Compose 等库
+- **布局优化**: 分析 ReaderContent、Settings、BookDetail 等页面布局
+- **智能缓存**: CacheManager LRU 缓存 + 内存压力响应
+- **内存管理**: MemoryManager 实时监控内存压力等级
+- **文本渲染**: 分析 ReaderContent 段落渲染流程
+- **预加载框架**: PrefetchManager 智能预加载相邻章节
+- **性能监控**: PerformanceMonitor 追踪性能指标
+- **内存泄漏检测**: LeakDetector 监控组件生命周期
+- **构建配置优化**: 简化 buildTypes 配置
+
+### v30
 - **账号系统**: 新增本地账号注册/登录功能
 - **云端同步**: 阅读进度、书签、笔记自动同步（需要注册账号）
 - **新用户引导**: 全新 Onboarding 引导流程，带你快速了解核心功能
