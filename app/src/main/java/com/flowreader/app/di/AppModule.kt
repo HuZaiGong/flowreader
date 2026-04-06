@@ -8,6 +8,15 @@ import com.flowreader.app.data.local.dao.BookmarkDao
 import com.flowreader.app.data.local.dao.CategoryDao
 import com.flowreader.app.data.local.dao.ChapterDao
 import com.flowreader.app.data.local.dao.ReadingStatsDao
+import com.flowreader.app.data.local.entity.BookEntity
+import com.flowreader.app.data.local.entity.BookmarkEntity
+import com.flowreader.app.data.local.entity.CategoryEntity
+import com.flowreader.app.data.local.entity.ChapterEntity
+import com.flowreader.app.data.local.entity.ReadingStatsEntity
+import com.flowreader.app.data.local.entity.BookmarkEntity
+import com.flowreader.app.data.local.entity.CategoryEntity
+import com.flowreader.app.data.local.entity.ChapterEntity
+import com.flowreader.app.data.local.entity.ReadingStatsEntity
 import com.flowreader.app.data.repository.*
 import com.flowreader.app.domain.repository.*
 import dagger.Binds
