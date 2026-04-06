@@ -21,7 +21,9 @@ data class SettingsUiState(
     val readingReminderMinute: Int = 0,
     val dailyReadingGoal: Int = 30,
     val exportResult: String? = null,
-    val importResult: String? = null
+    val importResult: String? = null,
+    val isExporting: Boolean = false,
+    val isImporting: Boolean = false
 )
 
 @HiltViewModel
@@ -60,15 +62,48 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun exportData() {
+        _uiState.update { it.copy(isExporting = true, exportResult = null) }
+    }
+
+    fun onExportReady(uri: Uri) {
         viewModelScope.launch {
-            _uiState.update { it.copy(exportResult = "备份功能正在开发中") }
+            backupRepository.exportData(uri)
+                .onSuccess {
+                    _uiState.update { it.copy(isExporting = false, exportResult = "备份成功") }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isExporting = false, exportResult = "备份失败: ${e.message}") }
+                }
         }
     }
 
     fun importData() {
+        _uiState.update { it.copy(isImporting = true, importResult = null) }
+    }
+
+    fun onImportReady(uri: Uri) {
         viewModelScope.launch {
-            _uiState.update { it.copy(importResult = "恢复功能正在开发中") }
+            backupRepository.importData(uri)
+                .onSuccess { result ->
+                    _uiState.update { 
+                        it.copy(
+                            isImporting = false, 
+                            importResult = "导入成功: ${result.booksImported}本书, ${result.bookmarksImported}个书签"
+                        ) 
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(isImporting = false, importResult = "导入失败: ${e.message}") }
+                }
         }
+    }
+
+    fun clearExportResult() {
+        _uiState.update { it.copy(exportResult = null) }
+    }
+
+    fun clearImportResult() {
+        _uiState.update { it.copy(importResult = null) }
     }
 
     fun updateAppTheme(theme: ReaderTheme) {

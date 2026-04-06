@@ -125,29 +125,23 @@ fun SettingsScreen(
                 )
             }
 
-            SettingsSection(title = "关于") {
+            SettingsSection(title = "数据管理") {
                 SettingsItem(
-                    icon = Icons.Default.Info,
-                    title = "版本",
-                    subtitle = "12.0.0",
-                    onClick = { showAboutDialog = true }
-                )
-
-                SettingsSwitch(
                     icon = Icons.Default.Backup,
                     title = "备份数据",
                     subtitle = "导出书籍和阅读进度",
-                    checked = false,
-                    onCheckedChange = { if (it) { viewModel.exportData() } }
+                    onClick = { viewModel.exportData() }
                 )
 
-                SettingsSwitch(
+                SettingsItem(
                     icon = Icons.Default.Restore,
                     title = "恢复数据",
                     subtitle = "从备份文件导入",
-                    checked = false,
-                    onCheckedChange = { if (it) { viewModel.importData() } }
+                    onClick = { viewModel.importData() }
                 )
+            }
+
+            SettingsSection(title = "关于") {
             }
         }
 

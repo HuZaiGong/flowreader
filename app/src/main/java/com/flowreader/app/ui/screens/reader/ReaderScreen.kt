@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 
 package com.flowreader.app.ui.screens.reader
 
@@ -8,17 +8,21 @@ import android.os.ParcelFileDescriptor
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.ScrollState
 import androidx.compose.material.icons.Icons
@@ -231,42 +235,46 @@ private fun ReaderContent(
                 )
             }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(
-                    horizontal = 20.dp,
-                    vertical = 80.dp
-                )
+        SelectionContainer(
+            modifier = Modifier.fillMaxSize()
         ) {
-            Text(
-                text = chapter.title,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = (settings.fontSize + 4).sp,
-                    lineHeight = (settings.fontSize * settings.lineSpacing + 8).sp
-                ),
-                color = textColor,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
-
-            val paragraphs = chapter.content.split("\n\n")
-            paragraphs.forEach { paragraph ->
-                if (paragraph.isNotBlank()) {
-                    Text(
-                        text = paragraph.trim(),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = settings.fontSize.sp,
-                            lineHeight = (settings.fontSize * settings.lineSpacing).sp,
-                            textAlign = TextAlign.Justify
-                        ),
-                        color = textColor,
-                        modifier = Modifier.padding(bottom = settings.paragraphSpacing.toInt().dp)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 80.dp
                     )
-                }
-            }
+            ) {
+                Text(
+                    text = chapter.title,
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = (settings.fontSize + 4).sp,
+                        lineHeight = (settings.fontSize * settings.lineSpacing + 8).sp
+                    ),
+                    color = textColor,
+                    modifier = Modifier.padding(bottom = 24.dp)
+                )
 
-            Spacer(modifier = Modifier.height(100.dp))
+                val paragraphs = chapter.content.split("\n\n")
+                paragraphs.forEach { paragraph ->
+                    if (paragraph.isNotBlank()) {
+                        Text(
+                            text = paragraph.trim(),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = settings.fontSize.sp,
+                                lineHeight = (settings.fontSize * settings.lineSpacing).sp,
+                                textAlign = TextAlign.Justify
+                            ),
+                            color = textColor,
+                            modifier = Modifier.padding(bottom = settings.paragraphSpacing.toInt().dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(100.dp))
+            }
         }
     }
 }

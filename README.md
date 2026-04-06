@@ -4,6 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
+  <img src="https://img.shields.io/badge/Version-23.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -194,11 +195,16 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v22 (Latest)
+### v23 (Latest)
+- 新增底部导航栏（书架、设置）
+- 新增文本选择功能（长按选中文本）
+- 修复设置页面备份/恢复按钮（改为点击触发）
+- 优化导入/导出功能实现
+
+### v22
 - 新增多语言支持（中文、英语、日语、韩语）
 - 性能优化：章节内存缓存
 - 性能优化：数据库查询优化
-- 修复若干已知问题
 
 ### v19
 - 修复 Kotlin/Compose 版本兼容性问题
@@ -206,7 +212,6 @@ cd flowreader
 - 更新 Kotlin 至 2.0.21
 - 更新 Gradle 至 8.7
 - 更新 compileSdk/targetSdk 至 35
-- 使用新版 Compose Compiler Plugin 替代旧版配置
 
 ### v17
 - 新增 Readium Kotlin Toolkit EPUB渲染引擎，支持复杂CSS/排版
