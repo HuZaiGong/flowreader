@@ -45,6 +45,7 @@ class SettingsRepository @Inject constructor(
         val GESTURE_DOUBLE_TAP = stringPreferencesKey("gesture_double_tap")
         val GESTURE_LONG_PRESS = stringPreferencesKey("gesture_long_press")
         val GESTURE_EDGE_ENABLED = booleanPreferencesKey("gesture_edge_enabled")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     private fun getGestureSettings(preferences: Preferences): GestureSettings = GestureSettings(
@@ -240,6 +241,17 @@ class SettingsRepository @Inject constructor(
             preferences[PreferencesKeys.GESTURE_DOUBLE_TAP] = settings.doubleTapAction.name
             preferences[PreferencesKeys.GESTURE_LONG_PRESS] = settings.longPressAction.name
             preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] = settings.edgeGestureEnabled
+        }
+    }
+
+    fun isOnboardingCompleted(): Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false
+        }
+
+    suspend fun setOnboardingCompleted() {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.ONBOARDING_COMPLETED] = true
         }
     }
 }

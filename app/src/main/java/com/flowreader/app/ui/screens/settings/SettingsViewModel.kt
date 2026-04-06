@@ -23,7 +23,8 @@ data class SettingsUiState(
     val exportResult: String? = null,
     val importResult: String? = null,
     val isExporting: Boolean = false,
-    val isImporting: Boolean = false
+    val isImporting: Boolean = false,
+    val isOnboardingCompleted: Boolean = false
 )
 
 @HiltViewModel
@@ -43,8 +44,9 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 settingsRepository.appSettings,
-                settingsRepository.getDailyReadingGoal()
-            ) { settings, goal ->
+                settingsRepository.getDailyReadingGoal(),
+                settingsRepository.isOnboardingCompleted()
+            ) { settings, goal, onboardingCompleted ->
                 SettingsUiState(
                     appTheme = settings.theme,
                     readingSettings = settings.defaultReadingSettings,
@@ -53,11 +55,26 @@ class SettingsViewModel @Inject constructor(
                     readingReminderEnabled = settings.readingReminderEnabled,
                     readingReminderHour = settings.readingReminderHour,
                     readingReminderMinute = settings.readingReminderMinute,
-                    dailyReadingGoal = goal
+                    dailyReadingGoal = goal,
+                    isOnboardingCompleted = onboardingCompleted
                 )
             }.collect { state ->
                 _uiState.value = state
             }
+        }
+    }
+
+    fun checkOnboardingStatus() {
+        viewModelScope.launch {
+            settingsRepository.isOnboardingCompleted().collect { completed ->
+                _uiState.update { it.copy(isOnboardingCompleted = completed) }
+            }
+        }
+    }
+
+    fun completeOnboarding() {
+        viewModelScope.launch {
+            settingsRepository.setOnboardingCompleted()
         }
     }
 

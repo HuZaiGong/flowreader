@@ -60,6 +60,7 @@ class BookParser @Inject constructor(
                     result.map { it.copy(book = it.book.copy(coverPath = coverPath)) }
                 }
                 BookFormat.TXT -> parseTxtStream(inputStream, fileName, fileSize)
+                BookFormat.MARKDOWN -> parseMarkdownStream(inputStream, fileName, fileSize)
                 BookFormat.PDF -> {
                     val result = parsePdfStream(uri, fileName, fileSize)
                     result.map { it.copy(book = it.book.copy(coverPath = extractPdfCover(uri))) }
@@ -117,6 +118,7 @@ class BookParser @Inject constructor(
             fileName.endsWith(".epub", ignoreCase = true) -> BookFormat.EPUB
             fileName.endsWith(".txt", ignoreCase = true) -> BookFormat.TXT
             fileName.endsWith(".pdf", ignoreCase = true) -> BookFormat.PDF
+            fileName.endsWith(".md", ignoreCase = true) -> BookFormat.MARKDOWN
             else -> BookFormat.UNKNOWN
         }
     }
@@ -443,6 +445,87 @@ class BookParser @Inject constructor(
                     chapters = chapters,
                     pdfPageCount = pageCount,
                     pdfFilePath = internalPath
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun parseMarkdownStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+        return try {
+            val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
+
+            val title = fileName.removeSuffix(".md")
+            val chapters = mutableListOf<Chapter>()
+
+            val lines = text.lines()
+            val chapterPattern = Regex("^#{1,6}\\s+(.+)|^##?\\s+.+")
+
+            var currentChapterTitle = "前言"
+            var currentContent = StringBuilder()
+            var chapterIndex = 0
+
+            for (line in lines) {
+                val trimmedLine = line.trim()
+                if (chapterPattern.containsMatchIn(trimmedLine) && trimmedLine.length < 100) {
+                    if (currentContent.isNotBlank()) {
+                        chapters.add(
+                            Chapter(
+                                bookId = 0,
+                                index = chapterIndex,
+                                title = currentChapterTitle,
+                                content = currentContent.toString().trim(),
+                                startPosition = 0,
+                                endPosition = currentContent.length
+                            )
+                        )
+                        chapterIndex++
+                    }
+                    currentChapterTitle = trimmedLine.replace(Regex("^#{1,6}\\s*"), "")
+                    currentContent = StringBuilder()
+                } else {
+                    currentContent.appendLine(line)
+                }
+            }
+
+            if (currentContent.isNotBlank()) {
+                chapters.add(
+                    Chapter(
+                        bookId = 0,
+                        index = chapterIndex,
+                        title = currentChapterTitle,
+                        content = currentContent.toString().trim(),
+                        startPosition = 0,
+                        endPosition = currentContent.length
+                    )
+                )
+            }
+
+            if (chapters.isEmpty()) {
+                chapters.add(
+                    Chapter(
+                        bookId = 0,
+                        index = 0,
+                        title = "全部内容",
+                        content = text,
+                        startPosition = 0,
+                        endPosition = text.length
+                    )
+                )
+            }
+
+            Result.success(
+                BookParseResult(
+                    book = Book(
+                        title = title,
+                        author = "未知作者",
+                        filePath = "",
+                        fileSize = fileSize,
+                        format = BookFormat.MARKDOWN,
+                        totalChapters = chapters.size
+                    ),
+                    chapters = chapters
                 )
             )
         } catch (e: Exception) {

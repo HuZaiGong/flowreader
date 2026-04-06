@@ -24,6 +24,7 @@ enum class BookFormat {
     EPUB,
     TXT,
     PDF,
+    MARKDOWN,
     UNKNOWN
 }
 

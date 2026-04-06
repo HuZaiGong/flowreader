@@ -4,13 +4,13 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-29.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-30.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
 <p align="center">
   <b>一款简洁优雅的 Android 电子书阅读应用</b><br>
-  基于 Jetpack Compose 构建 | 支持 EPUB、TXT、PDF 格式<br>
+  基于 Jetpack Compose 构建 | 支持 EPUB、TXT、PDF、Markdown 格式<br>
   提供沉浸式的阅读体验
 </p>
 
@@ -20,13 +20,14 @@
 
 ### 📚 书库管理
 - 预装精品图书（神秘复苏、诡秘之主）
-- 导入本地书籍（EPUB、TXT、PDF）
+- 导入本地书籍（EPUB、TXT、PDF、Markdown）
 - 批量导入多本书籍
 - 书架展示与分类浏览
 - 最近阅读记录
 - 阅读进度自动保存（3秒延迟写入）
 - 书籍搜索与删除管理
 - 书籍排序（按添加时间/阅读时间/书名/作者）
+- 书籍元数据编辑（作者、描述、封面）
 
 ### 📖 阅读体验
 | 功能 | 说明 |
@@ -159,6 +160,7 @@ app/src/main/java/com/flowreader/app/
 | EPUB | ✅ 已支持（Readium引擎）|
 | TXT  | ✅ 已支持 |
 | PDF  | ✅ 已支持 |
+| Markdown | ✅ 已支持 |
 
 ---
 
@@ -198,7 +200,17 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v29 (Latest)
+### v30 (Latest)
+- **账号系统**: 新增本地账号注册/登录功能
+- **云端同步**: 阅读进度、书签、笔记自动同步（需要注册账号）
+- **新用户引导**: 全新 Onboarding 引导流程，带你快速了解核心功能
+- **Markdown 支持**: 新增 .md 格式解析支持
+- **测试基础设施**: 引入 JUnit 5 + MockK 测试框架
+- **构建优化**: Release 启用 R8 混淆压缩
+- **现代 Android 适配**: Edge-to-edge, Splash Screen 支持
+- **数据库升级**: 升级到 v3，新增用户表
+
+### v29
 - **UI组件拆分重构**: ReaderScreen拆分为独立组件模块
 - **新增ReaderContent**: 独立的阅读内容渲染组件
 - **新增PdfViewer**: 独立的PDF渲染组件
