@@ -194,7 +194,13 @@ cd flowreader
 
 ## 📝 更新日志
 
-### v19 (Latest)
+### v22 (Latest)
+- 新增多语言支持（中文、英语、日语、韩语）
+- 性能优化：章节内存缓存
+- 性能优化：数据库查询优化
+- 修复若干已知问题
+
+### v19
 - 修复 Kotlin/Compose 版本兼容性问题
 - 更新 Android Gradle Plugin 至 8.6.0
 - 更新 Kotlin 至 2.0.21
