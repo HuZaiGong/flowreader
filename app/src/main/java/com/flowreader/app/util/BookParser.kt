@@ -139,10 +139,7 @@ class BookParser @Inject constructor(
     }
 
     private fun parseEpubStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
-        // 暂时使用简化版的EPUB解析
-        // 完整的EPUB解析需要添加epublib依赖
         return try {
-            // 简化处理：尝试用JSoup直接解析
             val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
             val doc = Jsoup.parse(text)
             val bodyText = doc.body().text()
@@ -151,7 +148,6 @@ class BookParser @Inject constructor(
 
             val chapters = mutableListOf<Chapter>()
             if (bodyText.isNotBlank()) {
-                // 简单的章节分割
                 val contentLength = bodyText.length
                 val chapterCount = maxOf(1, contentLength / 5000)
                 val chunkSize = contentLength / chapterCount
