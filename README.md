@@ -136,7 +136,8 @@ app/src/main/java/com/flowreader/app/
 ├── di/                        # Hilt 依赖注入
 ├── domain/                    # 领域层
 │   ├── model/                 # 领域模型
-│   └── repository/            # 仓库接口
+│   ├── repository/            # 仓库接口
+│   └── usecase/               # 用例（待完善）
 ├── ui/                        # 表现层
 │   ├── screens/               # 页面
 │   │   ├── library/           # 书库
@@ -199,6 +200,15 @@ cd flowreader
 ---
 
 ## 📝 更新日志
+
+### v35
+- **代码治理**: 重命名 Application 类 FlowReaderApp → FlowReaderApplication
+- **代码治理**: 重命名 Composable FlowReaderApp → FlowReaderRoot
+- **代码规范**: 添加 .editorconfig 代码规范配置
+- **CI 优化**: 优化 CI permissions，按需授权（最小权限原则）
+- **异常处理**: 新增 AppException.kt 统一异常处理机制
+- **长期规划**: 添加 FlowReader 长期更新规划文档
+- **测试恢复**: 恢复 BookParserTest.kt 单元测试
 
 ### v34 (Latest)
 - **数据管理**: DataManager 管理书籍计数、会话统计
