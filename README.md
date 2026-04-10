@@ -191,8 +191,14 @@ cd flowreader
 
 ## 📝 更新日志
 
+### v36
+- **Bug修复**: 修复空安全断言 !! 问题 (ReaderViewModel)
+- **CI修复**: 修复 GitHub Actions build.yml job 定义问题
+- **代码优化**: 移除过期 Icons.Filled 使用
+
 ### v35
 - **离线优先**: 移除账号系统、云端同步等网络功能，纯本地运行
+- **代码治理**: 重命名 Application 类 FlowReaderApp → FlowReaderApplication
 - **代码治理**: 重命名 Application 类 FlowReaderApp → FlowReaderApplication
 - **代码治理**: 重命名 Composable FlowReaderApp → FlowReaderRoot
 - **代码规范**: 添加 .editorconfig 代码规范配置

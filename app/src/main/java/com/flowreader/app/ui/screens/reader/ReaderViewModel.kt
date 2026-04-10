@@ -326,7 +326,9 @@ class ReaderViewModel @Inject constructor(
         sessionCharactersRead += position
         
         val progress = if (state.chapters.isNotEmpty()) {
-            (state.currentChapterIndex.toFloat() + position.toFloat() / state.chapters.getOrNull(state.currentChapterIndex)?.content?.length?.coerceAtLeast(1)!!) / state.chapters.size
+            val currentChapter = state.chapters.getOrNull(state.currentChapterIndex)
+            val contentLength = currentChapter?.content?.length?.coerceAtLeast(1) ?: 1
+            (state.currentChapterIndex.toFloat() + position.toFloat() / contentLength) / state.chapters.size
         } else 0f
 
         _uiState.update { it.copy(currentPosition = position) }
