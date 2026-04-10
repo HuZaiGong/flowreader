@@ -20,7 +20,7 @@ class BookParserTest {
             fileName.endsWith(".epub", ignoreCase = true) -> BookFormat.EPUB
             fileName.endsWith(".txt", ignoreCase = true) -> BookFormat.TXT
             fileName.endsWith(".pdf", ignoreCase = true) -> BookFormat.PDF
-            fileName.endsWith(".md", ignoreCase = true) -> BookFormat.MARKDOWN
+            fileName.endsWith(".md", ignoreCase = true) || fileName.endsWith(".markdown", ignoreCase = true) -> BookFormat.MARKDOWN
             else -> BookFormat.UNKNOWN
         }
     }

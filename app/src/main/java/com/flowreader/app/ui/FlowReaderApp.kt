@@ -21,7 +21,7 @@ sealed class AppRoute(val route: String) {
 }
 
 @Composable
-fun FlowReaderApp(
+fun FlowReaderRoot(
     settingsViewModel: SettingsViewModel = hiltViewModel()
 ) {
     val settingsState by settingsViewModel.uiState.collectAsState()

@@ -10,7 +10,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+      pull-requests: write
+    if: github.event_name == 'pull_request'
+
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
       contents: write
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout repository
@@ -51,7 +59,6 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK to Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}

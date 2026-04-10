@@ -1,64 +1,71 @@
-# 项目知识库
+# PROJECT KNOWLEDGE BASE
 
-**生成时间：** 2026-04-06
-**提交版本：** 65d4620
-**分支：** main
+**Generated:** 2026-04-08
+**Commit:** 65d4620
+**Branch:** main
 
-## 概述
-FlowReader（心流阅读）- 基于 Jetpack Compose 构建的 Android 电子书阅读应用，支持 EPUB、TXT、PDF 格式，提供丰富的自定义阅读功能。
+## OVERVIEW
+FlowReader (心流阅读) - Android ebook reader built with Jetpack Compose, supporting EPUB/TXT/PDF/Markdown formats with rich customization.
 
-## 目录结构
+## STRUCTURE
 ```
 ./
-├── .github/workflows/       # CI：build.yml（main 分支自动发布）
-├── app/
-│   └── src/main/
-│       ├── java/com/flowreader/app/
-│       │   ├── data/           # 数据层（Room，仓库实现）
-│       │   ├── di/             # Hilt 依赖注入模块
-│       │   ├── domain/         # 领域层（模型与接口）
-│       │   ├── ui/             # Compose 界面与主题
-│       │   ├── util/           # 工具类（BookParser，使用 JSoup 解析 EPUB/TXT）
-│       │   ├── MainActivity.kt
-│       │   └── FlowReaderApp.kt
-│       └── res/                # 资源（主题、字符串、Drawable）
-├── build.gradle.kts          # 根构建文件（插件：AGP 8.2.0, Kotlin 1.9.22, Hilt 2.50, KSP）
-├── gradle/                   # Gradle 包装器
-└── README.md
+├── .github/workflows/       # CI: build.yml (auto-publish main)
+├── app/src/main/
+│   ├── java/com/flowreader/app/
+│   │   ├── data/           # Room DB, repositories
+│   │   ├── di/             # Hilt modules
+│   │   ├── domain/         # Models, repo interfaces
+│   │   ├── ui/             # Compose screens, theme
+│   │   ├── util/           # BookParser, TTS, cache managers
+│   │   ├── MainActivity.kt
+│   │   └── FlowReaderApp.kt
+│   └── assets/books/       # Preloaded books
+├── build.gradle.kts         # Root (AGP 8.6.0, Kotlin 2.0.21, Hilt 2.50)
+└── gradle/                  # Gradle wrapper 8.7
 ```
 
-## 关键路径
-| 任务 | 路径 | 说明 |
-|------|------|------|
-| 添加新页面 | `ui/screens/` | 遵循现有的 Screen+ViewModel 模式 |
-| 数据库修改 | `data/local/dao/` + `data/local/entity/` | Room 实体与 DAO |
-| 依赖注入配置 | `di/AppModule.kt` | Hilt 模块配置仓库 |
-| 阅读设置 | `domain/model/ReadingSettings.kt` | 字体、主题、行间距配置 |
-| 书籍解析 | `util/BookParser.kt` | 基于 JSoup 的 EPUB/TXT 解析器 |
-| 导航配置 | `ui/Navigation.kt` | Compose Navigation 导航设置 |
+## WHERE TO LOOK
+| Task | Path | Notes |
+|------|------|-------|
+| Add screen | `ui/screens/` | Screen+ViewModel pattern |
+| Database | `data/local/dao/` + `entity/` | Room entities & DAOs |
+| DI config | `di/AppModule.kt` | Hilt module |
+| Reading settings | `domain/model/ReadingSettings.kt` | Font, theme, spacing |
+| Book parsing | `util/BookParser.kt` | JSoup-based EPUB/TXT |
+| Navigation | `ui/Navigation.kt` | Compose Navigation |
 
-## 代码规范
-- MVVM + 整洁架构（data/domain/ui 分层）
-- Hilt 依赖注入；ViewModel 使用 `hiltViewModel()`
-- Room 持久化；DataStore 存储偏好设置
-- Compose UI + Material 3；通过 StateFlow 管理状态
-- 阅读进度保存采用 3 秒防抖
-- 未找到单元测试配置（无 tests/ 目录）
+## CODE MAP
+| Symbol | Type | Location |
+|--------|------|----------|
+| MainActivity | Activity | app/src/main/java/com/flowreader/app/MainActivity.kt |
+| FlowReaderApp | Application @HiltAndroidApp | app/src/main/java/com/flowreader/app/FlowReaderApp.kt |
+| FlowReaderApp (UI) | Composable | app/src/main/java/com/flowreader/app/ui/FlowReaderApp.kt |
+| AppDatabase | Room DB | app/src/main/java/com/flowreader/app/data/local/AppDatabase.kt |
 
-## 反模式（项目特有）
-- 源码中无 DO NOT/NEVER/ALWAYS/DEPRECATED 等注释
-- 仓库中无单元测试（仅通过 CI 构建测试）
-- CI 工作流使用宽泛的 `permissions: contents: write`（建议收紧权限）
-- 无 .eslintrc、pyproject.toml 或 .editorconfig（纯 Android/Kotlin 项目）
+## CONVENTIONS
+- MVVM + Clean Architecture (data/domain/ui layers)
+- Hilt DI with `@HiltAndroidApp`; ViewModels via `hiltViewModel()`
+- Room + DataStore for persistence
+- StateFlow for UI state
+- 3-second debounce for progress save
+- **Naming collision**: `FlowReaderApp` used for both Application class AND root composable (non-standard)
 
-## 构建命令
+## ANTI-PATTERNS (THIS PROJECT)
+- No DO NOT/NEVER comments in source code
+- **Tests exist** at `app/src/test/java/com/flowreader/app/util/BookParserTest.kt` (contradicts old doc)
+- CI uses broad `permissions: contents: write` (security concern)
+- No .editorconfig, lint.xml, or detekt configs
+
+## BUILD COMMANDS
 ```bash
-./gradlew assembleDebug      # 构建 Debug 版 APK
-./gradlew assembleRelease   # 构建 Release 版 APK
+./gradlew assembleDebug      # Debug APK
+./gradlew assembleRelease   # Release APK
+./gradlew :app:testDebugUnitTest  # Run unit tests
 ```
 
-## 注意事项
-- 预置图书：诡秘之主.txt、神秘复苏.txt 位于根目录
-- 支持 5 种阅读主题：浅色、深色、护眼、羊皮纸、AMOLED 纯黑
-- PDF 支持采用 Android 原生 PDF 渲染器（无外部库）
-- 最低 SDK 26，目标 SDK 34，编译 SDK 34
+## NOTES
+- Preloaded books: `app/src/main/assets/books/诡秘之主.txt`, `神秘复苏.txt`
+- 5 reading themes: light, dark, sepia, eye-care, AMOLED black
+- PDF uses Android native renderer (no external lib)
+- Min SDK 26, Target/Compile SDK 34
