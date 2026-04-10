@@ -198,6 +198,9 @@ cd flowreader
 - **代码规范**: 添加 .editorconfig 代码规范配置
 - **CI 优化**: 优化 CI permissions，按需授权（最小权限原则）
 - **异常处理**: 新增 AppException.kt 统一异常处理机制
+- **架构优化**: 新增 domain/usecase/ 层 (GetBookUseCase, SaveProgressUseCase)
+- **性能优化**: 新增 TextPaginator 分页加载 (3000字/页, 预加载2页)
+- **进度防抖**: 3秒延迟保存减少数据库写入
 
 ### v30
 - **Markdown 支持**: 新增 .md 格式解析支持
