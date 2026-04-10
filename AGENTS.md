@@ -65,7 +65,7 @@ FlowReader (心流阅读) - Android ebook reader built with Jetpack Compose, sup
 ```
 
 ## NOTES
-- Preloaded books: `app/src/main/assets/books/诡秘之主.txt`, `神秘复苏.txt`
+- No preloaded books (offline-first, user imports their own)
 - 5 reading themes: light, dark, sepia, eye-care, AMOLED black
 - PDF uses Android native renderer (no external lib)
 - Min SDK 26, Target/Compile SDK 34

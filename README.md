@@ -19,7 +19,6 @@
 ## ✨ 特性亮点
 
 ### 📚 书库管理
-- 预装精品图书（神秘复苏、诡秘之主）
 - 导入本地书籍（EPUB、TXT、PDF、Markdown）
 - 批量导入多本书籍
 - 书架展示与分类浏览
@@ -165,15 +164,6 @@ app/src/main/java/com/flowreader/app/
 
 ---
 
-## 📚 预装图书
-
-应用首次启动时会自动导入以下图书：
-
-- **神秘复苏** - 作者：我会睡觉
-- **诡秘之主** - 作者：爱潜水的乌贼
-
----
-
 ## 📲 构建
 
 ```bash
@@ -202,51 +192,18 @@ cd flowreader
 ## 📝 更新日志
 
 ### v35
+- **离线优先**: 移除账号系统、云端同步等网络功能，纯本地运行
 - **代码治理**: 重命名 Application 类 FlowReaderApp → FlowReaderApplication
 - **代码治理**: 重命名 Composable FlowReaderApp → FlowReaderRoot
 - **代码规范**: 添加 .editorconfig 代码规范配置
 - **CI 优化**: 优化 CI permissions，按需授权（最小权限原则）
 - **异常处理**: 新增 AppException.kt 统一异常处理机制
-- **长期规划**: 添加 FlowReader 长期更新规划文档
-- **测试恢复**: 恢复 BookParserTest.kt 单元测试
-
-### v34 (Latest)
-- **数据管理**: DataManager 管理书籍计数、会话统计
-- **数据清理**: DataCleaner 自动清理过期数据
-- **缓存预热**: CacheManager.warmUpCache 启动时预热
-- **章节预加载**: CacheManager.prewarmChapters 批量预加载
-- **缓存命中率**: CacheManager.getCacheHitRate 追踪缓存效率
-- **项目结构**: 优化 data/repository 层架构
-
-### v33
-- **异步章节加载**: BookLoader 异步加载章节内容
-- **智能预加载**: 自动预加载相邻章节（前后各2章）
-- **后台线程池**: 自定义 IO 调度器，限制并发数
-- **文本分页**: TextPaginator 实现内容分页
-- **内存缓存**: ChapterRepository 内存缓存 contentCache
-- **并发优化**: 多章节并行加载优化
-
-### v32
-- **R8 优化增强**: isMinifyEnabled + isShrinkResources 完整配置
-- **ProGuard 规则完善**: 涵盖 Room、Hilt、Readium、JSoup、Compose 等库
-- **布局优化**: 分析 ReaderContent、Settings、BookDetail 等页面布局
-- **智能缓存**: CacheManager LRU 缓存 + 内存压力响应
-- **内存管理**: MemoryManager 实时监控内存压力等级
-- **文本渲染**: 分析 ReaderContent 段落渲染流程
-- **预加载框架**: PrefetchManager 智能预加载相邻章节
-- **性能监控**: PerformanceMonitor 追踪性能指标
-- **内存泄漏检测**: LeakDetector 监控组件生命周期
-- **构建配置优化**: 简化 buildTypes 配置
 
 ### v30
-- **账号系统**: 新增本地账号注册/登录功能
-- **云端同步**: 阅读进度、书签、笔记自动同步（需要注册账号）
-- **新用户引导**: 全新 Onboarding 引导流程，带你快速了解核心功能
 - **Markdown 支持**: 新增 .md 格式解析支持
 - **测试基础设施**: 引入 JUnit 5 + MockK 测试框架
 - **构建优化**: Release 启用 R8 混淆压缩
 - **现代 Android 适配**: Edge-to-edge, Splash Screen 支持
-- **数据库升级**: 升级到 v3，新增用户表
 
 ### v29
 - **UI组件拆分重构**: ReaderScreen拆分为独立组件模块
