@@ -191,6 +191,10 @@ cd flowreader
 
 ## 📝 更新日志
 
+### v40.1
+- **高亮修复**: 优化高亮功能交互，长按/点击段落后手动输入文本再添加高亮
+- **章节跳转修复**: 修复跳转下一章时滚动位置重置问题，切换章节自动回到开头
+
 ### v40
 - **TTS功能**: 修复语音朗读功能，添加朗读/停止按钮到设置界面
 - **版本规范**: 规范版本号为40.0.0，CI使用语义化版本
@@ -204,7 +208,6 @@ cd flowreader
 
 ### v35
 - **离线优先**: 移除账号系统、云端同步等网络功能，纯本地运行
-- **代码治理**: 重命名 Application 类 FlowReaderApp → FlowReaderApplication
 - **代码治理**: 重命名 Application 类 FlowReaderApp → FlowReaderApplication
 - **代码治理**: 重命名 Composable FlowReaderApp → FlowReaderRoot
 - **代码规范**: 添加 .editorconfig 代码规范配置

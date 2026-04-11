@@ -63,7 +63,7 @@ fun ReaderContent(
                             )
                         )
                     },
-                    onLongPress = {
+                    onLongPress = { offset ->
                         showHighlightMenu = true
                     }
                 )
@@ -87,7 +87,7 @@ fun ReaderContent(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            paragraphs.forEach { paragraph ->
+            paragraphs.forEachIndexed { index, paragraph ->
                 if (paragraph.isNotBlank()) {
                     Text(
                         text = paragraph.trim(),
@@ -100,7 +100,7 @@ fun ReaderContent(
                         modifier = Modifier
                             .padding(bottom = settings.paragraphSpacing.toInt().dp)
                             .clickable {
-                                selectedText = paragraph.trim().take(100)
+                                selectedText = paragraph.trim()
                                 selectionStart = 0
                                 selectionEnd = selectedText.length
                                 showHighlightMenu = true
@@ -114,13 +114,20 @@ fun ReaderContent(
 
         if (showHighlightMenu) {
             HighlightMenu(
-                onDismiss = { showHighlightMenu = false },
-                onHighlight = { color ->
-                    onTextSelected(selectedText, selectionStart, selectionEnd)
+                onDismiss = { 
                     showHighlightMenu = false
+                    selectedText = ""
+                },
+                onHighlight = { color ->
+                    if (selectedText.isNotEmpty()) {
+                        onTextSelected(selectedText, selectionStart, selectionEnd)
+                    }
+                    showHighlightMenu = false
+                    selectedText = ""
                 },
                 textColor = textColor,
-                backgroundColor = backgroundColor
+                backgroundColor = backgroundColor,
+                selectedText = selectedText
             )
         }
     }
@@ -131,8 +138,15 @@ fun HighlightMenu(
     onDismiss: () -> Unit,
     onHighlight: (AnnotationColor) -> Unit,
     textColor: androidx.compose.ui.graphics.Color,
-    backgroundColor: androidx.compose.ui.graphics.Color
+    backgroundColor: androidx.compose.ui.graphics.Color,
+    selectedText: String = ""
 ) {
+    var inputText by remember { mutableStateOf(selectedText) }
+    
+    LaunchedEffect(selectedText) {
+        inputText = selectedText
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -156,12 +170,31 @@ fun HighlightMenu(
                     color = textColor,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
+                
+                OutlinedTextField(
+                    value = inputText,
+                    onValueChange = { inputText = it },
+                    label = { Text("输入要高亮的文本") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = textColor
+                    )
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     AnnotationColor.entries.forEach { color ->
                         IconButton(
-                            onClick = { onHighlight(color) },
+                            onClick = { 
+                                if (inputText.isNotEmpty()) {
+                                    onHighlight(color)
+                                }
+                            },
                             modifier = Modifier
                                 .size(40.dp)
                                 .background(

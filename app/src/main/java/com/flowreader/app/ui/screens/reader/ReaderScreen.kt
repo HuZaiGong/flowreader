@@ -54,9 +54,11 @@ fun ReaderScreen(
     val chapterScrollPositions = remember { mutableStateMapOf<Int, Int>() }
 
     LaunchedEffect(uiState.currentChapterIndex) {
-        val savedPosition = chapterScrollPositions[uiState.currentChapterIndex] ?: 0
-        if (savedPosition > 0) {
+        val savedPosition = chapterScrollPositions[uiState.currentChapterIndex]
+        if (savedPosition != null && savedPosition > 0) {
             contentScrollState.scrollTo(savedPosition)
+        } else {
+            contentScrollState.scrollTo(0)
         }
     }
 
