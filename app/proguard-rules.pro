@@ -1,53 +1,72 @@
 # FlowReader ProGuard Rules
+# Optimized for release builds with R8
 
-# Basic Android rules
--keepattributes Signature
--keepattributes *Annotation*
+# ========================================
+# Basic Android & Kotlin Rules
+# ========================================
+-keepattributes Signature, InnerClasses, *Annotation*
 -keepattributes SourceFile,LineNumberTable
--keepattributes EnclosingMethod
+-keepattributes EnclosingMethod, RuntimeVisibleAnnotations, RuntimeInvisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations, RuntimeInvisibleParameterAnnotations
 
 # Keep line numbers for crash reports
--keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
 
-# Keep Room entities
--keep class com.flowreader.app.data.local.entity.** { *; }
--keep class * extends androidx.room.RoomDatabase
--keep @androidx.room.Entity class *
--dontwarn androidx.room.paging.**
-
-# Keep Hilt
--keep class dagger.hilt.** { *; }
--keep class * extends dagger.hilt.android.internal.managers.ComponentSupplier { *; }
--keep class * extends dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper { *; }
--keepclasseswithmembers class * {
-    @dagger.hilt.* <methods>;
-}
--keepclasseswithmembers class * {
-    @dagger.hilt.* <fields>;
-}
-
-# Keep Kotlin Coroutines
+# Kotlin Coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
 -keepclassmembers class kotlinx.coroutines.** {
     volatile <fields>;
 }
--keepclassmembers class * extends kotlinx.coroutines.Job {
-    volatile <fields>;
+
+# ========================================
+# Room Database
+# ========================================
+-keep class * extends androidx.room.RoomDatabase
+-keep @androidx.room.Entity class *
+-keep @androidx.room.Database class *
+-keepclassmembers class * extends androidx.room.RoomDatabase {
+    <init>(...);
+}
+-dontwarn androidx.room.paging.**
+-dontwarn androidx.room.**
+
+# ========================================
+# Hilt Dependency Injection
+# ========================================
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keep class * extends dagger.hilt.android.internal.managers.ComponentSupplier { *; }
+-keepclasseswithmembers class * {
+    @dagger.hilt.* <fields>;
+}
+-keepclasseswithmembers class * {
+    @dagger.hilt.* <methods>;
+}
+-keep class * extends dagger.hilt.* { *; }
+-dontwarn dagger.hilt.**
+-dontwarn hilt_aggregated_deps_*
+
+# ========================================
+# Jetpack Compose
+# ========================================
+-keep class androidx.compose.** { *; }
+-keep class * extends androidx.compose.runtime.Composer { *; }
+-dontwarn androidx.compose.**
+
+# ========================================
+# ViewModel & Lifecycle
+# ========================================
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+-keepclassmembers class * extends androidx.lifecycle.ViewModel {
+    <init>(...);
 }
 
-# Keep Readium
--keep class org.readium.** { *; }
--dontwarn org.readium.**
-
-# Keep JSoup
--keeppackagenames org.jsoup.nodes
--keep class org.jsoup.** { *; }
--keepclassmembers class org.jsoup.** { *; }
-
-# Keep data classes
+# ========================================
+# Data Classes & Models
+# ========================================
 -keep class com.flowreader.app.domain.model.** { *; }
+-keep class com.flowreader.app.data.local.entity.** { *; }
 -keepclassmembers class * implements java.io.Serializable {
     static final long serialVersionUID;
     private static final java.io.ObjectStreamField[] serialPersistentFields;
@@ -57,50 +76,54 @@
     java.lang.Object readResolve();
 }
 
-# Keep Compose
--keep class androidx.compose.** { *; }
--dontwarn androidx.compose.**
+# ========================================
+# Readium EPUB Toolkit
+# ========================================
+-keep class org.readium.** { *; }
+-dontwarn org.readium.**
 
-# Keep Coil
+# ========================================
+# JSoup HTML Parser
+# ========================================
+-keep class org.jsoup.** { *; }
+-keeppackagenames org.jsoup.nodes
+-keepclassmembers class org.jsoup.** { *; }
+
+# ========================================
+# Coil Image Loading
+# ========================================
 -keep class coil.** { *; }
 -dontwarn coil.**
 
-# Keep ViewModel
--keep class * extends androidx.lifecycle.ViewModel { *; }
+# ========================================
+# Native Methods & Enums
+# ========================================
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
 
-# Optimization: Remove logging in release
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+
+# ========================================
+# Optimization Settings
+# ========================================
+-optimizationpasses 5
+-allowaccessmodification
+-dontusemixedcaseclassnames
+
+# Remove logging in release builds
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
     public static *** i(...);
 }
 
-# Optimization: Remove debug checks
--assumenosideeffects class java.lang.Boolean {
-    public static java.lang.Boolean getBoolean(java.lang.String);
-}
-
-# Optimization: Remove timestamp calls
--assumenosideeffects class android.os.SystemClock {
-    public static long elapsedRealtime();
-}
-
-# Keep native methods
--keepclasseswithmembernames class * {
-    native <methods>;
-}
-
-# Keep enum classes
--keepclassmembers enum * {
-    public static **[] values();
-    public static ** valueOf(java.lang.String);
-}
-
-# Remove unused code
--optimizationpasses 5
--allowaccessmodification
-
-# Remove inner class references
--dontoptimize
--dontusemixedcaseclassnames
--verbose
+# ========================================
+# Warnings Suppression (Known Safe)
+# ========================================
+-dontwarn okio.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**

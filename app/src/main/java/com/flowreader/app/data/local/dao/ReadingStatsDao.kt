@@ -12,6 +12,9 @@ interface ReadingStatsDao {
     @Query("SELECT * FROM reading_stats WHERE date = :date")
     suspend fun getStatsByDate(date: String): ReadingStatsEntity?
 
+    @Query("SELECT * FROM reading_stats")
+    suspend fun getAllStats(): List<ReadingStatsEntity>
+
     @Query("SELECT SUM(readTimeSeconds) FROM reading_stats WHERE date = :date")
     suspend fun getTodayReadTime(date: String): Long?
 

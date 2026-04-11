@@ -1,5 +1,6 @@
 package com.flowreader.app.data.repository
 
+import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.dao.ReadingStatsDao
 import com.flowreader.app.data.local.entity.ReadingStatsEntity
 import com.flowreader.app.domain.model.DailyStats
@@ -15,7 +16,8 @@ import javax.inject.Singleton
 
 @Singleton
 class ReadingStatsRepositoryImpl @Inject constructor(
-    private val readingStatsDao: ReadingStatsDao
+    private val readingStatsDao: ReadingStatsDao,
+    private val bookDao: BookDao
 ) : ReadingStatsRepository {
 
     private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -87,14 +89,93 @@ class ReadingStatsRepositoryImpl @Inject constructor(
     override suspend fun getReadingSummary(): ReadingSummary {
         val totalTime = getTotalReadTime()
         val totalPages = getTotalReadPages()
-        
+        val totalBooks = bookDao.getBookCount()
+        val currentStreak = calculateCurrentStreak()
+        val longestStreak = calculateLongestStreak()
+
         return ReadingSummary(
             totalReadTime = totalTime,
             totalReadPages = totalPages,
-            totalBooks = 0,
-            currentStreak = 0,
-            longestStreak = 0
+            totalBooks = totalBooks,
+            currentStreak = currentStreak,
+            longestStreak = longestStreak
         )
+    }
+
+    /**
+     * 计算当前连续阅读天数
+     */
+    private suspend fun calculateCurrentStreak(): Int {
+        val allStats = readingStatsDao.getAllStats()
+        if (allStats.isEmpty()) return 0
+
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+
+        var streak = 0
+        var checkDate = calendar.time
+
+        // 从今天开始往前检查
+        for (i in 0 until 365) {
+            val dateStr = dateFormat.format(checkDate)
+            val hasReadOnThisDay = allStats.any { it.date == dateStr && it.readTimeSeconds > 0 }
+
+            if (hasReadOnThisDay) {
+                streak++
+            } else if (i > 0) {
+                // 如果今天没读但之前连续，说明断了
+                break
+            } else if (i == 0 && !hasReadOnThisDay) {
+                // 今天还没读，检查昨天
+                continue
+            } else {
+                break
+            }
+
+            calendar.add(Calendar.DAY_OF_YEAR, -1)
+            checkDate = calendar.time
+        }
+
+        return streak
+    }
+
+    /**
+     * 计算最长连续阅读天数
+     */
+    private suspend fun calculateLongestStreak(): Int {
+        val allStats = readingStatsDao.getAllStats()
+        if (allStats.isEmpty()) return 0
+
+        val sortedDates = allStats
+            .filter { it.readTimeSeconds > 0 }
+            .map { it.date }
+            .distinct()
+            .sorted()
+
+        if (sortedDates.isEmpty()) return 0
+
+        var maxStreak = 1
+        var currentStreak = 1
+
+        for (i in 1 until sortedDates.size) {
+            val currentDate = dateFormat.parse(sortedDates[i])
+            val previousDate = dateFormat.parse(sortedDates[i - 1])
+
+            if (currentDate != null && previousDate != null) {
+                val diffDays = ((currentDate.time - previousDate.time) / (1000 * 60 * 60 * 24)).toInt()
+                if (diffDays == 1) {
+                    currentStreak++
+                    maxStreak = maxOf(maxStreak, currentStreak)
+                } else {
+                    currentStreak = 1
+                }
+            }
+        }
+
+        return maxStreak
     }
 
     override fun getRecentDailyStats(limit: Int): Flow<List<DailyStats>> {
