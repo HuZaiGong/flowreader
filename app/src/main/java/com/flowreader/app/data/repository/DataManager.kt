@@ -40,7 +40,6 @@ class DataManager @Inject constructor(
     companion object {
         private const val PREFS_NAME = "data_manager"
         private const val KEY_BOOK_COUNT = "book_count"
-        private const val KEY_LAST_SYNC = "last_sync"
         private const val KEY_SESSION_COUNT = "session_count"
     }
     
@@ -73,11 +72,5 @@ class DataManager @Inject constructor(
     fun incrementSessionCount() {
         val count = getSessionCount() + 1
         prefs.edit { putInt(KEY_SESSION_COUNT, count) }
-    }
-    
-    fun getLastSyncTime(): Long = prefs.getLong(KEY_LAST_SYNC, 0)
-    
-    fun setLastSyncTime(time: Long) {
-        prefs.edit { putLong(KEY_LAST_SYNC, time) }
     }
 }
