@@ -41,6 +41,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
@@ -84,23 +87,34 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --no-daemon
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
+
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: flowreader-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: flowreader-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
 
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
-          files: app/build/outputs/apk/debug/app-debug.apk
-          name: FlowReader v${{ github.run_number }}
+          tag_name: v40
+          files: app/build/outputs/apk/release/app-release.apk
+          name: FlowReader v40.0.0
           body: |
-            Auto-built APK from commit ${{ github.sha }}
+            FlowReader v40.0.0 - 离线电子书阅读应用
+            
+            主要更新:
+            - 修复 TTS 语音朗读功能
+            - 清理残留网络代码
+            - 优化代码架构
             
             Download the APK and install on your Android device.
         env:

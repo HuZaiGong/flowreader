@@ -7,6 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.flowreader.app.domain.model.Bookmark
@@ -22,6 +23,9 @@ fun ReaderSettingsDialog(
     onLineSpacingChange: (Float) -> Unit,
     onThemeChange: (ReaderTheme) -> Unit,
     onPageModeChange: (PageMode) -> Unit,
+    onTtsPlay: () -> Unit,
+    onTtsStop: () -> Unit,
+    isTtsPlaying: Boolean,
     onDismiss: () -> Unit,
     textColor: androidx.compose.ui.graphics.Color,
     backgroundColor: androidx.compose.ui.graphics.Color
@@ -34,6 +38,21 @@ fun ReaderSettingsDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                Text("语音朗读", style = MaterialTheme.typography.bodyMedium)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = if (isTtsPlaying) onTtsStop else onTtsPlay,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (isTtsPlaying) "停止" else "朗读")
+                    }
+                }
+
+                HorizontalDivider()
+
                 Text("字体大小: ${settings.fontSize}sp", style = MaterialTheme.typography.bodyMedium)
                 Slider(
                     value = settings.fontSize.toFloat(),

@@ -191,6 +191,12 @@ cd flowreader
 
 ## 📝 更新日志
 
+### v40
+- **TTS功能**: 修复语音朗读功能，添加朗读/停止按钮到设置界面
+- **版本规范**: 规范版本号为40.0.0，CI使用语义化版本
+- **单元测试**: GitHub Actions集成单元测试
+- **代码清理**: 移除DataManager中Sync残留代码
+
 ### v36
 - **Bug修复**: 修复空安全断言 !! 问题 (ReaderViewModel)
 - **CI修复**: 修复 GitHub Actions build.yml job 定义问题

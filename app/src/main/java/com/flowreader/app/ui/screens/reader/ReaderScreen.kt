@@ -180,6 +180,9 @@ fun ReaderScreen(
                     onLineSpacingChange = { viewModel.updateLineSpacing(it) },
                     onThemeChange = { viewModel.updateReaderTheme(it) },
                     onPageModeChange = { viewModel.updatePageMode(it) },
+                    onTtsPlay = { viewModel.playTts() },
+                    onTtsStop = { viewModel.stopTts() },
+                    isTtsPlaying = viewModel.ttsState.value == com.flowreader.app.util.TtsState.PLAYING,
                     onDismiss = { viewModel.showSettings(false) },
                     textColor = textColor,
                     backgroundColor = backgroundColor

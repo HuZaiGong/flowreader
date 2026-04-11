@@ -65,13 +65,16 @@ class ReaderViewModel @Inject constructor(
     private val readingStatsRepository: ReadingStatsRepository,
     private val cacheManager: CacheManager,
     private val memoryManager: MemoryManager,
-    private val bookLoader: com.flowreader.app.util.BookLoader
+    private val bookLoader: com.flowreader.app.util.BookLoader,
+    private val ttsManager: com.flowreader.app.util.TtsManager
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
+
+    val ttsState: StateFlow<com.flowreader.app.util.TtsState> = ttsManager.ttsState
 
     private var progressSaveJob: Job? = null
     private var statsUpdateJob: Job? = null
@@ -119,6 +122,7 @@ class ReaderViewModel @Inject constructor(
         predictionJob?.cancel()
         saveProgressImmediately()
         saveReadingStats()
+        ttsManager.shutdown()
     }
 
     private fun saveReadingStats() {
@@ -522,5 +526,14 @@ class ReaderViewModel @Inject constructor(
 
     fun clearShareText() {
         _uiState.update { it.copy(shareText = null) }
+    }
+
+    fun playTts() {
+        val currentChapter = _uiState.value.currentChapter ?: return
+        ttsManager.speak(currentChapter.content)
+    }
+
+    fun stopTts() {
+        ttsManager.stop()
     }
 }
