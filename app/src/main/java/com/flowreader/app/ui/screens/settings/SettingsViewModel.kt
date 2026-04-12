@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowreader.app.domain.model.*
 import com.flowreader.app.data.repository.SettingsRepository
-import com.flowreader.app.data.repository.BackupRepository
+import com.flowreader.app.domain.repository.BackupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch

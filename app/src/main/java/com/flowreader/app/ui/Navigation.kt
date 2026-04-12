@@ -2,7 +2,7 @@ package com.flowreader.app.ui
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LibraryBooks
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material3.*
@@ -25,7 +25,7 @@ import com.flowreader.app.ui.screens.settings.SettingsScreen
 import com.flowreader.app.ui.screens.stats.StatsScreen
 
 sealed class Screen(val route: String, val title: String, val icon: ImageVector? = null) {
-    object Library : Screen("library", "书架", Icons.Default.LibraryBooks)
+    object Library : Screen("library", "书架", Icons.AutoMirrored.Filled.LibraryBooks)
     object Stats : Screen("stats", "统计", Icons.Default.BarChart)
     object BookDetail : Screen("book_detail/{bookId}", "书籍详情") {
         fun createRoute(bookId: Long) = "book_detail/$bookId"
