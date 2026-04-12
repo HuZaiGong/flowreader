@@ -10,6 +10,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -205,7 +208,7 @@ fun LibraryScreen(
                         }
 
                         item {
-                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                         }
                     }
 
@@ -333,7 +336,7 @@ private fun RecentBookCard(
                 if (book.readingProgress > 0) {
                     Spacer(modifier = Modifier.height(4.dp))
                     LinearProgressIndicator(
-                        progress = book.readingProgress,
+                        progress = { book.readingProgress },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -429,7 +432,7 @@ private fun BookListItem(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         LinearProgressIndicator(
-                            progress = book.readingProgress,
+                            progress = { book.readingProgress },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(4.dp)

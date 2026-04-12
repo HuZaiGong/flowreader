@@ -13,6 +13,7 @@ import com.flowreader.app.data.local.entity.BookmarkEntity
 import com.flowreader.app.data.local.entity.CategoryEntity
 import com.flowreader.app.data.local.entity.ChapterEntity
 import com.flowreader.app.data.local.entity.ReadingStatsEntity
+import com.flowreader.app.domain.repository.BackupRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -26,15 +27,15 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class BackupRepository @Inject constructor(
+class BackupRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val bookDao: BookDao,
     private val chapterDao: ChapterDao,
     private val bookmarkDao: BookmarkDao,
     private val categoryDao: CategoryDao,
     private val readingStatsDao: ReadingStatsDao
-) {
-    suspend fun exportData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
+) : BackupRepository {
+    override suspend fun exportData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val json = JSONObject()
 
@@ -75,7 +76,7 @@ class BackupRepository @Inject constructor(
         }
     }
 
-    suspend fun importData(uri: Uri): Result<ImportResult> = withContext(Dispatchers.IO) {
+    override suspend fun importData(uri: Uri): Result<ImportResult> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 BufferedReader(InputStreamReader(inputStream)).use { reader ->
@@ -115,7 +116,7 @@ class BackupRepository @Inject constructor(
         }
     }
 
-    suspend fun exportReadingProgress(bookId: Long): Result<String> = withContext(Dispatchers.IO) {
+    override suspend fun exportReadingProgress(bookId: Long): Result<String> = withContext(Dispatchers.IO) {
         try {
             val book = bookDao.getBookById(bookId)
                 ?: return@withContext Result.failure(Exception("书籍不存在"))

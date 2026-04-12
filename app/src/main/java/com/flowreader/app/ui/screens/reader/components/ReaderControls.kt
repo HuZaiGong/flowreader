@@ -3,6 +3,7 @@ package com.flowreader.app.ui.screens.reader.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -64,7 +65,7 @@ fun ReaderControls(
             actions = {
                 IconButton(onClick = onChapterClick) {
                     Icon(
-                        Icons.Default.List,
+                        Icons.AutoMirrored.Filled.List,
                         contentDescription = "目录",
                         tint = textColor
                     )
