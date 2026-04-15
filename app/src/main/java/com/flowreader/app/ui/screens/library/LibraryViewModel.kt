@@ -30,6 +30,7 @@ data class LibraryUiState(
     val selectedCategoryId: Long? = null,
     val searchQuery: String = "",
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val appTheme: ReaderTheme = ReaderTheme.SYSTEM,
     val sortOrder: SortOrder = SortOrder.ADDED_TIME
@@ -46,6 +47,9 @@ class LibraryViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+    
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     private val _sortOrder = MutableStateFlow(SortOrder.ADDED_TIME)
@@ -209,5 +213,17 @@ class LibraryViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+    
+    fun refreshBooks() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                // 重新加载书籍列表
+                loadBooks()
+            } finally {
+                _isRefreshing.value = false
+            }
+        }
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -32,6 +33,19 @@ import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.ui.theme.FlowReaderTheme
 import java.io.File
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.pullToRefresh
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +56,7 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val listState = rememberLazyListState()
 
     val singleBookPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -65,6 +80,10 @@ fun LibraryScreen(
 
     var showSearchBar by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    
+    // 下拉刷新状态
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     FlowReaderTheme(theme = uiState.appTheme) {
         Scaffold(
@@ -178,55 +197,87 @@ fun LibraryScreen(
                     onAddBook = { bookPickerLauncher.launch(arrayOf("*/*")) }
                 )
             } else {
-                LazyColumn(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                        .padding(paddingValues)
                 ) {
-                    if (uiState.recentlyRead.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "最近阅读",
-                                style = MaterialTheme.typography.titleMedium,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                        }
-
-                        item {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(uiState.recentlyRead) { book ->
-                                    RecentBookCard(
-                                        book = book,
-                                        onClick = { onBookClick(book.id) }
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pullToRefresh(
+                                isRefreshing = isRefreshing,
+                                state = pullToRefreshState,
+                                onRefresh = { viewModel.refreshBooks() }
+                            ),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        if (uiState.recentlyRead.isNotEmpty()) {
+                            item {
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
+                                ) {
+                                    Text(
+                                        text = "最近阅读",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(bottom = 8.dp)
                                     )
                                 }
+                            }
+
+                            item {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    items(uiState.recentlyRead, key = { it.id }) { book ->
+                                        RecentBookCard(
+                                            book = book,
+                                            onClick = { onBookClick(book.id) }
+                                        )
+                                    }
+                                }
+                            }
+
+                            item {
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             }
                         }
 
                         item {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
+                            ) {
+                                Text(
+                                    text = "全部书籍",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
+                        }
+
+                        items(uiState.books, key = { it.id }) { book ->
+                            AnimatedVisibility(
+                                visible = true,
+                                enter = fadeIn(animationSpec = tween(300))
+                            ) {
+                                BookListItem(
+                                    book = book,
+                                    onClick = { onBookClick(book.id) },
+                                    onDelete = { viewModel.deleteBook(book.id) }
+                                )
+                            }
                         }
                     }
-
-                    item {
-                        Text(
-                            text = "全部书籍",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(bottom = 8.dp)
-                        )
-                    }
-
-                    items(uiState.books, key = { it.id }) { book ->
-                        BookListItem(
-                            book = book,
-                            onClick = { onBookClick(book.id) },
-                            onDelete = { viewModel.deleteBook(book.id) }
-                        )
-                    }
+                    
+                    PullToRefreshDefaults.Indicator(
+                        state = pullToRefreshState,
+                        isRefreshing = isRefreshing,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
                 }
             }
 

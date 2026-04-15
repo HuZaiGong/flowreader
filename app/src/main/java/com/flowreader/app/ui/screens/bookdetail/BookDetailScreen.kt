@@ -3,6 +3,7 @@ package com.flowreader.app.ui.screens.bookdetail
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +27,16 @@ import com.flowreader.app.ui.theme.FlowReaderTheme
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.shrinkVertically
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,48 +102,40 @@ fun BookDetailScreen(
                             }
                         }
 
-                        when (selectedTab) {
-                            0 -> {
-                                if (uiState.chapters.isEmpty()) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(32.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = "暂无目录",
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                            )
-                                        }
+                        item {
+                            AnimatedContent(
+                                targetState = selectedTab,
+                                transitionSpec = {
+                                    if (targetState > initialState) {
+                                        slideInHorizontally(
+                                            animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                            initialOffsetX = { it }
+                                        ) togetherWith slideOutHorizontally(
+                                            animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                            targetOffsetX = { -it }
+                                        )
+                                    } else {
+                                        slideInHorizontally(
+                                            animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                            initialOffsetX = { -it }
+                                        ) togetherWith slideOutHorizontally(
+                                            animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                            targetOffsetX = { it }
+                                        )
                                     }
-                                } else {
-                                    items(uiState.chapters) { chapter ->
-                                        ChapterItem(chapter = chapter)
+                                },
+                                label = "TabContentTransition"
+                            ) { targetTab ->
+                                when (targetTab) {
+                                    0 -> {
+                                        ChapterListContent(
+                                            chapters = uiState.chapters
+                                        )
                                     }
-                                }
-                            }
-                            1 -> {
-                                if (uiState.bookmarks.isEmpty()) {
-                                    item {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(32.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = "暂无书签",
-                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                                            )
-                                        }
-                                    }
-                                } else {
-                                    items(uiState.bookmarks) { bookmark ->
-                                        BookmarkItem(
-                                            bookmark = bookmark,
-                                            onDelete = { viewModel.deleteBookmark(bookmark.id) }
+                                    1 -> {
+                                        BookmarkListContent(
+                                            bookmarks = uiState.bookmarks,
+                                            onDelete = { bookmarkId -> viewModel.deleteBookmark(bookmarkId) }
                                         )
                                     }
                                 }
@@ -309,42 +312,119 @@ private fun BookmarkItem(
     onDelete: () -> Unit
 ) {
     val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    var isDeleting by remember { mutableStateOf(false) }
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp)
+    AnimatedVisibility(
+        visible = !isDeleting,
+        exit = fadeOut(animationSpec = tween(300)) + shrinkVertically(),
+        label = "BookmarkDeleteAnimation"
     ) {
-        Row(
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Bookmark,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = bookmark.text,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "第 ${bookmark.chapterIndex + 1} 章 · ${dateFormat.format(bookmark.createdTime)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+                IconButton(onClick = { isDeleting = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "删除",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+    }
+    
+    if (isDeleting) {
+        LaunchedEffect(Unit) {
+            onDelete()
+        }
+    }
+}
+
+@Composable
+private fun ChapterListContent(
+    chapters: List<Chapter>
+) {
+    if (chapters.isEmpty()) {
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = Icons.Default.Bookmark,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
+            Text(
+                text = "暂无目录",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = bookmark.text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "第 ${bookmark.chapterIndex + 1} 章 · ${dateFormat.format(bookmark.createdTime)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
+        }
+    } else {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(chapters, key = { it.id }) { chapter ->
+                AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(animationSpec = tween(300)),
+                    label = "ChapterItemAnimation"
+                ) {
+                    ChapterItem(chapter = chapter)
+                }
             }
-            IconButton(onClick = onDelete) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "删除",
-                    tint = MaterialTheme.colorScheme.error
+        }
+    }
+}
+
+@Composable
+private fun BookmarkListContent(
+    bookmarks: List<Bookmark>,
+    onDelete: (Long) -> Unit
+) {
+    if (bookmarks.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "暂无书签",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        }
+    } else {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(bookmarks, key = { it.id }) { bookmark ->
+                BookmarkItem(
+                    bookmark = bookmark,
+                    onDelete = { onDelete(bookmark.id) }
                 )
             }
         }
