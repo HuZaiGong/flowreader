@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>FlowReader · 心流阅读 · 纯粹的本地阅读体验</title>
+    <meta name="description" content="FlowReader 是一款简洁优雅的 Android 电子书阅读应用，基于 Jetpack Compose 构建，支持 EPUB、TXT、PDF、Markdown 格式，提供沉浸式阅读体验。">
+    <meta property="og:title" content="FlowReader · 心流阅读">
+    <meta property="og:description" content="一款简洁优雅的 Android 电子书阅读应用，基于 Jetpack Compose 构建，提供沉浸式阅读体验。">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    <style>
+        /* ============================================
+           CSS Variables & Reset
+           ============================================ */
+        :root {
+            --primary: #6C5CE7;
+            --primary-light: #A29BFE;
+            --primary-dark: #4834D4;
+            --accent: #00CEC9;
+            --accent-light: #81ECEC;
+            --bg-dark: #0F0F1A;
+            --bg-card: #1A1A2E;
+            --bg-card-hover: #222240;
+            --text-primary: #EAEAEA;
+            --text-secondary: #A0A0B8;
+            --text-muted: #6C6C85;
+            --gradient-1: linear-gradient(135deg, #6C5CE7, #00CEC9);
+            --gradient-2: linear-gradient(135deg, #6C5CE7, #E84393);
+            --gradient-3: linear-gradient(135deg, #00CEC9, #6C5CE7);
+            --shadow-glow: 0 0 40px rgba(108, 92, 231, 0.3);
+            --radius: 16px;
+            --radius-sm: 10px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: var(--primary) var(--bg-dark);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                         'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        /* ============================================
+           Background Effects
+           ============================================ */
+        .bg-grid {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(108, 92, 231, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(108, 92, 231, 0.03) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .bg-orb-1 {
+            width: 600px; height: 600px;
+            background: var(--primary);
+            top: -200px; right: -200px;
+            animation: float1 20s ease-in-out infinite;
+        }
+
+        .bg-orb-2 {
+            width: 500px; height: 500px;
+            background: var(--accent);
+            bottom: -150px; left: -150px;
+            animation: float2 25s ease-in-out infinite;
+        }
+
+        .bg-orb-3 {
+            width: 400px; height: 400px;
+            background: #E84393;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation: float3 18s ease-in-out infinite;
+            opacity: 0.08;
+        }
+
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(-50px, 50px); }
+            66% { transform: translate(30px, -30px); }
+        }
+
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0); }
+            33% { transform: translate(40px, -40px); }
+            66% { transform: translate(-30px, 30px); }
+        }
+
+        @keyframes float3 {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+        }
+
+        /* ============================================
+           Navigation
+           ============================================ */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 16px 0;
+            transition: var(--transition);
+        }
+
+        .navbar.scrolled {
+            background: rgba(15, 15, 26, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(108, 92, 231, 0.1);
+            padding: 10px 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-logo svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-1);
+            transition: var(--transition);
+            border-radius: 1px;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 22px;
+            background: var(--gradient-1);
+            color: #fff !important;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.88rem;
+            text-decoration: none;
+            transition: var(--transition);
+            -webkit-text-fill-color: #fff !important;
+        }
+
+        .nav-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(108, 92, 231, 0.4);
+        }
+
+        .nav-cta::after { display: none !important; }
+
+        .mobile-toggle {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 4px;
+        }
+
+        .mobile-toggle span {
+            width: 24px;
+            height: 2px;
+            background: var(--text-primary);
+            border-radius: 2px;
+            transition: var(--transition);
+        }
+
+        /* ============================================
+           Hero Section
+           ============================================ */
+        .hero {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 120px 24px 80px;
+        }
+
+        .hero-content {
+            max-width: 800px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: rgba(108, 92, 231, 0.12);
+            border: 1px solid rgba(108, 92, 231, 0.25);
+            border-radius: 50px;
+            font-size: 0.85rem;
+            color: var(--primary-light);
+            margin-bottom: 32px;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .hero-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.8rem, 6vw, 4.5rem);
+            font-weight: 900;
+            line-height: 1.15;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.8s ease 0.1s both;
+        }
+
+        .hero h1 .gradient-text {
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-description {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 40px;
+            animation: fadeInUp 0.8s ease 0.2s both;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease 0.3s both;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 32px;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 35px rgba(108, 92, 231, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-3px);
+            border-color: rgba(108, 92, 231, 0.3);
+        }
+
+        .hero-stats {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 64px;
+            animation: fadeInUp 0.8s ease 0.4s both;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat .number {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-stat .label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ============================================
+           Section Common
+           ============================================ */
+        .section {
+            position: relative;
+            z-index: 1;
+            padding: 100px 24px;
+        }
+
+        .section-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 64px;
+        }
+
+        .section-label {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(108, 92, 231, 0.1);
+            border: 1px solid rgba(108, 92, 231, 0.2);
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--primary-light);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 4vw, 2.8rem);
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .section-subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* ============================================
+           Features Section
+           ============================================ */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .feature-card {
+            padding: 32px 28px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-1);
+            opacity: 0;
+            transition: var(--transition);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(108, 92, 231, 0.2);
+            box-shadow: var(--shadow-glow);
+            background: var(--bg-card-hover);
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .feature-icon.purple { background: rgba(108, 92, 231, 0.15); }
+        .feature-icon.teal { background: rgba(0, 206, 201, 0.15); }
+        .feature-icon.pink { background: rgba(232, 67, 147, 0.15); }
+        .feature-icon.orange { background: rgba(253, 121, 68, 0.15); }
+        .feature-icon.blue { background: rgba(9, 132, 227, 0.15); }
+        .feature-icon.green { background: rgba(0, 184, 148, 0.15); }
+        .feature-icon.yellow { background: rgba(253, 203, 110, 0.15); }
+
+        .feature-card h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .feature-card p {
+            font-size: 0.92rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+        }
+
+        /* ============================================
+           Reading Experience Table
+           ============================================ */
+        .exp-table {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            overflow: hidden;
+            margin-top: 24px;
+        }
+
+        .exp-row {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .exp-row:last-child {
+            border-bottom: none;
+        }
+
+        .exp-label {
+            width: 140px;
+            padding: 16px 20px;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.02);
+            border-right: 1px solid rgba(255, 255, 255, 0.05);
+            flex-shrink: 0;
+        }
+
+        .exp-desc {
+            flex: 1;
+            padding: 16px 20px;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           Tech Stack Section
+           ============================================ */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .tech-card {
+            padding: 28px 20px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .tech-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(108, 92, 231, 0.2);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .tech-card .tech-icon {
+            font-size: 2.2rem;
+            margin-bottom: 12px;
+        }
+
+        .tech-card h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .tech-card p {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ============================================
+           Performance Section
+           ============================================ */
+        .perf-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .perf-card {
+            padding: 24px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .perf-card h4 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--primary-light);
+        }
+
+        .perf-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           Contributing
+           ============================================ */
+        .contrib-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .contrib-card {
+            padding: 32px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 20px;
+            transition: var(--transition);
+        }
+
+        .contrib-card:hover {
+            border-color: rgba(108, 92, 231, 0.2);
+            transform: translateY(-3px);
+        }
+
+        .contrib-card .contrib-num {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(108, 92, 231, 0.12);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: var(--primary-light);
+            flex-shrink: 0;
+        }
+
+        .contrib-card h4 {
+            font-size: 1.05rem;
+            margin-bottom: 6px;
+        }
+
+        .contrib-card p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+        }
+
+        /* ============================================
+           CTA Section
+           ============================================ */
+        .cta-section {
+            text-align: center;
+            padding: 100px 24px;
+        }
+
+        .cta-box {
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 64px 48px;
+            background: var(--bg-card);
+            border-radius: 24px;
+            border: 1px solid rgba(108, 92, 231, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-1);
+        }
+
+        .cta-box h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+        }
+
+        .cta-box p {
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+            font-size: 1.05rem;
+        }
+
+        .cta-actions {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        /* ============================================
+           Footer
+           ============================================ */
+        .footer {
+            position: relative;
+            z-index: 1;
+            padding: 48px 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .footer-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .footer-logo {
+            font-size: 1.1rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .footer-copy {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.88rem;
+            transition: var(--transition);
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-light);
+        }
+
+        /* ============================================
+           Scroll Animations
+           ============================================ */
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ============================================
+           Responsive
+           ============================================ */
+        @media (max-width: 1024px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .tech-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .mobile-toggle { display: flex; }
+
+            .nav-links.open {
+                display: flex;
+                flex-direction: column;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: rgba(15, 15, 26, 0.95);
+                backdrop-filter: blur(20px);
+                padding: 24px;
+                gap: 20px;
+                border-bottom: 1px solid rgba(108, 92, 231, 0.1);
+            }
+
+            .features-grid { grid-template-columns: 1fr; }
+            .tech-grid { grid-template-columns: 1fr; }
+            .contrib-cards { grid-template-columns: 1fr; }
+            .perf-grid { grid-template-columns: 1fr; }
+            .hero-stats { gap: 24px; }
+            .exp-label { width: 110px; }
+        }
+
+        @media (max-width: 480px) {
+            .hero-stats { flex-direction: column; gap: 16px; }
+            .hero-actions { flex-direction: column; }
+            .hero-actions .btn { width: 100%; justify-content: center; }
+            .exp-row { flex-direction: column; }
+            .exp-label { border-right: none; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Effects -->
+    <div class="bg-grid"></div>
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <a href="#" class="nav-logo">
+                <svg viewBox="0 0 32 32" fill="none">
+                    <rect width="32" height="32" rx="8" fill="url(#logoGrad)"/>
+                    <path d="M9 11h14M9 16h10M9 21h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0" y1="0" x2="32" y2="32">
+                            <stop stop-color="#6C5CE7"/>
+                            <stop offset="1" stop-color="#00CEC9"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                FlowReader
+            </a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="#features">功能特性</a></li>
+                <li><a href="#reading">阅读体验</a></li>
+                <li><a href="#tech-stack">技术栈</a></li>
+                <li><a href="#contributing">贡献</a></li>
+                <li>
+                    <a href="https://github.com/HuZaiGong/flowreader" target="_blank" class="nav-cta">
+                        ⭐ GitHub
+                    </a>
+                </li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle" aria-label="菜单">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                开源 · 免费 · 纯本地运行
+            </div>
+            <h1>
+                FlowReader<br>
+                <span class="gradient-text">心流阅读</span>
+            </h1>
+            <p class="hero-description">
+                一款简洁优雅的 Android 电子书阅读应用，基于 Jetpack Compose 构建。<br>
+                支持 EPUB、TXT、PDF、Markdown 格式，提供沉浸式的阅读体验。
+            </p>
+            <div class="hero-actions">
+                <a href="https://github.com/HuZaiGong/flowreader" target="_blank" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                    </svg>
+                    查看源码
+                </a>
+                <a href="#features" class="btn btn-secondary">
+                    了解更多 →
+                </a>
+            </div>
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="number" id="starCount">--</div>
+                    <div class="label">GitHub Stars</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">GPL v3</div>
+                    <div class="label">开源协议</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="number">25+</div>
+                    <div class="label">版本迭代</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="section" id="features">
+        <div class="section-container">
+            <div class="section-header reveal">
+                <span class="section-label">✨ 功能特性</span>
+                <h2 class="section-title">全面的阅读功能</h2>
+                <p class="section-subtitle">
+                    从书库管理到深度阅读，FlowReader 提供了完整的功能矩阵
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card reveal">
+                    <div class="feature-icon purple">📚</div>
+                    <h3>书库管理</h3>
+                    <p>导入本地书籍（EPUB、TXT、PDF、Markdown），支持批量导入、书架展示、分类浏览与排序管理[reference:0]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon teal">🎨</div>
+                    <h3>阅读主题</h3>
+                    <p>浅色、深色、护眼、羊皮纸、AMOLED 纯黑五种主题，随心切换[reference:1]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon pink">📝</div>
+                    <h3>笔记与批注</h3>
+                    <p>文字高亮划线，添加想法批注，支持黄、绿、蓝、粉、橙多种高亮颜色，笔记可导出[reference:2]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon orange">🔍</div>
+                    <h3>全文搜索</h3>
+                    <p>单本书籍内全文检索，搜索结果高亮显示，快速跳转定位[reference:3]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon blue">🗣️</div>
+                    <h3>文本朗读</h3>
+                    <p>接入系统 TTS 语音引擎，支持调节语速和音调，中英文语音识别[reference:4]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon yellow">🎲</div>
+                    <h3>决策转盘</h3>
+                    <p>可定制的决策转盘工具，支持自定义选项和颜色，加权随机算法，帮助解决阅读选择困难[reference:5]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon green">📊</div>
+                    <h3>阅读统计</h3>
+                    <p>每日阅读时长和页数统计，阅读进度自动记录，支持设置每日阅读目标[reference:6]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon purple">🔖</div>
+                    <h3>书签功能</h3>
+                    <p>随时添加书签，书签列表管理，快速跳转书签位置[reference:7]。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon teal">💾</div>
+                    <h3>数据管理</h3>
+                    <p>书籍和阅读进度备份与恢复，阅读记录导出，纯本地运行无云端依赖[reference:8]。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Reading Experience Section -->
+    <section class="section" id="reading">
+        <div class="section-container">
+            <div class="section-header reveal">
+                <span class="section-label">📖 阅读体验</span>
+                <h2 class="section-title">沉浸式阅读，随心定制</h2>
+                <p class="section-subtitle">每一个细节都为更好的阅读体验而设计</p>
+            </div>
+            <div class="exp-table reveal">
+                <div class="exp-row"><div class="exp-label">📏 字体大小</div><div class="exp-desc">12sp - 32sp 可调，适配不同阅读习惯[reference:9]</div></div>
+                <div class="exp-row"><div class="exp-label">📐 行间距</div><div class="exp-desc">1.0 - 2.5 可调，优化阅读舒适度[reference:10]</div></div>
+                <div class="exp-row"><div class="exp-label">📄 翻页模式</div><div class="exp-desc">滑动、仿真、无动画、卷曲、滑动覆盖五种模式[reference:11]</div></div>
+                <div class="exp-row"><div class="exp-label">🎯 点击区域</div><div class="exp-desc">左30%上一页，中间呼出菜单，右30%下一页[reference:12]</div></div>
+                <div class="exp-row"><div class="exp-label">🌙 自动夜间模式</div><div class="exp-desc">根据时间自动切换深色/浅色主题[reference:13]</div></div>
+                <div class="exp-row"><div class="exp-label">📑 PDF 支持</div><div class="exp-desc">流畅阅读，支持缩放和拖拽翻页[reference:14]</div></div>
+                <div class="exp-row"><div class="exp-label">🖐️ 边缘手势</div><div class="exp-desc">自定义边缘滑动区域，避免与系统返回手势冲突[reference:15]</div></div>
+                <div class="exp-row"><div class="exp-label">🔆 屏幕常亮</div><div class="exp-desc">阅读时保持屏幕常亮，无需频繁点击[reference:16]</div></div>
+                <div class="exp-row"><div class="exp-label">🔗 章节记忆</div><div class="exp-desc">切换章节自动恢复滚动位置[reference:17]</div></div>
+                <div class="exp-row"><div class="exp-label">📊 阅读进度</div><div class="exp-desc">底部可拖拽进度条，快速跳转章节[reference:18]</div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Performance Section -->
+    <section class="section">
+        <div class="section-container">
+            <div class="section-header reveal">
+                <span class="section-label">⚡ 性能优化</span>
+                <h2 class="section-title">流畅，不止于表面</h2>
+                <p class="section-subtitle">多项优化技术，确保即使在低配置设备上也能流畅运行</p>
+            </div>
+            <div class="perf-grid reveal">
+                <div class="perf-card"><h4>🧠 智能内存管理</h4><p>MemoryManager 实时监控内存压力，自动调节缓存策略[reference:19]</p></div>
+                <div class="perf-card"><h4>🗑️ LRU 缓存管理</h4><p>CacheManager 实现 LRU 缓存，自动淘汰低优先级缓存[reference:20]</p></div>
+                <div class="perf-card"><h4>📚 章节内存缓存</h4><p>智能缓存已读取章节，减少数据库查询，提升阅读切换速度[reference:21]</p></div>
+                <div class="perf-card"><h4>🌊 流式书籍解析</h4><p>支持进度回调，大文件不再卡顿[reference:22]</p></div>
+                <div class="perf-card"><h4>🖼️ 图片缓存优化</h4><p>内存 + 磁盘双缓存，滚动更流畅[reference:23]</p></div>
+                <div class="perf-card"><h4>⏱️ 进度延迟写入</h4><p>3 秒 debounce 减少数据库写入，提升整体性能[reference:24]</p></div>
+                <div class="perf-card"><h4>📄 PDF 流式渲染</h4><p>大型 PDF 文件流畅加载[reference:25]</p></div>
+                <div class="perf-card"><h4>⚡ Lazy Loading</h4><p>章节内容按需加载，首屏加载更快[reference:26]</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tech Stack Section -->
+    <section class="section" id="tech-stack">
+        <div class="section-container">
+            <div class="section-header reveal">
+                <span class="section-label">🛠️ 技术栈</span>
+                <h2 class="section-title">现代化 Android 技术架构</h2>
+                <p class="section-subtitle">采用业界领先的技术方案，确保高性能与可维护性</p>
+            </div>
+            <div class="tech-grid">
+                <div class="tech-card reveal"><div class="tech-icon">⚛️</div><h4>Jetpack Compose + Material 3</h4><p>UI 框架</p></div>
+                <div class="tech-card reveal"><div class="tech-icon">🏛️</div><h4>MVVM + Clean Architecture</h4><p>架构设计</p></div>
+                <div class="tech-card reveal"><div class="tech-icon">💉</div><h4>Hilt</h4><p>依赖注入</p></div>
+                <div class="tech-card reveal"><div class="tech-icon">🗄️</div><h4>Room + SQLite FTS5</h4><p>数据库</p></div>
+                <div class="tech-card reveal"><div class="tech-icon">🖼️</div><h4>Coil</h4><p>图片加载</p></div>
+                <div class="tech-card reveal"><div class="tech-icon">🔄</div><h4>Kotlin Coroutines + Flow</h4><p>异步处理</p></div>
+                <div class="tech-card reveal"><div class="tech-icon">🧭</div><h4>Navigation Compose</h4><p>导航</p></div>
+                <div class="tech-card reveal"><div class="tech-icon">📘</div><h4>Readium Kotlin Toolkit</h4><p>EPUB 渲染</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Supported Formats Section -->
+    <section class="section">
+        <div class="section-container">
+            <div class="section-header reveal">
+                <span class="section-label">📄 支持格式</span>
+                <h2 class="section-title">多格式阅读支持</h2>
+                <p class="section-subtitle">EPUB · TXT · PDF · Markdown 全格式覆盖</p>
+            </div>
+            <div class="exp-table reveal">
+                <div class="exp-row"><div class="exp-label">📘 EPUB</div><div class="exp-desc">✅ 已支持（Readium 引擎）[reference:27]</div></div>
+                <div class="exp-row"><div class="exp-label">📃 TXT</div><div class="exp-desc">✅ 已支持[reference:28]</div></div>
+                <div class="exp-row"><div class="exp-label">📑 PDF</div><div class="exp-desc">✅ 已支持[reference:29]</div></div>
+                <div class="exp-row"><div class="exp-label">📝 Markdown</div><div class="exp-desc">✅ 已支持[reference:30]</div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contributing Section -->
+    <section class="section" id="contributing">
+        <div class="section-container">
+            <div class="section-header reveal">
+                <span class="section-label">🤝 参与贡献</span>
+                <h2 class="section-title">一起建设 FlowReader</h2>
+                <p class="section-subtitle">
+                    我们欢迎每一位开发者的贡献，无论你是修复 Bug 还是添加新功能
+                </p>
+            </div>
+            <div class="contrib-cards">
+                <div class="contrib-card reveal"><div class="contrib-num">1</div><div><h4>Fork 仓库</h4><p>点击 GitHub 页面右上角的 Fork 按钮，将项目复制到你的账号下。</p></div></div>
+                <div class="contrib-card reveal"><div class="contrib-num">2</div><div><h4>创建分支</h4><p>基于 main 分支创建功能分支，命名规范如 feature/your-feature。</p></div></div>
+                <div class="contrib-card reveal"><div class="contrib-num">3</div><div><h4>提交更改</h4><p>编写代码并提交，确保 commit message 清晰明了，符合规范。</p></div></div>
+                <div class="contrib-card reveal"><div class="contrib-num">4</div><div><h4>发起 Pull Request</h4><p>向主仓库发起 PR，描述你的改动内容，等待审核与合并。</p></div></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Build Guide Section -->
+    <section class="section">
+        <div class="section-container">
+            <div class="section-header reveal">
+                <span class="section-label">🔧 构建指南</span>
+                <h2 class="section-title">快速构建 APK</h2>
+                <p class="section-subtitle">环境要求：Android SDK 34+、Kotlin 1.9+、JDK 17[reference:31]</p>
+            </div>
+            <div class="code-block-wrapper reveal" style="max-width:700px;margin:0 auto;">
+                <div style="background:#0D0D1A;border-radius:16px;border:1px solid rgba(255,255,255,0.06);overflow:hidden;">
+                    <div style="padding:14px 20px;background:rgba(255,255,255,0.02);border-bottom:1px solid rgba(255,255,255,0.05);display:flex;justify-content:space-between;">
+                        <span style="font-size:0.78rem;color:var(--text-muted);">Terminal</span>
+                        <button class="copy-btn" onclick="copyBuildCode(this)" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:6px 14px;color:var(--text-secondary);cursor:pointer;">📋 复制</button>
+                    </div>
+                    <div id="buildCode" style="padding:24px;font-family:monospace;font-size:0.9rem;line-height:1.8;">
+                        <span style="color:#546E7A;"># 克隆项目</span><br>
+                        <span style="color:#C792EA;">git</span> <span style="color:#82AAFF;">clone</span> <span style="color:#C3E88D;">https://github.com/HuZaiGong/flowreader.git</span><br><br>
+                        <span style="color:#546E7A;"># 进入项目目录</span><br>
+                        <span style="color:#C792EA;">cd</span> <span style="color:#EEFFFF;">flowreader</span><br><br>
+                        <span style="color:#546E7A;"># 构建 Debug APK</span><br>
+                        <span style="color:#EEFFFF;">./gradlew</span> <span style="color:#82AAFF;">assembleDebug</span><br><br>
+                        <span style="color:#546E7A;"># 构建 Release APK</span><br>
+                        <span style="color:#EEFFFF;">./gradlew</span> <span style="color:#82AAFF;">assembleRelease</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <div class="cta-box reveal">
+            <h2>准备好开始阅读了吗？</h2>
+            <p>加入 FlowReader 的开源社区，一起打造更好的阅读工具</p>
+            <div class="cta-actions">
+                <a href="https://github.com/HuZaiGong/flowreader" target="_blank" class="btn btn-primary">⭐ Star 项目</a>
+                <a href="https://github.com/HuZaiGong/flowreader/issues" target="_blank" class="btn btn-secondary">💬 反馈问题</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-left"><span class="footer-logo">FlowReader</span><span class="footer-copy">© 2024-2026 HuZaiGong · GPL v3 开源许可</span></div>
+            <div class="footer-links">
+                <a href="https://github.com/HuZaiGong/flowreader" target="_blank">GitHub</a>
+                <a href="https://github.com/HuZaiGong/flowreader/issues" target="_blank">Issues</a>
+                <a href="https://github.com/HuZaiGong/flowreader/blob/main/LICENSE" target="_blank">License</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 50));
+
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        mobileToggle.addEventListener('click', () => navLinks.classList.toggle('open'));
+        navLinks.querySelectorAll('a').forEach(link => link.addEventListener('click', () => navLinks.classList.remove('open')));
+
+        const revealElements = document.querySelectorAll('.reveal');
+        new IntersectionObserver((entries) => { entries.forEach((entry, i) => { if (entry.isIntersecting) { setTimeout(() => entry.target.classList.add('visible'), i * 80); revealObserver.unobserve(entry.target); } }); }, { threshold: 0.1 }).observe;
+        const revealObserver = new IntersectionObserver((entries) => { entries.forEach((entry, i) => { if (entry.isIntersecting) { setTimeout(() => entry.target.classList.add('visible'), i * 80); revealObserver.unobserve(entry.target); } }); }, { threshold: 0.1 });
+        revealElements.forEach(el => revealObserver.observe(el));
+
+        function copyBuildCode(btn) { const code = document.getElementById('buildCode').innerText; navigator.clipboard.writeText(code).then(() => { const original = btn.innerHTML; btn.innerHTML = '✅ 已复制!'; btn.style.color = '#28CA41'; setTimeout(() => { btn.innerHTML = original; btn.style.color = ''; }, 2000); }); }
+
+        async function fetchStars() { try { const res = await fetch('https://api.github.com/repos/HuZaiGong/flowreader'); if (res.ok) { const data = await res.json(); document.getElementById('starCount').textContent = data.stargazers_count || '⭐'; } else { document.getElementById('starCount').textContent = '⭐'; } } catch { document.getElementById('starCount').textContent = '⭐'; } }
+        fetchStars();
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => { anchor.addEventListener('click', function(e) { e.preventDefault(); const target = document.querySelector(this.getAttribute('href')); if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }); });
+
+        window.addEventListener('mousemove', (e) => { const x = (e.clientX / window.innerWidth - 0.5) * 20; const y = (e.clientY / window.innerHeight - 0.5) * 20; document.querySelectorAll('.bg-orb').forEach((orb, i) => { const factor = (i + 1) * 0.5; orb.style.transform = `translate(${x * factor}px, ${y * factor}px)`; }); });
+    </script>
+</body>
+</html>
