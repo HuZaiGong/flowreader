@@ -90,6 +90,12 @@ jobs:
       - name: Run unit tests
         run: ./gradlew testDebugUnitTest --no-daemon
 
+      - name: Extract version name
+        id: version
+        run: |
+          VERSION=$(grep 'versionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
@@ -105,16 +111,11 @@ jobs:
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v40
+          tag_name: v${{ steps.version.outputs.version }}
           files: app/build/outputs/apk/release/app-release.apk
-          name: FlowReader v40.0.0
+          name: FlowReader v${{ steps.version.outputs.version }}
           body: |
-            FlowReader v40.0.0 - 离线电子书阅读应用
-            
-            主要更新:
-            - 修复 TTS 语音朗读功能
-            - 清理残留网络代码
-            - 优化代码架构
+            FlowReader v${{ steps.version.outputs.version }} - 离线电子书阅读应用
             
             Download the APK and install on your Android device.
         env:

@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-34.0.0-green?style=flat" alt="Version">
+  <img src="https://img.shields.io/badge/Version-41.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
@@ -31,7 +31,7 @@
 ### 📖 阅读体验
 | 功能 | 说明 |
 |------|------|
-| **阅读主题** | 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）|
+| **阅读主题** | 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）、系统跟随、清晨、正午、傍晚、夜晚 |
 | **字体大小** | 12sp - 32sp 可调 |
 | **行间距** | 1.0 - 2.5 可调 |
 | **翻页模式** | 滑动、仿真、无动画、卷曲、滑动覆盖 |
@@ -134,28 +134,38 @@
 
 ```
 app/src/main/java/com/flowreader/app/
-├── data/                      # 数据层
-│   ├── local/                 # Room 数据库
-│   │   ├── dao/               # Data Access Objects
-│   │   └── entity/            # 数据实体
-│   └── repository/            # 仓库实现
-├── di/                        # Hilt 依赖注入
-├── domain/                    # 领域层
-│   ├── model/                 # 领域模型
-│   ├── repository/            # 仓库接口
-│   └── usecase/               # 用例（待完善）
-├── ui/                        # 表现层
-│   ├── screens/               # 页面
-│   │   ├── library/           # 书库
-│   │   ├── reader/            # 阅读器
-│   │   ├── bookdetail/        # 书籍详情
-│   │   └── settings/          # 设置
-│   ├── theme/                 # 主题样式
-│   └── Navigation.kt          # 导航配置
-└── util/                      # 工具类
-    ├── BookParser.kt          # 书籍解析
-    ├── TtsManager.kt          # TTS文本朗读
-    └── FullTextSearch.kt       # 全文搜索
+├── MainActivity.kt              # 主活动入口
+├── FlowReaderApplication.kt     # @HiltAndroidApp 应用类
+├── data/                        # 数据层
+│   ├── local/                   # Room 数据库
+│   │   ├── AppDatabase.kt       # Room DB v4
+│   │   ├── dao/                 # Data Access Objects
+│   │   └── entity/              # 数据实体
+│   └── repository/              # 仓库实现
+├── di/                          # Hilt 依赖注入
+│   └── AppModule.kt             # DatabaseModule + RepositoryModule
+├── domain/                      # 领域层
+│   ├── model/                   # 领域模型（Book, ReadingSettings 等）
+│   ├── repository/              # 仓库接口
+│   └── usecase/                 # 用例（GetBookUseCase, SaveProgressUseCase, TextPaginator）
+├── ui/                          # 表现层
+│   ├── FlowReaderApp.kt         # 根 Composable (FlowReaderRoot)
+│   ├── Navigation.kt            # 导航配置（4 个底部 tab）
+│   ├── theme/                   # 主题样式
+│   └── screens/                 # 页面
+│       ├── library/             # 书库
+│       ├── reader/              # 阅读器 + components/
+│       ├── bookdetail/          # 书籍详情
+│       ├── settings/            # 设置
+│       ├── stats/               # 阅读统计
+│       └── wheel/               # 决策转盘 + components/
+└── util/                        # 工具类
+    ├── BookParser.kt            # 书籍解析（EPUB/TXT/PDF/MD）
+    ├── BookLoader.kt            # 书籍加载
+    ├── TtsManager.kt            # TTS 文本朗读
+    ├── FullTextSearch.kt        # 全文搜索（FTS5）
+    ├── MemoryManager.kt         # 内存管理
+    └── CacheManager.kt          # LRU 缓存管理
 ```
 
 ---
@@ -189,9 +199,9 @@ cd flowreader
 
 ### 环境要求
 
-- Android SDK 34+
-- Kotlin 1.9+
-- Android Gradle Plugin 8.1+
+- Android SDK 35
+- Kotlin 2.0.21
+- Android Gradle Plugin 8.6.0
 - JDK 17
 
 ---
@@ -239,7 +249,7 @@ cd flowreader
 
 ### v30
 - **Markdown 支持**: 新增 .md 格式解析支持
-- **测试基础设施**: 引入 JUnit 5 + MockK 测试框架
+- **测试基础设施**: 引入 JUnit 4 + MockK 测试框架
 - **构建优化**: Release 启用 R8 混淆压缩
 - **现代 Android 适配**: Edge-to-edge, Splash Screen 支持
 
