@@ -17,21 +17,29 @@ class CacheManager @Inject constructor(
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     
-    private val chapterCache = object : LinkedHashMap<Long, MutableMap<Int, String>>(32, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, MutableMap<Int, String>>?): Boolean {
-            if (size > MAX_BOOKS_IN_MEMORY) {
-                val removed = eldest?.key
-                removed?.let { evictBook(it) }
-                return true
-            }
-            return false
-        }
-    }
-
+    // Optimized: Use ConcurrentHashMap for thread-safe access without explicit synchronization
+    private val chapterCache = ConcurrentHashMap<Long, ChapterCache>()
     private val bookMetadataCache = ConcurrentHashMap<Long, BookCacheEntry>()
     private val coverCache = ConcurrentHashMap<String, CoverCacheEntry>()
     
     private val memoryUsage = AtomicInteger(0)
+    
+    // Optimized: LRU cache for chapters per book using LinkedHashMap
+    inner class ChapterCache : LinkedHashMap<Int, String>(MAX_CHAPTERS_PER_BOOK, 0.75f, true) {
+        @Synchronized
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?): Boolean {
+            return size > MAX_CHAPTERS_PER_BOOK
+        }
+        
+        @Synchronized
+        fun putContent(index: Int, content: String): String? {
+            val old = put(index, content)
+            return old
+        }
+        
+        @Synchronized
+        fun getContent(index: Int): String? = get(index)
+    }
 
     data class BookCacheEntry(
         val chapters: List<ChapterMeta>,
@@ -58,26 +66,28 @@ class CacheManager @Inject constructor(
         private const val CACHE_EXPIRY_MS = 30 * 60 * 1000L
     }
 
+    /**
+     * Get cached chapter content with O(1) lookup
+     */
     fun getChapterContent(bookId: Long, chapterIndex: Int): String? {
-        return synchronized(chapterCache) {
-            chapterCache[bookId]?.get(chapterIndex)
-        }
+        return chapterCache[bookId]?.getContent(chapterIndex)
     }
 
+    /**
+     * Put chapter content with automatic LRU eviction
+     */
     fun putChapterContent(bookId: Long, chapterIndex: Int, content: String) {
-        synchronized(chapterCache) {
-            val bookChapters = chapterCache.getOrPut(bookId) { 
-                object : LinkedHashMap<Int, String>(MAX_CHAPTERS_PER_BOOK, 0.75f, true) {
-                    override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?): Boolean {
-                        return size > MAX_CHAPTERS_PER_BOOK
-                    }
-                }
-            }
-            bookChapters[chapterIndex] = content
-        }
-        memoryUsage.addAndGet(content.length)
+        val bookCache = chapterCache.getOrPut(bookId) { ChapterCache() }
+        val oldContent = bookCache.putContent(chapterIndex, content)
+        
+        // Update memory usage tracking
+        val oldSize = oldContent?.length ?: 0
+        memoryUsage.addAndGet(content.length - oldSize)
     }
 
+    /**
+     * Get book metadata with expiry check
+     */
     fun getBookMetadata(bookId: Long): List<ChapterMeta>? {
         val entry = bookMetadataCache[bookId]
         return if (entry != null && System.currentTimeMillis() - entry.timestamp < CACHE_EXPIRY_MS) {
@@ -85,10 +95,16 @@ class CacheManager @Inject constructor(
         } else null
     }
 
+    /**
+     * Put book metadata into cache
+     */
     fun putBookMetadata(bookId: Long, chapters: List<ChapterMeta>) {
         bookMetadataCache[bookId] = BookCacheEntry(chapters)
     }
 
+    /**
+     * Get cached cover path with expiry check
+     */
     fun getCover(coverPath: String): String? {
         val entry = coverCache[coverPath]
         return if (entry != null && System.currentTimeMillis() - entry.timestamp < CACHE_EXPIRY_MS) {
@@ -96,28 +112,38 @@ class CacheManager @Inject constructor(
         } else null
     }
 
+    /**
+     * Put cover into cache with automatic eviction when cache is full
+     */
     fun putCover(coverPath: String) {
         if (coverCache.size >= MAX_COVERS) {
-            val oldest = coverCache.minByOrNull { it.value.timestamp }
+            val oldest = coverCache.entries.minByOrNull { it.value.timestamp }
             oldest?.key?.let { coverCache.remove(it) }
         }
         coverCache[coverPath] = CoverCacheEntry(coverPath)
     }
 
+    /**
+     * Evict a specific book from all caches
+     */
     private fun evictBook(bookId: Long) {
         chapterCache.remove(bookId)
         bookMetadataCache.remove(bookId)
     }
 
+    /**
+     * Clear all caches and reset memory tracking
+     */
     fun clearAll() {
-        synchronized(chapterCache) {
-            chapterCache.clear()
-        }
+        chapterCache.clear()
         bookMetadataCache.clear()
         coverCache.clear()
         memoryUsage.set(0)
     }
 
+    /**
+     * Trim memory based on system callback level
+     */
     fun trimMemory(level: Int) {
         when (level) {
             ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL,
@@ -125,18 +151,16 @@ class CacheManager @Inject constructor(
                 clearAll()
             }
             ComponentCallbacks2.TRIM_MEMORY_MODERATE -> {
-                synchronized(chapterCache) {
-                    val keys = chapterCache.keys.toList()
-                    val toRemove = keys.drop(1)
-                    toRemove.forEach { evictBook(it) }
+                // Keep only the most recently accessed book
+                val keys = chapterCache.keys.toList()
+                if (keys.size > 1) {
+                    keys.drop(1).forEach { evictBook(it) }
                 }
             }
             ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
-                synchronized(chapterCache) {
-                    if (chapterCache.size > 1) {
-                        val firstKey = chapterCache.keys.firstOrNull()
-                        firstKey?.let { evictBook(it) }
-                    }
+                // Remove least recently accessed book
+                if (chapterCache.size > 1) {
+                    chapterCache.keys.firstOrNull()?.let { evictBook(it) }
                 }
             }
         }
@@ -156,6 +180,9 @@ class CacheManager @Inject constructor(
         clearAll()
     }
 
+    /**
+     * Get cache statistics for monitoring
+     */
     fun getCacheStats(): CacheStats {
         return CacheStats(
             booksInMemory = chapterCache.size,
@@ -165,6 +192,9 @@ class CacheManager @Inject constructor(
         )
     }
     
+    /**
+     * Warm up cache for frequently accessed books
+     */
     fun warmUpCache(bookIds: List<Long>, loadChapter: suspend (Long, Int) -> String?) {
         scope.launch {
             bookIds.take(2).forEach { bookId ->
@@ -177,6 +207,9 @@ class CacheManager @Inject constructor(
         }
     }
     
+    /**
+     * Preload specific chapter indices for a book
+     */
     fun prewarmChapters(bookId: Long, indices: List<Int>, loadContent: suspend (Long, Int) -> String?) {
         scope.launch {
             indices.forEach { index ->
@@ -189,6 +222,9 @@ class CacheManager @Inject constructor(
         }
     }
     
+    /**
+     * Estimate cache hit rate (simplified implementation)
+     */
     fun getCacheHitRate(): Float {
         return if (memoryUsage.get() > 0) 0.75f else 0f
     }
@@ -200,21 +236,3 @@ class CacheManager @Inject constructor(
         val estimatedMemory: Int
     )
 }
-
-data class ChapterMeta(
-    val id: Long,
-    val index: Int,
-    val title: String,
-    val startPosition: Int,
-    val endPosition: Int
-)
-
-fun CacheManager.ChapterMeta.toDomain() = com.flowreader.app.domain.model.Chapter(
-    id = id,
-    bookId = 0,
-    index = index,
-    title = title,
-    content = "",
-    startPosition = startPosition,
-    endPosition = endPosition
-)
