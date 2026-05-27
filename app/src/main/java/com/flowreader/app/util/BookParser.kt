@@ -42,6 +42,11 @@ class BookParser @Inject constructor(
 ) {
     private val bufferSize = 8192
 
+    // Keep chapter rows safely below Android CursorWindow limits. Large TXT/Markdown
+    // files without headings used to be stored as one huge chapter and could crash
+    // when Room read the content back for the reader screen.
+    private val maxChapterChars = 8_000
+
     suspend fun parseBook(uri: Uri): Result<BookParseResult> = withContext(Dispatchers.IO) {
         try {
             val inputStream = context.contentResolver.openInputStream(uri)
@@ -102,6 +107,12 @@ class BookParser @Inject constructor(
                     emit(ParseProgress.Parsing)
                     result
                 }
+                BookFormat.MARKDOWN -> {
+                    emit(ParseProgress.Reading(0, fileSize))
+                    val result = parseMarkdownStream(inputStream, fileName, fileSize)
+                    emit(ParseProgress.Parsing)
+                    result
+                }
                 else -> Result.failure(Exception("不支持的格式: $format"))
             }.onSuccess {
                 emit(ParseProgress.Complete)
@@ -118,7 +129,7 @@ class BookParser @Inject constructor(
             fileName.endsWith(".epub", ignoreCase = true) -> BookFormat.EPUB
             fileName.endsWith(".txt", ignoreCase = true) -> BookFormat.TXT
             fileName.endsWith(".pdf", ignoreCase = true) -> BookFormat.PDF
-            fileName.endsWith(".md", ignoreCase = true) -> BookFormat.MARKDOWN
+            fileName.endsWith(".md", ignoreCase = true) || fileName.endsWith(".markdown", ignoreCase = true) -> BookFormat.MARKDOWN
             else -> BookFormat.UNKNOWN
         }
     }
@@ -158,28 +169,12 @@ class BookParser @Inject constructor(
             val title = fileName.removeSuffix(".epub")
 
             val chapters = mutableListOf<Chapter>()
-            if (bodyText.isNotBlank()) {
-                val contentLength = bodyText.length
-                val chapterCount = maxOf(1, contentLength / 5000)
-                val chunkSize = contentLength / chapterCount
-
-                for (i in 0 until chapterCount) {
-                    val start = i * chunkSize
-                    val end = minOf(start + chunkSize, contentLength)
-                    val chapterContent = bodyText.substring(start, end)
-
-                    chapters.add(
-                        Chapter(
-                            bookId = 0,
-                            index = i,
-                            title = "第 ${i + 1} 章",
-                            content = chapterContent,
-                            startPosition = start,
-                            endPosition = end
-                        )
-                    )
-                }
-            }
+            appendChunkedChapter(
+                chapters = chapters,
+                title = "第 1 章",
+                content = bodyText,
+                startPosition = 0
+            )
 
             Result.success(
                 BookParseResult(
@@ -303,17 +298,13 @@ class BookParser @Inject constructor(
                 val trimmedLine = line.trim()
                 if (chapterPattern.containsMatchIn(trimmedLine) && trimmedLine.length < 100) {
                     if (currentContent.isNotBlank()) {
-                        chapters.add(
-                            Chapter(
-                                bookId = 0,
-                                index = chapterIndex,
-                                title = currentChapterTitle,
-                                content = currentContent.toString().trim(),
-                                startPosition = 0,
-                                endPosition = currentContent.length
-                            )
+                        chapterIndex = appendChunkedChapter(
+                            chapters = chapters,
+                            title = currentChapterTitle,
+                            content = currentContent.toString().trim(),
+                            startPosition = 0,
+                            startIndex = chapterIndex
                         )
-                        chapterIndex++
                     }
                     currentChapterTitle = trimmedLine
                     currentContent = StringBuilder()
@@ -323,28 +314,21 @@ class BookParser @Inject constructor(
             }
 
             if (currentContent.isNotBlank()) {
-                chapters.add(
-                    Chapter(
-                        bookId = 0,
-                        index = chapterIndex,
-                        title = currentChapterTitle,
-                        content = currentContent.toString().trim(),
-                        startPosition = 0,
-                        endPosition = currentContent.length
-                    )
+                appendChunkedChapter(
+                    chapters = chapters,
+                    title = currentChapterTitle,
+                    content = currentContent.toString().trim(),
+                    startPosition = 0,
+                    startIndex = chapterIndex
                 )
             }
 
             if (chapters.isEmpty()) {
-                chapters.add(
-                    Chapter(
-                        bookId = 0,
-                        index = 0,
-                        title = "全部内容",
-                        content = text,
-                        startPosition = 0,
-                        endPosition = text.length
-                    )
+                appendChunkedChapter(
+                    chapters = chapters,
+                    title = "全部内容",
+                    content = text,
+                    startPosition = 0
                 )
             }
 
@@ -452,6 +436,48 @@ class BookParser @Inject constructor(
         }
     }
 
+    private fun appendChunkedChapter(
+        chapters: MutableList<Chapter>,
+        title: String,
+        content: String,
+        startPosition: Int,
+        startIndex: Int = chapters.size
+    ): Int {
+        if (content.isBlank()) return startIndex
+
+        var nextIndex = startIndex
+        var offset = 0
+        val trimmedContent = content.trim()
+        while (offset < trimmedContent.length) {
+            val rawEnd = minOf(offset + maxChapterChars, trimmedContent.length)
+            val splitEnd = if (rawEnd < trimmedContent.length) {
+                trimmedContent.lastIndexOf('\n', rawEnd - 1).takeIf { it > offset + maxChapterChars / 2 } ?: rawEnd
+            } else {
+                rawEnd
+            }
+            val chunk = trimmedContent.substring(offset, splitEnd).trim()
+            if (chunk.isNotEmpty()) {
+                val partNumber = nextIndex - startIndex + 1
+                chapters.add(
+                    Chapter(
+                        bookId = 0,
+                        index = nextIndex,
+                        title = if (offset == 0 && splitEnd >= trimmedContent.length) title else "$title ($partNumber)",
+                        content = chunk,
+                        startPosition = startPosition + offset,
+                        endPosition = startPosition + splitEnd
+                    )
+                )
+                nextIndex++
+            }
+            offset = splitEnd
+            while (offset < trimmedContent.length && trimmedContent[offset].isWhitespace()) {
+                offset++
+            }
+        }
+        return nextIndex
+    }
+
     private fun parseMarkdownStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
             val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
@@ -470,17 +496,13 @@ class BookParser @Inject constructor(
                 val trimmedLine = line.trim()
                 if (chapterPattern.containsMatchIn(trimmedLine) && trimmedLine.length < 100) {
                     if (currentContent.isNotBlank()) {
-                        chapters.add(
-                            Chapter(
-                                bookId = 0,
-                                index = chapterIndex,
-                                title = currentChapterTitle,
-                                content = currentContent.toString().trim(),
-                                startPosition = 0,
-                                endPosition = currentContent.length
-                            )
+                        chapterIndex = appendChunkedChapter(
+                            chapters = chapters,
+                            title = currentChapterTitle,
+                            content = currentContent.toString().trim(),
+                            startPosition = 0,
+                            startIndex = chapterIndex
                         )
-                        chapterIndex++
                     }
                     currentChapterTitle = trimmedLine.replace(Regex("^#{1,6}\\s*"), "")
                     currentContent = StringBuilder()
@@ -490,28 +512,21 @@ class BookParser @Inject constructor(
             }
 
             if (currentContent.isNotBlank()) {
-                chapters.add(
-                    Chapter(
-                        bookId = 0,
-                        index = chapterIndex,
-                        title = currentChapterTitle,
-                        content = currentContent.toString().trim(),
-                        startPosition = 0,
-                        endPosition = currentContent.length
-                    )
+                appendChunkedChapter(
+                    chapters = chapters,
+                    title = currentChapterTitle,
+                    content = currentContent.toString().trim(),
+                    startPosition = 0,
+                    startIndex = chapterIndex
                 )
             }
 
             if (chapters.isEmpty()) {
-                chapters.add(
-                    Chapter(
-                        bookId = 0,
-                        index = 0,
-                        title = "全部内容",
-                        content = text,
-                        startPosition = 0,
-                        endPosition = text.length
-                    )
+                appendChunkedChapter(
+                    chapters = chapters,
+                    title = "全部内容",
+                    content = text,
+                    startPosition = 0
                 )
             }
 

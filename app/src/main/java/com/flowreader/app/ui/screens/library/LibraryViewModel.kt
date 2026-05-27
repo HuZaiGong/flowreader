@@ -180,11 +180,10 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val existingBook = bookParser.copyFileToInternal(uri)
                 val parseResult = bookParser.parseBook(uri)
 
                 parseResult.onSuccess { result ->
-                    val internalPath = bookParser.copyFileToInternal(uri)
+                    val internalPath = result.pdfFilePath ?: bookParser.copyFileToInternal(uri)
                     val book = result.book.copy(filePath = internalPath ?: "")
                     val bookId = bookRepository.insertBook(book)
                     val chaptersWithBookId = result.chapters.map { it.copy(bookId = bookId) }

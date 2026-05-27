@@ -46,7 +46,7 @@ class ChapterRepositoryImpl @Inject constructor(
     override suspend fun getChapter(bookId: Long, index: Int): Chapter? {
         val cachedContent = contentCache[bookId]?.get(index)
         
-        val meta = chapterDao.getChapterMetadataList(bookId).getOrNull(index)
+        val meta = chapterDao.getChapterMetadataList(bookId).firstOrNull { it.index == index }
         
         if (meta == null) {
             val entity = chapterDao.getChapter(bookId, index) ?: return null
