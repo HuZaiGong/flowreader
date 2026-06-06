@@ -1,88 +1,154 @@
-# FlowReader — Agent 指南（中文版）
+# 项目指南（Repository Guidelines）
 
-Android 电子书阅读器（EPUB/TXT/PDF/Markdown）。Jetpack Compose + MVVM + Hilt。离线优先，无网络功能。
+## 项目概述
 
-## 构建与测试
+**FlowReader** 是一款离线优先的 Android 电子书阅读器，支持 EPUB、TXT、PDF 和 Markdown 格式。采用 Jetpack Compose 构建，遵循 Clean Architecture + MVVM。所有数据均为本地存储，没有网络功能。
+
+- **包名**：`com.flowreader.app`
+- **最低 SDK**：26，**目标/编译 SDK**：35
+- **许可证**：GPL-3.0
+
+---
+
+## 架构与数据流
+
+项目采用 **Clean Architecture**，分层如下：
+
+```
+UI 层（Compose 页面 + ViewModel）
+  ↕
+领域层（模型、仓库接口、用例）
+  ↕
+数据层（仓库实现、Room 数据库、DAO、实体）
+```
+
+- **UI 层**：`ui/screens/` 中每个子包对应一个页面（包含 Composable 和 `*ViewModel`）。根导航置于 `Navigation.kt`。
+- **领域层**：`domain/model/` 存放数据类与密封类；`domain/repository/` 存放接口；`domain/usecase/` 存放业务逻辑（如 `GetBookUseCase`）。
+- **数据层**：`data/local/`（Room 数据库、DAO、实体）和 `data/repository/`（实现类）。`BackupRepository.kt` 也在此处。
+
+数据流：**Composable → ViewModel → UseCase/Repository → Room DAO → SQLite**。
+
+关键 DI 配置：`di/AppModule.kt` 同时包含 `DatabaseModule`（`@Provides`）和 `RepositoryModule`（`@Binds`）。
+
+---
+
+## 关键目录
+
+| 目录 | 用途 |
+|-----------|---------|
+| `app/src/main/java/com/flowreader/app/` | 全部 Kotlin 源代码 |
+| `data/local/entity/` | Room 实体（6 张表） |
+| `data/local/dao/` | Room DAO |
+| `data/repository/` | 仓库实现 |
+| `domain/model/` | 领域模型与 `AppException` |
+| `domain/usecase/` | 业务逻辑 / 用例 |
+| `ui/screens/` | 页面目录（`library/`、`reader/`、`bookdetail/`、`settings/`、`stats/`、`wheel/`） |
+| `ui/theme/` | Compose 主题（`Color.kt`、`Theme.kt`、`Typography.kt`） |
+| `util/` | 工具类：`BookParser`、`BookLoader`、`TtsManager`、`FullTextSearch`、`MemoryManager`、`CacheManager` |
+| `app/src/test/java/...` | 单元测试（JUnit 4） |
+| `.github/workflows/` | CI/CD（GitHub Actions） |
+
+---
+
+## 开发命令
 
 ```bash
-./gradlew assembleDebug           # Debug APK → app/build/outputs/apk/debug/
-./gradlew assembleRelease         # Release APK（R8 混淆压缩，需配置签名）
-./gradlew :app:testDebugUnitTest  # 单元测试（JUnit 4）
-./gradlew clean                   # 清理构建
+# 构建 Debug APK
+./gradlew assembleDebug
+
+# 构建 Release APK（R8 压缩）
+./gradlew assembleRelease
+
+# 运行单元测试
+./gradlew testDebugUnitTest
+
+# 清理构建
+./gradlew clean
 ```
 
-- 需要 JDK 17。compileSdk/targetSdk = 35，minSdk = 26。
-- Release 构建启用了 `isMinifyEnabled` + `isShrinkResources`（见 `app/build.gradle.kts:30-36`）。
-- 未配置 lint/detekt/ktlint，仅有 `.editorconfig` 做代码风格约束。
+**环境要求**：JDK 17，Android SDK 35。
 
-## 版本信息（以 `build.gradle.kts` / `app/build.gradle.kts` 为准）
+---
 
-| 组件 | 版本 |
+## 代码规范与常见模式
+
+### 命名规范
+- **包名**：全部小写，与目录结构一致。
+- **类名**：`PascalCase`，例如：`BookRepositoryImpl`、`ReaderViewModel`。
+- **函数 / 变量**：`camelCase`。
+- **常量**：`SCREAMING_SNAKE_CASE` 或 Object 中的顶层 `val`。
+
+### 依赖注入
+- 使用 **Hilt** 进行依赖注入。
+- `FlowReaderApplication.kt` 标注 `@HiltAndroidApp`。
+- `di/AppModule.kt` 包含 `@Provides`（DatabaseModule）和 `@Binds`（RepositoryModule）。
+- 在 Composable 中使用 `hiltViewModel()` 注入 ViewModel。
+
+### 状态管理
+- ViewModel 暴露 Compose `StateFlow`，在 Composable 中收集。
+- 使用 `derivedStateOf` 缓存昂贵的 UI 计算。
+- 阅读进度保存采用 **3 秒防抖** 以减少数据库写入。
+
+### 错误处理
+- `AppException` 是用于领域错误的密封类（`DatabaseError`、`FileError`、`ParseError` 等）。
+- 使用 `Result<T>` 包装可能失败的操作。
+
+### 异步模式
+- 使用 Kotlin **Coroutines + Flow** 处理异步任务。
+- Room 查询返回 `Flow<T>`。
+- 在 ViewModel 中使用 `viewModelScope.launch`。
+
+### Compose 规范
+- 根 Composable：`FlowReaderRoot()`（位于 `ui/FlowReaderApp.kt`）。
+- 导航使用 `sealed class Screen` 定义路由。
+- 底部导航有 4 个标签：书架、转盘、统计、设置。
+- 采用 Material 3 主题，支持动态颜色（Material You）。
+
+---
+
+## 重要文件
+
+| 文件 | 作用 |
 |------|------|
-| AGP | 8.6.0 |
-| Kotlin | 2.0.21 |
-| KSP | 2.0.21-1.0.27 |
-| Hilt | 2.50 |
-| Gradle wrapper | 8.7 |
-| Compose BOM | 2024.12.01 |
-| Room | 2.6.1 |
-| app versionName | 41.0.0 |
+| `app/build.gradle.kts` | App 级构建配置（AGP 8.6.0、Kotlin 2.0.21、Compose BOM 2024.12.01） |
+| `build.gradle.kts` | 根项目插件（Hilt、KSP、Compose） |
+| `settings.gradle.kts` | 项目名称与包含模块 |
+| `gradle.properties` | Gradle JVM 参数、AndroidX、缓存标志 |
+| `app/src/main/AndroidManifest.xml` | 应用清单、权限、MainActivity |
+| `FlowReaderApplication.kt` | `@HiltAndroidApp` 入口 |
+| `MainActivity.kt` | 设置 Compose 内容根布局，支持 edge-to-edge |
+| `Navigation.kt` | `NavHost`、底部导航、`Screen` 密封类 |
+| `di/AppModule.kt` | Hilt 模块：数据库与仓库 |
+| `data/local/AppDatabase.kt` | Room 数据库（v4），`flowreader_db` |
+| `proguard-rules.pro` | Release 构建的 R8 ProGuard 规则 |
 
-## 项目结构
+---
 
-单模块：`:app`。源码根目录：`app/src/main/java/com/flowreader/app/`
+## 运行时/工具偏好
 
+- **构建系统**：Gradle（wrapper 8.7）
+- **AGP**：8.6.0
+- **Kotlin**：2.0.21（KSP 2.0.21-1.0.27）
+- **JDK**：17
+- **无额外运行时**（无 Bun、Node、Python 等）
+- 启用 `coreLibraryDesugaring` 以向后兼容 `java.time`
+
+---
+
+## 测试与质量保障
+
+- **框架**：JUnit 4 + MockK
+- **协程测试**：`kotlinx-coroutines-test`
+- **测试位置**：`app/src/test/java/com/flowreader/app/util/BookParserTest.kt`
+- **CI**：GitHub Actions（`build.yml`）
+  - PR：运行单元测试 + 构建 Debug APK + 上传构建产物
+  - Push 到 `main`：运行单元测试 + 构建 Debug + 构建 Release + 创建 GitHub Release
+  - 使用 JDK 17 Temurin，缓存 Gradle 包
+
+### 运行测试
+```bash
+./gradlew testDebugUnitTest    # 仅单元测试
+./gradlew test                 # 所有测试（如有连接设备则包含仪器化测试）
 ```
-├── MainActivity.kt              # 入口，设置 Compose 内容
-├── FlowReaderApplication.kt     # @HiltAndroidApp（注意：不是 FlowReaderApp）
-├── data/
-│   ├── local/
-│   │   ├── AppDatabase.kt       # Room DB v4，数据库名="flowreader_db"
-│   │   ├── dao/                 # BookDao, ChapterDao, BookmarkDao, AnnotationDao, CategoryDao, ReadingStatsDao
-│   │   └── entity/              # 与各 DAO 对应的实体类
-│   └── repository/              # 实现类 + SettingsRepository, DataManager, BackupRepository
-├── di/
-│   └── AppModule.kt             # 包含 DatabaseModule（提供）和 RepositoryModule（绑定）
-├── domain/
-│   ├── model/                   # Book, ReadingSettings, Annotation, AppException, WheelItem 等
-│   ├── repository/              # 接口：BookRepository, BackupRepository, ReadingStatsRepository
-│   └── usecase/                 # GetBookUseCase, SaveProgressUseCase, TextPaginator
-├── ui/
-│   ├── FlowReaderApp.kt         # 根 Composable 是 FlowReaderRoot()（不是 FlowReaderApp）
-│   ├── Navigation.kt            # Sealed Screen 类、NavHost、底部导航（4 个 tab）
-│   ├── theme/                   # Color.kt, Theme.kt, Typography.kt
-│   └── screens/
-│       ├── library/             # LibraryScreen + ViewModel
-│       ├── bookdetail/          # BookDetailScreen + ViewModel
-│       ├── reader/              # ReaderScreen + ViewModel + components/
-│       ├── settings/            # SettingsScreen + ViewModel
-│       ├── stats/               # StatsScreen + ViewModel
-│       └── wheel/               # WheelScreen + ViewModel + components/WheelSpinner
-└── util/                        # BookParser, BookLoader, TtsManager, FullTextSearch, MemoryManager, CacheManager
-```
 
-## 架构要点
-
-- **命名冲突已解决（v35）**：Application = `FlowReaderApplication`，根 Composable = `FlowReaderRoot`（在 `ui/FlowReaderApp.kt` 中）。旧名称 `FlowReaderApp` 已废弃。
-- **Hilt 模块**：`DatabaseModule`（提供 DB + DAO）和 `RepositoryModule`（绑定接口）都在同一个文件 `di/AppModule.kt` 中。
-- **导航**：4 个底部 tab — 书架（Library）、转盘（Wheel）、统计（Stats）、设置（Settings）。阅读器（Reader）和书籍详情（BookDetail）是非 tab 路由。见 `Navigation.kt:29-40`。
-- **ReadingSettings**（`domain/model/ReadingSettings.kt`）定义了 10 种 `ReaderTheme`（LIGHT, DARK, SEPIA, PAPER, AMOLED, SYSTEM, MORNING, NOON, EVENING, NIGHT）、5 种 `PageMode`、8 种 `FontFamily`，以及手势/纹理/音效等枚举。
-- **3 秒防抖**：ReaderViewModel 中阅读进度保存使用 3 秒 debounce。
-- **测试框架**：JUnit 4（不是 JUnit 5）。测试文件在 `app/src/test/java/com/flowreader/app/util/BookParserTest.kt`。
-- **无预置书籍**：`app/src/main/assets/books/` 目录存在但为空，用户自行导入。
-- **PDF 渲染**：Android 原生 `PdfRenderer`，无外部 PDF 库。
-- **EPUB 渲染**：Readium Kotlin Toolkit 3.1.2（readium-shared, readium-streamer, readium-navigator, readium-opds）。
-
-## CI（`.github/workflows/build.yml`）
-
-- PR → `build` 任务：单元测试 + debug APK 上传。
-- Push 到 main → `build-and-release` 任务：测试 + debug + release APK + GitHub release。
-- `build-and-release` 使用 `permissions: contents: write`（较宽权限）。
-- Release 的 tag/name 从 `app/build.gradle.kts` 的 `versionName` **动态读取**（通过 grep 步骤）。
-- 使用 `actions/cache@v3`（不是 v4）。
-
-## 易踩坑点
-
-- `gradle.properties` 中 `org.gradle.jvmargs` 声明了**两次**（第 2 行和第 23 行），第二次覆盖第一次。
-- README.md 和 index.html 包含过时信息（版本 badge 写 34.0.0、声称 5 种主题、Kotlin 1.9+）。以 `build.gradle.kts` 为准。
-- 启用了 `coreLibraryDesugaring`（`app/build.gradle.kts:45,62`）用于 java.time API 向下兼容。
+未配置 lint/detekt/ktlint；仅使用 `.editorconfig` 进行代码风格管理。

@@ -1,88 +1,154 @@
-# FlowReader — Agent Guide
+# Repository Guidelines
 
-Android ebook reader (EPUB/TXT/PDF/Markdown). Jetpack Compose + MVVM + Hilt. Offline-first, no network features.
+## Project Overview
 
-## Build & Test
+**FlowReader** is an offline-first Android e-book reader supporting EPUB, TXT, PDF, and Markdown formats. It is built with Jetpack Compose and follows Clean Architecture with MVVM. All data is local; there are no network features.
+
+- **Package**: `com.flowreader.app`
+- **Min SDK**: 26, **Target/Compile SDK**: 35
+- **License**: GPL-3.0
+
+---
+
+## Architecture & Data Flow
+
+The project uses **Clean Architecture** layered as follows:
+
+```
+UI (Compose Screens + ViewModels)
+  ↕
+Domain (Models, Repository Interfaces, UseCases)
+  ↕
+Data (Repository Impl, Room DB, DAOs, Entities)
+```
+
+- **UI Layer**: `ui/screens/` contains one package per screen with its Composable and `*ViewModel`. Root navigation is in `Navigation.kt`.
+- **Domain Layer**: `domain/model/` holds data classes and sealed classes; `domain/repository/` holds interfaces; `domain/usecase/` holds business logic like `GetBookUseCase`.
+- **Data Layer**: `data/local/` (Room DB, DAOs, entities) and `data/repository/` (implementations). `BackupRepository.kt` also lives here.
+
+Data flow: **Composable → ViewModel → UseCase/Repository → Room DAO → SQLite**.
+
+Key DI wiring: `di/AppModule.kt` contains both `DatabaseModule` (`@Provides`) and `RepositoryModule` (`@Binds`).
+
+---
+
+## Key Directories
+
+| Directory | Purpose |
+|-----------|---------|
+| `app/src/main/java/com/flowreader/app/` | All Kotlin source code |
+| `data/local/entity/` | Room entities (6 tables) |
+| `data/local/dao/` | Room DAOs |
+| `data/repository/` | Repository implementations |
+| `domain/model/` | Domain models and `AppException` |
+| `domain/usecase/` | Business logic / UseCases |
+| `ui/screens/` | Screen packages (`library/`, `reader/`, `bookdetail/`, `settings/`, `stats/`, `wheel/`) |
+| `ui/theme/` | Compose theme (`Color.kt`, `Theme.kt`, `Typography.kt`) |
+| `util/` | Utility classes: `BookParser`, `BookLoader`, `TtsManager`, `FullTextSearch`, `MemoryManager`, `CacheManager` |
+| `app/src/test/java/...` | Unit tests (JUnit 4) |
+| `.github/workflows/` | CI/CD (GitHub Actions) |
+
+---
+
+## Development Commands
 
 ```bash
-./gradlew assembleDebug           # Debug APK → app/build/outputs/apk/debug/
-./gradlew assembleRelease         # Release APK (R8 minified, needs signing config)
-./gradlew :app:testDebugUnitTest  # Unit tests (JUnit 4)
-./gradlew clean                   # Clean build
+# Build debug APK
+./gradlew assembleDebug
+
+# Build release APK (R8 minified)
+./gradlew assembleRelease
+
+# Run unit tests
+./gradlew testDebugUnitTest
+
+# Clean build
+./gradlew clean
 ```
 
-- JDK 17 required. compileSdk/targetSdk = 35, minSdk = 26.
-- Release build enables `isMinifyEnabled` + `isShrinkResources` (see `app/build.gradle.kts:30-36`).
-- No lint/detekt/ktlint configured. Only `.editorconfig` for style.
+**Environment**: JDK 17 required. Android SDK 35.
 
-## Versions (verify in `build.gradle.kts` / `app/build.gradle.kts`)
+---
 
-| Component | Version |
-|-----------|---------|
-| AGP | 8.6.0 |
-| Kotlin | 2.0.21 |
-| KSP | 2.0.21-1.0.27 |
-| Hilt | 2.50 |
-| Gradle wrapper | 8.7 |
-| Compose BOM | 2024.12.01 |
-| Room | 2.6.1 |
-| app versionName | 41.0.0 |
+## Code Conventions & Common Patterns
 
-## Structure
+### Naming
+- **Packages**: all lowercase, matching directory structure.
+- **Classes**: `PascalCase` — e.g., `BookRepositoryImpl`, `ReaderViewModel`.
+- **Functions / Variables**: `camelCase`.
+- **Constants**: `SCREAMING_SNAKE_CASE` or top-level `val` in objects.
 
-Single module: `:app`. Source root: `app/src/main/java/com/flowreader/app/`
+### Dependency Injection
+- Uses **Hilt** for DI.
+- `FlowReaderApplication.kt` is annotated with `@HiltAndroidApp`.
+- `di/AppModule.kt` contains both `@Provides` (DatabaseModule) and `@Binds` (RepositoryModule).
+- Inject ViewModels with `hiltViewModel()`.
 
+### State Management
+- Compose `StateFlow` exposed from ViewModels, collected in Composables.
+- `derivedStateOf` used for expensive UI computations.
+- Progress save uses a **3-second debounce** to reduce DB writes.
+
+### Error Handling
+- `AppException` is a sealed class for domain errors (`DatabaseError`, `FileError`, `ParseError`, etc.).
+- Use `Result<T>` wrapper for operations that can fail.
+
+### Async Patterns
+- Kotlin **Coroutines + Flow** for asynchronous work.
+- Room queries return `Flow<T>`.
+- `viewModelScope.launch` for ViewModel-bound work.
+
+### Compose Conventions
+- Root composable: `FlowReaderRoot()` (in `ui/FlowReaderApp.kt`)
+- Navigation uses a `sealed class Screen` with route definitions.
+- Bottom navigation has 4 tabs: Library, Wheel, Stats, Settings.
+- Material 3 theming with dynamic colors (Material You).
+
+---
+
+## Important Files
+
+| File | Role |
+|------|------|
+| `app/build.gradle.kts` | App-level build config (AGP 8.6.0, Kotlin 2.0.21, Compose BOM 2024.12.01) |
+| `build.gradle.kts` | Root project plugins (Hilt, KSP, Compose) |
+| `settings.gradle.kts` | Project name and included modules |
+| `gradle.properties` | Gradle JVM args, AndroidX, caching flags |
+| `app/src/main/AndroidManifest.xml` | App manifest, permissions, MainActivity |
+| `FlowReaderApplication.kt` | `@HiltAndroidApp` entry point |
+| `MainActivity.kt` | Sets Compose content root, edge-to-edge |
+| `Navigation.kt` | `NavHost`, `BottomNavigation`, `Screen` sealed class |
+| `di/AppModule.kt` | Hilt modules for DB and Repositories |
+| `data/local/AppDatabase.kt` | Room DB (v4), `flowreader_db` |
+| `proguard-rules.pro` | R8 ProGuard rules for release builds |
+
+---
+
+## Runtime/Tooling Preferences
+
+- **Build System**: Gradle (wrapper 8.7)
+- **AGP**: 8.6.0
+- **Kotlin**: 2.0.21 (KSP 2.0.21-1.0.27)
+- **JDK**: 17
+- **No extra runtime** (no Bun, Node, Python, etc.)
+- `coreLibraryDesugaring` enabled for `java.time` backport
+
+---
+
+## Testing & QA
+
+- **Framework**: JUnit 4 + MockK
+- **Coroutines Test**: `kotlinx-coroutines-test`
+- **Location**: `app/src/test/java/com/flowreader/app/util/BookParserTest.kt`
+- **CI**: GitHub Actions (`build.yml`)
+  - PRs: run unit tests + build debug APK + upload artifact
+  - Push to `main`: run unit tests + build debug + build release + create GitHub release
+  - Uses JDK 17 Temurin, caches Gradle packages
+
+### Running Tests
+```bash
+./gradlew testDebugUnitTest    # Unit tests only
+./gradlew test                 # All tests (unit + instrumented if connected)
 ```
-├── MainActivity.kt              # Entry point, sets Compose content
-├── FlowReaderApplication.kt     # @HiltAndroidApp (NOT FlowReaderApp)
-├── data/
-│   ├── local/
-│   │   ├── AppDatabase.kt       # Room DB v4, name="flowreader_db"
-│   │   ├── dao/                 # BookDao, ChapterDao, BookmarkDao, AnnotationDao, CategoryDao, ReadingStatsDao
-│   │   └── entity/              # Matching entities for each DAO
-│   └── repository/              # Impl classes + SettingsRepository, DataManager, BackupRepository
-├── di/
-│   └── AppModule.kt             # Contains BOTH DatabaseModule (provides) AND RepositoryModule (binds)
-├── domain/
-│   ├── model/                   # Book, ReadingSettings, Annotation, AppException, WheelItem, etc.
-│   ├── repository/              # Interfaces: BookRepository, BackupRepository, ReadingStatsRepository
-│   └── usecase/                 # GetBookUseCase, SaveProgressUseCase, TextPaginator
-├── ui/
-│   ├── FlowReaderApp.kt         # Root composable is FlowReaderRoot() (NOT FlowReaderApp)
-│   ├── Navigation.kt            # Sealed Screen class, NavHost, bottom nav (4 tabs)
-│   ├── theme/                   # Color.kt, Theme.kt, Typography.kt
-│   └── screens/
-│       ├── library/             # LibraryScreen + ViewModel
-│       ├── bookdetail/          # BookDetailScreen + ViewModel
-│       ├── reader/              # ReaderScreen + ViewModel + components/
-│       ├── settings/            # SettingsScreen + ViewModel
-│       ├── stats/               # StatsScreen + ViewModel
-│       └── wheel/               # WheelScreen + ViewModel + components/WheelSpinner
-└── util/                        # BookParser, BookLoader, TtsManager, FullTextSearch, MemoryManager, CacheManager
-```
 
-## Architecture Notes
-
-- **Naming collision resolved (v35)**: Application = `FlowReaderApplication`, root composable = `FlowReaderRoot` (in `ui/FlowReaderApp.kt`). The old name `FlowReaderApp` is gone.
-- **Hilt modules**: Both `DatabaseModule` (provides DB + DAOs) and `RepositoryModule` (binds interfaces) live in the single file `di/AppModule.kt`.
-- **Navigation**: 4 bottom tabs — Library, Wheel, Stats, Settings. Reader and BookDetail are non-tab routes. See `Navigation.kt:29-40`.
-- **ReadingSettings** (`domain/model/ReadingSettings.kt`) defines 10 `ReaderTheme` values (LIGHT, DARK, SEPIA, PAPER, AMOLED, SYSTEM, MORNING, NOON, EVENING, NIGHT), 5 `PageMode` values, 8 `FontFamily` values, gesture/texture/sound enums.
-- **3-second debounce** for progress save in ReaderViewModel.
-- **Test framework**: JUnit 4 (not JUnit 5). Tests at `app/src/test/java/com/flowreader/app/util/BookParserTest.kt`.
-- **No preloaded books**: `app/src/main/assets/books/` exists but is empty. Users import their own.
-- **PDF rendering**: Android native `PdfRenderer`, no external PDF library.
-- **EPUB rendering**: Readium Kotlin Toolkit 3.1.2 (readium-shared, readium-streamer, readium-navigator, readium-opds).
-
-## CI (`.github/workflows/build.yml`)
-
-- PR → `build` job: unit tests + debug APK upload.
-- Push to main → `build-and-release` job: tests + debug + release APK + GitHub release.
-- `build-and-release` uses `permissions: contents: write` (broad permission).
-- Release tag/name is **dynamically read** from `app/build.gradle.kts` `versionName` via grep step.
-- Uses `actions/cache@v3` (not v4).
-
-## Gotchas
-
-- `gradle.properties` declares `org.gradle.jvmargs` **twice** (line 2 and line 23); the second overrides the first.
-- README.md and index.html contain outdated info (version badge says 34.0.0, claims 5 themes, says Kotlin 1.9+). Trust `build.gradle.kts` over docs.
-- `coreLibraryDesugaring` is enabled (`app/build.gradle.kts:45,62`) for java.time API backport.
+No lint/detekt/ktlint configured; only `.editorconfig` for code style.

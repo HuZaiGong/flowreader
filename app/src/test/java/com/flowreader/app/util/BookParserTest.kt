@@ -1,7 +1,7 @@
 package com.flowreader.app.util
 
 import com.flowreader.app.domain.model.BookFormat
-import org.junit.Assert.*
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BookParserTest {
@@ -12,6 +12,7 @@ class BookParserTest {
         assertEquals(BookFormat.TXT, detectFormatTest("book.txt"))
         assertEquals(BookFormat.PDF, detectFormatTest("book.pdf"))
         assertEquals(BookFormat.MARKDOWN, detectFormatTest("book.md"))
+        assertEquals(BookFormat.MARKDOWN, detectFormatTest("book.markdown"))
         assertEquals(BookFormat.UNKNOWN, detectFormatTest("book.exe"))
     }
 
