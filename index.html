@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowReader - 沉浸式离线电子书阅读器</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+SC:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --accent: #f59e0b;
+            --bg-deep: #0f172a;
+            --bg-dark: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+            --gradient-1: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%);
+            --gradient-2: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* 导航 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            padding: 1rem 2rem;
+            transition: all 0.4s ease;
+        }
+
+        .navbar.scrolled {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(20px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .navbar-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--gradient-1);
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            -webkit-text-fill-color: white;
+        }
+
+        .logo-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.3s;
+            position: relative;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--gradient-1);
+            transition: width 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: dimgray;
+            cursor: pointer;
+        }
+
+        /* Hero 区域 */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 6rem 2rem 4rem;
+            overflow: hidden;
+        }
+
+        .hero-bg {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .hero-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 8s ease-in-out infinite;
+        }
+
+        .hero-orb:nth-child(1) {
+            width: 500px;
+            height: 500px;
+            background: #6366f1;
+            top: -100px;
+            left: -100px;
+            animation-delay.TileEntity;}/*修复错误和缺失样式并继续*/
+        .hero-orb:nth-child(2) {
+            width: 400px;
+            height: 400px;
+            background: #d946ef;
+            bottom: -150px;
+            right: -100px;
+            animation-delay: 2s;
+        }
+
+        .hero-orb:nth-child(3) {
+            width: 300px;
+            height: 300px;
+            background: #0ea5e9;
+            top: 50%;
+            left: 50%;
+            animation-delay: 4s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.05); }
+            66% { transform: translate(-20px, 20px) scale(0.95); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            max-width: 800px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--primary-light);
+            margin-bottom: 2rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .hero-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero h1 span {
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-desc {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.9rem 2rem;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--gradient-1);
+            color: white;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(99, 102, 241, 0.6);
+        }
+
+        .btn-secondary {
+            background: var(--glass-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        /* 通用区域样式 */
+        .section {
+            padding: 6rem 2rem;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        .section-tag {
+            display: inline-block;
+            padding: 0.4rem 1rem;
+            background: rgba(99, 102, 241, 0.15);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 100px;
+            font-size: 0.85rem;
+            color: var(--primary-light);
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .section-desc {
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            font-size: 1.05rem;
+        }
+
+        /* Features */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--gradient-1);
+            transform: scaleX(0);
+            transition: transform 0.4s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--gradient-1);
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-icon svg {
+            width: 28px;
+            height: 28px;
+            color: white;
+        }
+
+        .feature-card h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.75rem;
+            font-weight: 700;
+        }
+
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Tech Stack */
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .tech-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.3s;
+        }
+
+        .tech-item:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .tech-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient-2);
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .tech-info h4 {
+            font-size: 1rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .tech-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* 应用场景 */
+        .scenarios {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .scenario-card {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            min-height: 300px;
+            display: flex;
+            align-items: flex-end;
+            padding: 2rem;
+            cursor: pointer;
+            transition: transform 0.4s;
+        }
+
+        .scenario-card:hover {
+            transform: scale(1.02);
+        }
+
+        .scenario-bg {
+            position: absolute;
+            inset: 0;
+            background: var(--gradient-1);
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+
+        .scenario-card:hover .scenario-bg {
+            opacity: 1;
+        }
+
+        .scenario-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .scenario-content h3 {
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .scenario-content p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* 渐变多样性 */
+        .scenario-card:nth-child(2) .scenario-bg {
+            background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+        }
+
+        .scenario-card:nth-child(3) .scenario-bg {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+        }
+
+        .scenario-card:nth-child(4) .scenario-bg {
+            background: linear-gradient(135deg, #10b981 0%, #0ea5e9 100%);
+        }
+
+        /* Contact */
+        .contact-section {
+            background: var(--bg-dark);
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .contact-info h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .contact-links {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .contact-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            text-decoration: none;
+            color: var(--text-primary);
+            transition: all 0.3s;
+        }
+
+        .contact-link hearts:hover {
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .contact-link-icon {
+            width: 44px;
+            height: 44px;
+            background: var(--gradient-1);
+            border-radius: 12px;
+            display: grid;
+            place-items: center;
+            flex-shrink: 0;
+        }
+
+        /* Footer */
+        .footer {
+            padding: 3rem 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border);
+        }
+
+        .footer-text {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero-stats {
+                gap: 1.5rem;
+            }
+
+            .contact-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .section {
+                padding: 4rem 1.5rem;
+            }
+        }
+
+        /* 滚动动画 */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航 -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-inner">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+                    </svg>
+                </div>
+                FlowReader
+            </div>
+            <ul class="nav-links">
+                <li><a href="#overview">项目简介</a></li>
+                <li><a href="#features">核心功能</a></li>
+                <li><a href="#tech">技术亮点</a></li>
+                <li><a href="#scenarios">应用场景</a></li>
+                <li><a href="#contact">联系我们</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-bg">
+            <div class="hero-orb"></div>
+            <div class="hero-orb"></div>
+            <div class="hero-orb"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">开源项目 GPL-3.0 许可证</div>
+            <h1>沉浸式阅读体验<br>从 <span>FlowReader</span> 开始</h1>
+            <p class="hero-desc">FlowReader 是一款专为 Android 打造的离线优先电子书阅读器，支持 EPUB、TXT、PDF 和 Markdown 格式，采用 Jetpack Compose 构建，带给你流畅现代的阅读体验。</p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-value" data-count="4">0</div>
+                    <div class="stat-label">支持格式</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" data-count="26">0</div>
+                    <div class="stat-label">最低 API</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" data-count="0">0</div>
+                    <div class="stat-label">网络依赖</div>
+                </div>
+            </div>
+            <div class="hero-buttons">
+                <a href="#features" class="btn btn-primary">探索功能</a>
+                <a href="https://github.com/flowreader/flowreader" target="_blank" class="btn btn-secondary">GitHub 仓库</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 项目简介 -->
+    <section class="section" id="overview">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">项目简介</span>
+                <h2 class="section-title">为什么选择 FlowReader</h2>
+                <p class="section-desc">在信息洪流中，FlowReader 为你打造一片宁静的阅读空间。纯本地设计，无需网络连接，随时随地享受阅读时光。</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="araoh" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                    </div>
+                    <h3>离线优先</h3>
+                    <p>完全离线的阅读体验，无需网络连接，所有数据本地存储，保护隐私的同时让你随时随地畅快阅读。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                            <line x1="8" y1="21" x2="16" y2="21"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                    </div>
+                    <h3>现代化 UI</h3>
+                    <p>基于 Jetpack Compose 构建的 Material 3 界面，支持动态配色（Material You），视觉体验精美流畅。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                            <path d="M20 17V5a2 2 0 0 0-2-2H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 19H20z"/>
+                        </svg>
+                    </div>
+                    <h3>多格式支持</h3>
+                    <p>原生支持 EPUB、TXT、PDF Thread and PDF 格式的电子书，一键导入，即刻阅读，无需繁琐的格式转换。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 1v6m0 6v6m4.2-13.2l-4.2 4.2m-4.2 4.2l-4.2 4.2"/>
+                            <path d="M12 1a11 11 0 0 1 11 11m-11 11a11 11 0 0 1-11-11"/>
+                        </svg>
+                    </div>
+                    <h3>纯净开源</h3>
+                    <p>采用 GPL-3.0 开源协议，代码完全透明公开。自由使用、修改和分发，社区驱动持续迭代。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心功能 -->
+    <section class="section" id="features" style="background: var(--bg-dark);">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">核心功能</span>
+                <h2 class="section-title">强大的阅读体验</h2>
+                <p class="section-desc">从智能书库管理到个性化阅读设置，FlowReader 为每一位读者提供贴心的功能支持。</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 FormatSize16z"/>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+                            <line x1="12" y1="22.08" x2="12" y2="12"/>
+                        </svg>
+                    </div>
+                    <h3>智能书库</h3>
+                    <p>基于 Room 数据库的高效书库管理，支持书籍分类、搜索、收藏和阅读进度自动保存。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </div>
+                    <h3>多种阅读模式</h3>
+                    <p>支持日间/夜间模式切换，自定义字体大小、行间距和背景色，打造最舒适的阅读环境。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9 22 9 12 15 12 15 22"/>
+                        </svg>
+                    </div>
+                    <h3>阅读统计</h3>
+                    <p>可视化阅读数据统计，包括阅读时长、每日进度和阅读趋势，帮助你建立良好的阅读习惯。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                            <polyline points="2 17 12 22 22 17"/>
+                            <polyline points="2 12 12 17 22 12"/>
+                        </svg>
+                    </div>
+                    <h3>全文搜索</h3>
+                    <p>强大的全文搜索功能，快速定位书籍内容，支持关键词高亮显示，高效查找所需信息。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                            <path d="M2 12h20"/>
+                        </svg>
+                    </div>
+                    <h3>旋转书架</h3>
+                    <p>独特的 3D 旋转书架展示方式，直观浏览书籍封面，带来实体书架般的视觉体验。</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="feature-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 7v8a2 2 0 0 0 2 2h6M8 7V5a2 2 0 0 1 2-2h4.586a2 2 0 0 1 1.414.586l2.414 2.414A2 2 0 0 1 20 7.414V17a2 2 0 0 1-2 2h-6M8 7H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h6"/>
+                        </svg>
+                    </div>
+                    <h3>云端备份</h3>
+                    <p>支持数据备份和还原，通过本地备份文件保存书库和阅读进度， Lua 数据迁移更安心。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 技术亮点 -->
+    <section class="section" id="tech">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">技术亮点</span>
+                <h2 class="section-title">技术栈展示</h2>
+                <p class="section-desc">基于 Android 最新技术生态构建，兼顾性能与开发体验。</p>
+            </div>
+            <div class="tech-grid">
+                <div class="tech-item reveal">
+                    <div class="tech-icon">📱</div>
+                    <div class="relais 
+tech-info h4:"技术"info h4: Jetpack Compose"射线="2024-09-28']
+                        <p>各版本组件提升方式 与重组性能 "dual分支 Allocate 对比" h4:"> 数据持久化与内存申请与释放 k5g..\..
+                        <p>Room 数据库与 Markdown 解析器</p>
+                    </div>
+                </div>
+                <div class="tech-item reveal">
+                    <div class="tech-icon">composer "tech-item reveal">
+                    <div class="tech-icon">️</div>
+                    <div class="tech-info" h4: Hilt DI 依赖注入
+                        <p>Hilt 自动化依赖注入架构</p h4: Kotlin 协程 you've been孤立的文件中存在大量混淆、重复和不完整的 HTML 与 CSS。我将直接写入一个全新、完整、结构清晰的 `index.html` 文件。
