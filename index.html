@@ -169,7 +169,9 @@
             background: #6366f1;
             top: -100px;
             left: -100px;
-            animation-delay.TileEntity;}/*修复错误和缺失样式并继续*/
+            animation-delay: 0s;
+        }
+
         .hero-orb:nth-child(2) {
             width: 400px;
             height: 400px;
@@ -575,7 +577,7 @@
             transition: all 0.3s;
         }
 
-        .contact-link hearts:hover {
+        .contact-link:hover {
             border-color: var(--primary);
             transform: translateX(5px);
         }
@@ -684,7 +686,7 @@
             </div>
             <div class="hero-buttons">
                 <a href="#features" class="btn btn-primary">探索功能</a>
-                <a href="https://github.com/flowreader/flowreader" target="_blank" class="btn btn-secondary">GitHub 仓库</a>
+                <a href="https://github.com/HuZaiGong/flowreader" target="_blank" class="btn btn-secondary">GitHub 仓库</a>
             </div>
         </div>
     </section>
@@ -700,7 +702,7 @@
             <div class="features-grid">
                 <div class="feature-card reveal">
                     <div class="feature-icon">
-                        <svg viewBox="0 0 24 24" fill="araoh" stroke="currentColor" stroke-width="2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                         </svg>
                     </div>
@@ -726,7 +728,7 @@
                         </svg>
                     </div>
                     <h3>多格式支持</h3>
-                    <p>原生支持 EPUB、TXT、PDF Thread and PDF 格式的电子书，一键导入，即刻阅读，无需繁琐的格式转换。</p>
+                    <p>原生支持 EPUB、TXT、PDF 和 Markdown 格式的电子书，一键导入，即刻阅读，无需繁琐的格式转换。</p>
                 </div>
                 <div class="feature-card reveal">
                     <div class="feature-icon">
@@ -755,7 +757,7 @@
                 <div class="feature-card reveal">
                     <div class="feature-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 FormatSize16z"/>
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
                             <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
                             <line x1="12" y1="22.08" x2="12" y2="12"/>
                         </svg>
@@ -797,12 +799,12 @@
                 <div class="feature-card reveal">
                     <div class="feature-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                            <path d="M2 12h20"/>
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
                         </svg>
                     </div>
-                    <h3>旋转书架</h3>
-                    <p>独特的 3D 旋转书架展示方式，直观浏览书籍封面，带来实体书架般的视觉体验。</p>
+                    <h3>决策转盘</h3>
+                    <p>有趣的决策转盘功能，帮助你在不知道读哪本书时快速做出选择，增添阅读乐趣。</p>
                 </div>
                 <div class="feature-card reveal">
                     <div class="feature-icon">
@@ -810,8 +812,8 @@
                             <path d="M8 7v8a2 2 0 0 0 2 2h6M8 7V5a2 2 0 0 1 2-2h4.586a2 2 0 0 1 1.414.586l2.414 2.414A2 2 0 0 1 20 7.414V17a2 2 0 0 1-2 2h-6M8 7H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h6"/>
                         </svg>
                     </div>
-                    <h3>云端备份</h3>
-                    <p>支持数据备份和还原，通过本地备份文件保存书库和阅读进度， Lua 数据迁移更安心。</p>
+                    <h3>数据备份</h3>
+                    <p>支持数据备份和还原，通过本地备份文件保存书库和阅读进度，数据迁移更安心。</p>
                 </div>
             </div>
         </div>
@@ -828,14 +830,156 @@
             <div class="tech-grid">
                 <div class="tech-item reveal">
                     <div class="tech-icon">📱</div>
-                    <div class="relais 
-tech-info h4:"技术"info h4: Jetpack Compose"射线="2024-09-28']
-                        <p>各版本组件提升方式 与重组性能 "dual分支 Allocate 对比" h4:"> 数据持久化与内存申请与释放 k5g..\..
-                        <p>Room 数据库与 Markdown 解析器</p>
+                    <div class="tech-info">
+                        <h4>Jetpack Compose</h4>
+                        <p>声明式 UI 框架，响应式界面构建</p>
                     </div>
                 </div>
                 <div class="tech-item reveal">
-                    <div class="tech-icon">composer "tech-item reveal">
-                    <div class="tech-icon">️</div>
-                    <div class="tech-info" h4: Hilt DI 依赖注入
-                        <p>Hilt 自动化依赖注入架构</p h4: Kotlin 协程 you've been孤立的文件中存在大量混淆、重复和不完整的 HTML 与 CSS。我将直接写入一个全新、完整、结构清晰的 `index.html` 文件。
+                    <div class="tech-icon">🗄️</div>
+                    <div class="tech-info">
+                        <h4>Room 数据库</h4>
+                        <p>SQLite 抽象层，高效本地持久化</p>
+                    </div>
+                </div>
+                <div class="tech-item reveal">
+                    <div class="tech-icon">⚡</div>
+                    <div class="tech-info">
+                        <h4>Kotlin 协程</h4>
+                        <p>异步编程与 Flow 数据流</p>
+                    </div>
+                </div>
+                <div class="tech-item reveal">
+                    <div class="tech-icon">🔌</div>
+                    <div class="tech-info">
+                        <h4>Hilt 依赖注入</h4>
+                        <p>自动化依赖管理架构</p>
+                    </div>
+                </div>
+                <div class="tech-item reveal">
+                    <div class="tech-icon">🔍</div>
+                    <div class="tech-info">
+                        <h4>FTS5 全文检索</h4>
+                        <p>SQLite 全文搜索，快速定位内容</p>
+                    </div>
+                </div>
+                <div class="tech-item reveal">
+                    <div class="tech-icon">🎨</div>
+                    <div class="tech-info">
+                        <h4>Material You</h4>
+                        <p>动态主题与个性化配色</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 应用场景 -->
+    <section class="section" id="scenarios" style="background: var(--bg-dark);">
+        <div class="container">
+            <div class="section-header reveal">
+                <span class="section-tag">应用场景</span>
+                <h2 class="section-title">随时随地阅读</h2>
+                <p class="section-desc">无论是在通勤路上还是睡前时光，FlowReader 都是你的最佳阅读伴侣。</p>
+            </div>
+            <div class="scenarios">
+                <div class="scenario-card reveal">
+                    <div class="scenario-bg"></div>
+                    <div class="scenario-content">
+                        <h3>通勤路上</h3>
+                        <p>地铁、公交上的碎片时间，打开 FlowReader 继续未读完的章节，离线也能畅读。</p>
+                    </div>
+                </div>
+                <div class="scenario-card reveal">
+                    <div class="scenario-bg"></div>
+                    <div class="scenario-content">
+                        <h3>睡前阅读</h3>
+                        <p>自动切换夜间模式，护眼配色与舒适排版，让阅读成为睡前最佳放松方式。</p>
+                    </div>
+                </div>
+                <div class="scenario-card reveal">
+                    <div class="scenario-bg"></div>
+                    <div class="scenario-content">
+                        <h3>学习研究</h3>
+                        <p>PDF 论文与 EPUB 教材一键导入，全文搜索与高亮标注，学习效率倍增。</p>
+                    </div>
+                </div>
+                <div class="scenario-card reveal">
+                    <div class="scenario-bg"></div>
+                    <div class="scenario-content">
+                        <h3>旅行途中</h3>
+                        <p>无需担心网络信号，所有书籍本地存储，长途旅行也能沉浸书海。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 联系我们 -->
+    <section class="section contact-section" id="contact">
+        <div class="container">
+            <div class="contact-grid">
+                <div class="contact-info reveal">
+                    <span class="section-tag">联系我们</span>
+                    <h2 class="section-title" style="text-align: left;">加入社区</h2>
+                    <p class="section-desc" style="text-align: left; margin: 0;">欢迎通过 GitHub 提交 Issue 或 Pull Request，与我们一起完善 FlowReader。</p>
+                    <div class="contact-links">
+                        <a href="https://github.com/HuZaiGong/flowreader" target="_blank" class="contact-link">
+                            <div class="contact-link-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                    <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V19"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600;">GitHub 仓库</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">HuZaiGong/flowreader</div>
+                            </div>
+                        </a>
+                        <a href="https://github.com/HuZaiGong/flowreader/issues" target="_blank" class="contact-link">
+                            <div class="contact-link-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="8" x2="12" y2="12"/>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600;">问题反馈</div>
+                                <div style="font-size: 0.85rem; color: var(--text-muted);">提交 Issue 反馈 bug 或建议</div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p class="footer-text"> FlowReader. Licensed under GPL-3.0.</p>
+    </footer>
+
+    <script>
+        // 导航栏滚动效果
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // 滚动动画显现
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    </script>
+</body>
+</html>
