@@ -1,117 +1,200 @@
 # FlowReader 心流阅读
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-brightgreen?style=flat&logo=android" alt="Platform">
-  <img src="https://img.shields.io/badge/Language-Kotlin-blue?style=flat&logo=kotlin" alt="Language">
+  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=flat&logo=android" alt="Platform">
+  <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=flat&logo=kotlin" alt="Language">
+  <img src="https://img.shields.io/badge/Architecture-Clean%20Architecture-lightgrey?style=flat" alt="Architecture">
+  <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat&logo=jetpackcompose" alt="UI">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/Version-41.0.0-green?style=flat" alt="Version">
   <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
 <p align="center">
-  <b>一款简洁优雅的 Android 电子书阅读应用</b><br>
-  基于 Jetpack Compose 构建 | 支持 EPUB、TXT、PDF、Markdown 格式<br>
-  提供沉浸式的阅读体验
+  <b>一款简洁优雅的 Android 离线电子书阅读器</b><br>
+  专为沉浸式阅读体验而设计，兼顾性能与美观
 </p>
 
 ---
 
-## ✨ 特性亮点
+## 📖 概述
 
-### 📚 书库管理
-- 导入本地书籍（EPUB、TXT、PDF、Markdown）
-- 批量导入多本书籍
-- 书架展示与分类浏览
-- 最近阅读记录
-- 阅读进度自动保存（3秒延迟写入）
-- 书籍搜索与删除管理
-- 书籍排序（按添加时间/阅读时间/书名/作者）
-- 书籍元数据编辑（作者、描述、封面）
-
-### 📖 阅读体验
-| 功能 | 说明 |
-|------|------|
-| **阅读主题** | 浅色、深色、护眼、羊皮纸、纯黑（AMOLED）、系统跟随、清晨、正午、傍晚、夜晚 |
-| **字体大小** | 12sp - 32sp 可调 |
-| **行间距** | 1.0 - 2.5 可调 |
-| **翻页模式** | 滑动、仿真、无动画、卷曲、滑动覆盖 |
-| **点击区域** | 左30%上一页，中间呼出菜单，右30%下一页 |
-| **章节记忆** | 切换章节自动恢复滚动位置 |
-| **进度条** | 底部可拖拽，快速跳转章节 |
-| **屏幕常亮** | 阅读时保持屏幕常亮 |
-| **自动夜间模式** | 根据时间自动切换深色/浅色主题 |
-| **PDF支持** | 流畅阅读，支持缩放和拖拽翻页 |
-| **边缘手势** | 自定义边缘滑动区域，避免与系统返回手势冲突 |
-
-### 📊 阅读统计
-- 每日阅读时长统计
-- 每日阅读页数统计
-- 阅读进度自动记录
-- 阅读目标设置（每日阅读时长目标）
-
-### 🔖 书签功能
-- 随时添加书签
-- 书签列表管理
-- 快速跳转书签
-
-### 📑 目录导航
-- 章节目录展示
-- 快速跳转章节
-- 当前章节指示
-
-### ✏️ 笔记与批注 (新增)
-- 文字高亮划线
-- 添加想法/批注
-- 多种高亮颜色（黄、绿、蓝、粉、橙）
-- 笔记导出功能
-
-### 🔍 全文搜索 (新增)
-- 单本书籍内全文检索
-- 搜索结果高亮显示
-- 快速跳转到搜索位置
-
-### 🔊 文本朗读 (新增)
-- 接入系统TTS语音引擎
-- 支持调节语速和音调
-- 中英文语音识别
-
-### 🎡 决策转盘 (新增)
-- 可定制的决策转盘工具
-- 支持自定义选项和颜色
-- 加权随机算法
-- 编辑模式管理选项
-- 帮助解决阅读选择困难
-
-### ⏰ 提醒功能
-- 每日阅读提醒
-- 自定义提醒时间
-
-### 💾 数据管理
-- 书籍和阅读进度备份
-- 从备份文件恢复数据
-- 阅读记录导出
-
-### ⚙️ 个性化设置
-- 应用主题跟随系统（Material You 动态颜色）
-- 默认阅读设置
-- 简体中文界面
+FlowReader 是一款采用 **Jetpack Compose** 构建的 **Android 电子书阅读应用**。我们遵循 **Clean Architecture + MVVM** 设计，打造了一个纯本地、离线优先的阅读环境，支持 **EPUB、TXT、PDF、Markdown** 等多种格式。应用提供了可高度定制的阅读体验、强大的书籍管理系统以及多维度的阅读数据统计，帮助用户找回阅读心流。
 
 ---
 
-## 🚀 性能优化
+## ✨ 核心特性
 
-| 优化项 | 说明 |
-|--------|------|
-| 智能内存管理 | MemoryManager实时监控内存压力，自动调节缓存策略 |
-| LRU缓存管理 | CacheManager实现LRU缓存，自动淘汰低优先级缓存 |
-| 章节内存缓存 | 智能缓存已读取章节，减少数据库查询 |
-| 流式书籍解析 | 支持进度回调，大文件不再卡顿 |
-| 图片缓存优化 | 内存+磁盘双缓存，滚动更流畅 |
-| 进度延迟写入 | 3秒 debounce 减少数据库写入 |
-| UI 渲染优化 | 功能栏悬浮设计，内容区无遮挡 |
-| PDF流式渲染 | 大型PDF文件流畅加载 |
-| Lazy Loading | 章节内容按需加载，首屏加载更快 |
-| 分页加载 | 支持书籍列表分页加载，减少内存占用 |
+### 📚 书库与书籍管理
+*   **多格式导入**：支持 EPUB、TXT、PDF、Markdown文件的本地导入与批量导入。
+*   **智能书架**：支持按添加时间、阅读时间、书名、作者等多种维度排序；书籍元数据（作者、描述、封面）可编辑。
+*   **搜索与筛选**：快速定位书架中的目标书籍；支持查看最近阅读记录。
+*   **数据持久化**：3秒延迟写入的阅读进度自动保存机制，有效减少数据库 IO。
+
+### 📖 沉浸式阅读体验
+*   **个性化页面**：12 种可自定义的阅读主题（浅色、深色、护眼、羊皮纸、AMOLED纯黑等），12sp-32sp 无级字体调节，1.0-2.5 倍行间距调节。
+*   **流畅翻页**：支持滑动、仿真、无动画、卷曲、滑动覆盖等多种翻页模式；兼容边缘手势防误触。
+*   **智能交互**：左/右 30% 区域点击翻页，中间呼出菜单；底部可拖拽进度条快速跳转；支持屏幕常亮及自动夜间模式。
+*   **PDF 专精渲染**：内置流畅的 PDF 渲染引擎，支持缩放与拖拽翻页。
+
+### ☁️ 阅读云服务 (本地)
+*   **备份与恢复**：支持将书籍及阅读进度导出为备份文件；支持从备份文件恢复数据。
+
+### 📊 阅读数据统计
+*   **目标管理**：自定义每日阅读时长目标，实时查看当日完成进度。
+*   **多维统计**：按日统计阅读时长、阅读页数、阅读速度；提供阅读时长趋势分析。
+
+### 🎡 决策转盘 (灵感工具)
+*   **决策辅助**：内置可定制的决策转盘工具，支持自定义选项和颜色，帮助用户解决阅读选择困难症。
+
+### ⚙️ 更多贴心功能
+*   **全局搜索**：基于 SQLite FTS5 实现单本书籍内部全文检索，关键词高亮，快速定位。
+*   **笔记与批注**：支持文字高亮（黄、绿、蓝、粉、橙 5 色标注）、添加批注想法，并可导出。
+*   **TTS 朗读**：接入系统 TTS 语音引擎，中英文多语速/音调朗读，解放双眼。
+*   **护眼提醒**：开启后每 20 分钟提醒用户适当休息，保护视力。
+
+---
+
+## 📂 项目架构
+
+我们采用 **Clean Architecture** 分层架构，实现关注点分离与高度解耦：
+
+**`UI` → `Domain` → `Data`**
+
+### 1. UI 层
+*   **职责**：负责页面渲染与用户交互。
+*   **构成**：`ui/screens/` 按屏幕维度组织（`library`, `reader`, `wheel` 等），每个 Screen 包含其 Composable 与 `*ViewModel`。根导航由 `Navigation.kt` 与 `FlowReaderApp.kt` 统一管理。
+
+### 2. Domain 层
+*   **职责**：定义业务规则，是核心逻辑所在。
+*   **构成**：`domain/model/` 存放数据载体（如 `Book`, `AppException`）；`domain/repository/` 定义数据仓库接口；`domain/usecase/` 封装业务用例（如 `GetBookUseCase`, `SaveProgressUseCase`）。
+
+### 3. Data 层
+*   **职责**：负责数据的获取与持久化。
+*   **构成**：`data/local/` 基于 **Room** 实现本地数据库存储（含 DAO、Entity）；`data/repository/` 提供 Repository 接口的具体实现。
+
+---
+
+## 🌳 项目目录结构
+
+```
+flowreader/
+│
+├── .github/workflows           # CI/CD 工作流 (GitHub Actions)
+├── app/
+│   ├── build.gradle.kts        # App 级别构建配置
+│   ├── proguard-rules.pro      # R8/ProGuard 混淆规则
+│   └── src/
+│       ├── main/
+│       │   ├── AndroidManifest.xml
+│       │   ├── java/com/flowreader/app/
+│       │   │   ├── MainActivity.kt                    # 应用主入口，设置 Compose Content
+│       │   │   ├── FlowReaderApplication.kt           # @HiltAndroidApp 注入点
+│       │   │   │
+│       │   │   ├── data/                            # 数据层
+│       │   │   │   ├── local/
+│       │   │   │   │   ├── AppDatabase.kt           # Room 数据库 (v4)
+│       │   │   │   │   ├── dao/                     # Data Access Objects
+│       │   │   │   │   │   ├── AnnotationDao.kt
+│       │   │   │   │   │   ├── BookDao.kt
+│       │   │   │   │   │   ├── BookmarkDao.kt
+│       │   │   │   │   │   ├── CategoryDao.kt
+│       │   │   │   │   │   ├── ChapterDao.kt
+│       │   │   │   │   │   └── ReadingStatsDao.kt
+│       │   │   │   │   └── entity/                  # 数据库实体
+│       │   │   │   │       ├── AnnotationEntity.kt
+│       │   │   │   │       ├── BookEntity.kt
+│       │   │   │   │       ├── BookmarkEntity.kt
+│       │   │   │   │       ├── CategoryEntity.kt
+│       │   │   │   │       ├── ChapterEntity.kt
+│       │   │   │   │       └── ReadingStatsEntity.kt
+│       │   │   │   └── repository/                  # Repository 实现
+│       │   │   │       ├── AnnotationRepositoryImpl.kt
+│       │   │   │       ├── BackupRepository.kt
+│       │   │   │       ├── BookRepositoryImpl.kt
+│       │   │   │       ├── BookmarkRepositoryImpl.kt
+│       │   │   │       ├── CategoryRepositoryImpl.kt
+│       │   │   │       ├── DataManager.kt
+│       │   │   │       ├── ReadingStatsRepositoryImpl.kt
+│       │   │   │       └── SettingsRepository.kt
+│       │   │   │
+│       │   │   ├── di/
+│       │   │   │   └── AppModule.kt                 # Hilt 注入模块 (Database + Repository)
+│       │   │   │
+│       │   │   ├── domain/                          # 领域层
+│       │   │   │   ├── model/                       # 业务模型
+│       │   │   │   │   ├── Annotation.kt
+│       │   │   │   │   ├── AppException.kt          # 统一异常处理
+│       │   │   │   │   ├── Book.kt
+│       │   │   │   │   ├── ReadingSettings.kt
+│       │   │   │   │   ├── ReadingStats.kt
+│       │   │   │   │   └── WheelItem.kt
+│       │   │   │   ├── repository/                  # 数据仓库接口
+│       │   │   │   │   ├── BackupRepository.kt
+│       │   │   │   │   ├── BookRepository.kt
+│       │   │   │   │   └── ReadingStatsRepository.kt
+│       │   │   │   └── usecase/                     # 业务用例
+│       │   │   │       ├── GetBookUseCase.kt
+│       │   │   │       ├── SaveProgressUseCase.kt
+│       │   │   │       └── TextPaginator.kt
+│       │   │   │
+│       │   │   ├── ui/                              # 表现层 (UI Layer)
+│       │   │   │   ├── FlowReaderApp.kt             # 根 Composable
+│       │   │   │   ├── Navigation.kt                # 导航配置 (4个Tab)
+│       │   │   │   ├── theme/                       # Compose 主题 (Color, Theme, Typography)
+│       │   │   │   └── screens/
+│       │   │   │       ├── bookdetail/              # 书籍详情页
+│       │   │   │       │   ├── BookDetailScreen.kt
+│       │   │   │       │   └── BookDetailViewModel.kt
+│       │   │   │       ├── library/                 # 书库主页
+│       │   │   │       │   ├── LibraryScreen.kt
+│       │   │   │       │   └── LibraryViewModel.kt
+│       │   │   │       ├── reader/                  # 阅读器页面
+│       │   │   │       │   ├── ReaderScreen.kt
+│       │   │   │       │   ├── ReaderViewModel.kt
+│       │   │   │       │   └── components/          # 阅读器子组件
+│       │   │   │       │       ├── BookmarksDialog.kt
+│       │   │   │       │       ├── ChapterListDialog.kt
+│       │   │   │       │       ├── Dialogs.kt
+│       │   │   │       │       ├── PdfViewer.kt
+│       │   │   │       │       ├── ReaderContent.kt
+│       │   │   │       │       ├── ReaderControls.kt
+│       │   │   │       │       └── ReaderSettingsDialog.kt
+│       │   │   │       ├── settings/                # 设置页面
+│       │   │   │       │   ├── SettingsScreen.kt
+│       │   │   │       │   └── SettingsViewModel.kt
+│       │   │   │       ├── stats/                 # 阅读统计页面
+│       │   │   │       │   ├── StatsScreen.kt
+│       │   │   │       │   └── StatsViewModel.kt
+│       │   │   │       └── wheel/                   # 决策转盘页面
+│       │   │   │           ├── WheelScreen.kt
+│       │   │   │           ├── WheelViewModel.kt
+│       │   │   │           └── components/
+│       │   │   │               └── WheelSpinner.kt
+│       │   │   │
+│       │   │   └── util/                            # 工具类模块
+│       │   │       ├── BookLoader.kt                # 书籍加载器
+│       │   │       ├── BookParser.kt                # 书籍解析 (EPUB/TXT/PDF/MD)
+│       │   │       ├── CacheManager.kt              # LRU 缓存管理
+│       │   │       ├── FullTextSearch.kt            # 全文搜索 (FTS5)
+│       │   │       ├── MemoryManager.kt             # 内存压力监控与管理
+│       │   │       └── TtsManager.kt                # TTS 朗读管理
+│       │   │
+│       │   └── res/                               # Android 资源文件
+│       │       ├── drawable/
+│       │       ├── mipmap-*/
+│       │       ├── values/ (含多种语言 strings: en, ja, ko, zh)
+│       │       └── xml/
+│       │
+│       └── test/java/com/flowreader/app/util/     # 单元测试
+│           └── BookParserTest.kt
+│
+├── build.gradle.kts              # 项目根目录构建脚本
+├── gradle.properties             # Gradle 属性配置
+├── gradlew / gradlew.bat       # Gradle Wrapper
+├── settings.gradle.kts           # 项目配置
+├── .editorconfig                 # 代码格式统一配置
+└── README.md                     # 本文件
+```
 
 ---
 
@@ -119,226 +202,59 @@
 
 | 类别 | 技术 |
 |------|------|
-| UI | Jetpack Compose + Material 3 |
-| 架构 | MVVM + Clean Architecture |
-| 依赖注入 | Hilt |
-| 数据库 | Room + SQLite FTS5 |
-| 图片加载 | Coil |
-| 异步 | Kotlin Coroutines + Flow |
-| 导航 | Navigation Compose |
-| EPUB渲染 | Readium Kotlin Toolkit |
+| **UI** | Jetpack Compose + Material 3 (Material You) |
+| **架构** | MVVM + Clean Architecture |
+| **依赖注入** | Hilt |
+| **异步** | Kotlin Coroutines + Flow |
+| **数据库** | Room + SQLite (FTS5 全文检索) |
+| **PDF 渲染** | 内置 PDF 渲染引擎 |
+| **构建系统** | Gradle (AGP 8.6.0) |
 
 ---
 
-## 📂 项目结构
-
-```
-app/src/main/java/com/flowreader/app/
-├── MainActivity.kt              # 主活动入口
-├── FlowReaderApplication.kt     # @HiltAndroidApp 应用类
-├── data/                        # 数据层
-│   ├── local/                   # Room 数据库
-│   │   ├── AppDatabase.kt       # Room DB v4
-│   │   ├── dao/                 # Data Access Objects
-│   │   └── entity/              # 数据实体
-│   └── repository/              # 仓库实现
-├── di/                          # Hilt 依赖注入
-│   └── AppModule.kt             # DatabaseModule + RepositoryModule
-├── domain/                      # 领域层
-│   ├── model/                   # 领域模型（Book, ReadingSettings 等）
-│   ├── repository/              # 仓库接口
-│   └── usecase/                 # 用例（GetBookUseCase, SaveProgressUseCase, TextPaginator）
-├── ui/                          # 表现层
-│   ├── FlowReaderApp.kt         # 根 Composable (FlowReaderRoot)
-│   ├── Navigation.kt            # 导航配置（4 个底部 tab）
-│   ├── theme/                   # 主题样式
-│   └── screens/                 # 页面
-│       ├── library/             # 书库
-│       ├── reader/              # 阅读器 + components/
-│       ├── bookdetail/          # 书籍详情
-│       ├── settings/            # 设置
-│       ├── stats/               # 阅读统计
-│       └── wheel/               # 决策转盘 + components/
-└── util/                        # 工具类
-    ├── BookParser.kt            # 书籍解析（EPUB/TXT/PDF/MD）
-    ├── BookLoader.kt            # 书籍加载
-    ├── TtsManager.kt            # TTS 文本朗读
-    ├── FullTextSearch.kt        # 全文搜索（FTS5）
-    ├── MemoryManager.kt         # 内存管理
-    └── CacheManager.kt          # LRU 缓存管理
-```
-
----
-
-## 📋 支持格式
-
-| 格式 | 状态 |
-|------|------|
-| EPUB | ✅ 已支持（Readium引擎）|
-| TXT  | ✅ 已支持 |
-| PDF  | ✅ 已支持 |
-| Markdown | ✅ 已支持 |
-
----
-
-## 📲 构建
-
-```bash
-# 克隆项目
-git clone https://github.com/HuZaiGong/flowreader.git
-
-# 进入项目目录
-cd flowreader
-
-# 构建 Debug APK
-./gradlew assembleDebug
-
-# 构建 Release APK
-./gradlew assembleRelease
-```
+## 🚀 快速开始
 
 ### 环境要求
+- 操作系统: Windows / macOS / Linux
+- JDK: 17 (Temurin 推荐)
+- Android SDK: 35
 
-- Android SDK 35
-- Kotlin 2.0.21
-- Android Gradle Plugin 8.6.0
-- JDK 17
+### 构建与运行
+
+```bash
+# 1. 克隆仓库
+git clone https://github.com/HuZaiGong/flowreader.git
+cd flowreader
+
+# 2. 构建 Debug 版本 (用于开发调试)
+./gradlew assembleDebug
+
+# 3. 构建 Release 版本 (启用 R8 混淆压缩)
+./gradlew assembleRelease
+
+# 4. 运行单元测试
+./gradlew testDebugUnitTest
+```
 
 ---
 
-## 📝 更新日志
+## 📝 近期更新日志
 
-### v42 (开发中)
-- **交互优化**: 全面优化页面交互逻辑和动画效果
-- **书架优化**: 新增下拉刷新功能，优化书籍列表加载动画
-- **书籍详情**: 改善Tab切换动画效果，添加书签删除淡出动画
-- **动画增强**: 为列表项添加 AnimatedVisibility 淡入效果
-- **组件升级**: 使用 Material 3 PullToRefresh 组件替代旧版
-- **用户体验**: 优化过渡动画，使交互更平滑自然
+### v42 (最新发布)
+*   **交互体验**：全面优化页面交互动画，列表项添加 `AnimatedVisibility` 淡入效果，交互更平滑自然。
+*   **书架优化**：新增下拉刷新功能（PullToRefresh），列表加载动画优化。
+*   **书籍详情**：改善 Tab 切换动画与书签删除淡出效果。
 
 ### v41
-- **决策转盘**: 新增可定制的决策转盘功能，帮助解决阅读选择困难
-- **底部导航**: 优化底部导航栏，增加转盘入口
-- **版本规范**: 规范版本号为语义化版本控制
-
-### v40.1
-- **高亮修复**: 优化高亮功能交互，长按/点击段落后手动输入文本再添加高亮
-- **章节跳转修复**: 修复跳转下一章时滚动位置重置问题，切换章节自动回到开头
+*   **决策转盘**：新增可定制的决策转盘功能，支持自定义选项和颜色。
+*   **底部导航**：优化底部导航栏，新增转盘入口。
 
 ### v40
-- **TTS功能**: 修复语音朗读功能，添加朗读/停止按钮到设置界面
-- **版本规范**: 规范版本号为40.0.0，CI使用语义化版本
-- **单元测试**: GitHub Actions集成单元测试
-- **代码清理**: 移除DataManager中Sync残留代码
+*   **TTS 修复**：修复并恢复语音朗读功能，添加朗读/停止按钮到设置界面。
+*   **架构优化**：新增 `domain/usecase/` 层，新增 `TextPaginator` 实现分页加载性能优化。
+*   **离线强化**：移除账号与云端同步，强化纯本地离线优先体验。
 
-### v36
-- **Bug修复**: 修复空安全断言 !! 问题 (ReaderViewModel)
-- **CI修复**: 修复 GitHub Actions build.yml job 定义问题
-- **代码优化**: 移除过期 Icons.Filled 使用
-
-### v35
-- **离线优先**: 移除账号系统、云端同步等网络功能，纯本地运行
-- **代码治理**: 重命名 Application 类 FlowReaderApp → FlowReaderApplication
-- **代码治理**: 重命名 Composable FlowReaderApp → FlowReaderRoot
-- **代码规范**: 添加 .editorconfig 代码规范配置
-- **CI 优化**: 优化 CI permissions，按需授权（最小权限原则）
-- **异常处理**: 新增 AppException.kt 统一异常处理机制
-- **架构优化**: 新增 domain/usecase/ 层 (GetBookUseCase, SaveProgressUseCase)
-- **性能优化**: 新增 TextPaginator 分页加载 (3000字/页, 预加载2页)
-- **进度防抖**: 3秒延迟保存减少数据库写入
-
-### v30
-- **Markdown 支持**: 新增 .md 格式解析支持
-- **测试基础设施**: 引入 JUnit 4 + MockK 测试框架
-- **构建优化**: Release 启用 R8 混淆压缩
-- **现代 Android 适配**: Edge-to-edge, Splash Screen 支持
-
-### v29
-- **UI组件拆分重构**: ReaderScreen拆分为独立组件模块
-- **新增ReaderContent**: 独立的阅读内容渲染组件
-- **新增PdfViewer**: 独立的PDF渲染组件
-- **新增ReaderControls**: 独立的阅读控制栏组件
-- **新增Dialog组件**: 各对话框独立模块化
-- **智能阅读预测**: 基于阅读速度预测剩余阅读时间
-- **阅读速度跟踪**: 实时计算阅读速度(字/分钟)
-- **护眼提醒**: 每20分钟提醒用户休息眼睛
-- **阅读目标进度**: 显示每日阅读目标完成进度
-- **建议休息时间**: 根据阅读时长建议休息时间
-- **书籍分类增强**: 支持分类筛选、添加、删除书籍分类功能
-- **代码模块化**: 提升可维护性和可测试性
-
-### v28
-- **内存管理优化**: 新增MemoryManager，实时监控内存状态和压力级别
-- **智能缓存管理**: 新增CacheManager，实现LRU缓存和自动内存回收
-- **章节内容缓存**: 缓存已加载章节内容，减少重复数据库查询
-- **分页加载支持**: 新增getBooksPaged()支持分页加载书籍列表
-- **Lazy Loading**: 章节内容按需加载，首屏加载更快
-
-### v27
-- 性能优化：章节内容Lazy Loading，减少首次加载时间
-- 新增内容缓存机制，避免重复解析
-- 新增分页加载支持
-
-### v26
-- 性能优化：数据库版本升级到v2，添加复合索引
-- ViewModel优化：使用first()替代collect加载设置
-- UI渲染优化：使用derivedStateOf缓存计算值
-- 手势设置持久化到DataStore
-
-### v25
-- 新增文本高亮/笔记功能
-- 新增阅读进度条
-- 新增阅读统计页面
-- 新增书籍封面自动提取
-- 新增手势自定义UI
-- 新增阅读进度分享
-
-### v24
-- 新增多语言支持（中文、英语、日语、韩语）
-- 性能优化：章节内存缓存
-- 性能优化：数据库查询优化
-
-### v19
-- 修复 Kotlin/Compose 版本兼容性问题
-- 更新 Android Gradle Plugin 至 8.6.0
-- 更新 Kotlin 至 2.0.21
-- 更新 Gradle 至 8.7
-- 更新 compileSdk/targetSdk 至 35
-
-### v17
-- 新增 Readium Kotlin Toolkit EPUB渲染引擎，支持复杂CSS/排版
-- 新增边缘手势识别设置，解决滑动翻页与系统返回手势冲突
-- 新增笔记/批注功能（划线、想法、导出）
-- 新增全文搜索（单本书籍内FTS检索）
-- 新增TTS文本朗读功能
-- 性能优化：提升大型书籍解析速度
-
-### v15
-- Latest release version
-
-### v12.0.0
-- 新增阅读目标设置（每日阅读时长目标）
-- 新增搜索历史记录功能
-- 性能优化：数据库索引优化
-- 性能优化：图片缓存优化
-- 性能优化：书籍解析流式处理
-- UI优化：阅读进度百分比显示增强
-
-### v11.0.0
-- 新增 PDF 格式支持
-- 新增阅读统计功能（阅读时长、页数）
-- 新增底部可拖拽进度条
-- 新增时间自动夜间模式
-- 新增批量导入书籍
-- 新增书籍排序功能
-- 新增阅读记录导出
-- 新增每日阅读提醒
-- 新增备份/恢复功能
-- 新增关于页面
-- 新增 Material You 动态颜色支持
-- 性能优化：启动速度、内存占用优化
-- 深色主题对比度优化
-- AMOLED纯黑模式增强
+*(查看 [CHANGELOG.md](CHANGELOG.md) 获取更详细的历史更新记录)*
 
 ---
 
@@ -348,10 +264,8 @@ cd flowreader
 
 ---
 
-## 🌟 Star History
+## 🤝 致谢
 
-[![Star History Chart](https://api.star-history.com/svg?repos=HuZaiGong/flowreader&type=Date)](https://star-history.com/#HuZaiGong/flowreader&Date)
-
----
+感谢所有反馈问题与提交建议的用户。
 
 <p align="center"> Made with ❤️ by HuZaiGong </p>
