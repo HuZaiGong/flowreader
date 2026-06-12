@@ -357,8 +357,8 @@ class BookParser @Inject constructor(
                 coversDir.mkdirs()
             }
 
-            val fileName = bookTitle.replace(Regex("[^a-zA-Z0-9]"), "_") + ".jpg"
-            val file = File(coversDir, fileName)
+            val fileName = SafeFileNames.forCover(bookTitle)
+            val file = uniqueFile(coversDir, fileName)
 
             FileOutputStream(file).use { fos ->
                 fos.write(imageData)
@@ -377,8 +377,8 @@ class BookParser @Inject constructor(
                 booksDir.mkdirs()
             }
 
-            val fileName = getFileName(uri)
-            val file = File(booksDir, fileName)
+            val fileName = SafeFileNames.forInternalBook(getFileName(uri))
+            val file = uniqueFile(booksDir, fileName)
 
             context.contentResolver.openInputStream(uri)?.use { input ->
                 FileOutputStream(file).use { output ->
@@ -390,6 +390,19 @@ class BookParser @Inject constructor(
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun uniqueFile(directory: File, fileName: String): File {
+        val baseName = fileName.substringBeforeLast('.', missingDelimiterValue = fileName)
+        val extension = fileName.substringAfterLast('.', missingDelimiterValue = "")
+        var candidate = File(directory, fileName)
+        var suffix = 1
+        while (candidate.exists()) {
+            val nextName = if (extension.isEmpty()) "$baseName-$suffix" else "$baseName-$suffix.$extension"
+            candidate = File(directory, nextName)
+            suffix++
+        }
+        return candidate
     }
 
     private fun parsePdfStream(uri: Uri, fileName: String, fileSize: Long): Result<BookParseResult> {

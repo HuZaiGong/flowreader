@@ -23,8 +23,8 @@ Data (Repository Impl, Room DB, DAOs, Entities)
 ```
 
 - **UI Layer**: `ui/screens/` contains one package per screen with its Composable and `*ViewModel`. Root navigation is in `Navigation.kt`.
-- **Domain Layer**: `domain/model/` holds data classes and sealed classes; `domain/repository/` holds interfaces; `domain/usecase/` holds business logic like `GetBookUseCase`.
-- **Data Layer**: `data/local/` (Room DB, DAOs, entities) and `data/repository/` (implementations). `BackupRepository.kt` also lives here.
+- **Domain Layer**: `domain/model/` holds data classes and sealed classes; `domain/repository/` keeps one repository interface per file; `domain/usecase/` holds orchestration logic such as `ImportBookUseCase`, `GetBookUseCase`, and `SaveProgressUseCase`.
+- **Data Layer**: `data/local/` (Room DB, DAOs, entities) and `data/repository/` (implementations). `BackupRepository.kt` also lives here, but DTOs returned across the boundary belong in `domain/model/`.
 
 Data flow: **Composable → ViewModel → UseCase/Repository → Room DAO → SQLite**.
 
@@ -40,8 +40,9 @@ Key DI wiring: `di/AppModule.kt` contains both `DatabaseModule` (`@Provides`) an
 | `data/local/entity/` | Room entities (6 tables) |
 | `data/local/dao/` | Room DAOs |
 | `data/repository/` | Repository implementations |
-| `domain/model/` | Domain models and `AppException` |
-| `domain/usecase/` | Business logic / UseCases |
+| `domain/model/` | Domain models, `ImportResult`, and `AppException` |
+| `domain/repository/` | Repository interfaces; keep one public interface per file |
+| `domain/usecase/` | Business orchestration / UseCases |
 | `ui/screens/` | Screen packages (`library/`, `reader/`, `bookdetail/`, `settings/`, `stats/`, `wheel/`) |
 | `ui/theme/` | Compose theme (`Color.kt`, `Theme.kt`, `Typography.kt`) |
 | `util/` | Utility classes: `BookParser`, `BookLoader`, `TtsManager`, `FullTextSearch`, `MemoryManager`, `CacheManager` |
@@ -92,6 +93,7 @@ Key DI wiring: `di/AppModule.kt` contains both `DatabaseModule` (`@Provides`) an
 ### Error Handling
 - `AppException` is a sealed class for domain errors (`DatabaseError`, `FileError`, `ParseError`, etc.).
 - Use `Result<T>` wrapper for operations that can fail.
+- Keep UI-facing repository DTOs in `domain/model/`; data-layer DTOs must not leak into `domain/repository/` interfaces.
 
 ### Async Patterns
 - Kotlin **Coroutines + Flow** for asynchronous work.
@@ -120,6 +122,7 @@ Key DI wiring: `di/AppModule.kt` contains both `DatabaseModule` (`@Provides`) an
 | `Navigation.kt` | `NavHost`, `BottomNavigation`, `Screen` sealed class |
 | `di/AppModule.kt` | Hilt modules for DB and Repositories |
 | `data/local/AppDatabase.kt` | Room DB (v4), `flowreader_db` |
+| `domain/usecase/ImportBookUseCase.kt` | Book import orchestration: parse, copy, persist book, persist chapters |
 | `proguard-rules.pro` | R8 ProGuard rules for release builds |
 
 ---

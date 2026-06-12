@@ -1,7 +1,7 @@
 package com.flowreader.app.domain.repository
 
 import android.net.Uri
-import com.flowreader.app.data.repository.ImportResult
+import com.flowreader.app.domain.model.ImportResult
 
 /**
  * 备份和恢复仓库接口

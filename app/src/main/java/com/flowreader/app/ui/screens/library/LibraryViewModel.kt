@@ -9,8 +9,7 @@ import com.flowreader.app.domain.model.Category
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.CategoryRepository
-import com.flowreader.app.domain.repository.ChapterRepository
-import com.flowreader.app.util.BookParser
+import com.flowreader.app.domain.usecase.ImportBookUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -39,17 +38,17 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val bookRepository: BookRepository,
-    private val chapterRepository: ChapterRepository,
     private val categoryRepository: CategoryRepository,
-    private val bookParser: BookParser,
+    private val importBookUseCase: ImportBookUseCase,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
     
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    val isRefreshing: StateFlow<Boolean> = _uiState
+        .map { it.isRefreshing }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _searchQuery = MutableStateFlow("")
     private val _sortOrder = MutableStateFlow(SortOrder.ADDED_TIME)
@@ -149,21 +148,6 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun loadMoreBooks() {
-        val currentCount = _uiState.value.books.size
-        viewModelScope.launch {
-            val moreBooks = bookRepository.getBooksPaged(currentCount, PAGE_SIZE)
-            if (moreBooks.isNotEmpty()) {
-                _uiState.update {
-                    it.copy(books = it.books + moreBooks)
-                }
-            }
-        }
-    }
-
-    companion object {
-        private const val PAGE_SIZE = 20
-    }
 
     fun updateSortOrder(order: SortOrder) {
         _sortOrder.value = order
@@ -180,15 +164,7 @@ class LibraryViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val parseResult = bookParser.parseBook(uri)
-
-                parseResult.onSuccess { result ->
-                    val internalPath = result.pdfFilePath ?: bookParser.copyFileToInternal(uri)
-                    val book = result.book.copy(filePath = internalPath ?: "")
-                    val bookId = bookRepository.insertBook(book)
-                    val chaptersWithBookId = result.chapters.map { it.copy(bookId = bookId) }
-                    chapterRepository.insertChapters(chaptersWithBookId)
-                }.onFailure { error ->
+                importBookUseCase(uri).onFailure { error ->
                     _uiState.update { it.copy(error = error.message) }
                 }
 
@@ -216,13 +192,8 @@ class LibraryViewModel @Inject constructor(
     
     fun refreshBooks() {
         viewModelScope.launch {
-            _isRefreshing.value = true
-            try {
-                // 重新加载书籍列表
-                loadBooks()
-            } finally {
-                _isRefreshing.value = false
-            }
+            _uiState.update { it.copy(isRefreshing = true) }
+            _uiState.update { it.copy(isRefreshing = false) }
         }
     }
 }

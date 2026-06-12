@@ -2,6 +2,7 @@ package com.flowreader.app.util
 
 import com.flowreader.app.domain.model.BookFormat
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class BookParserTest {
@@ -14,6 +15,21 @@ class BookParserTest {
         assertEquals(BookFormat.MARKDOWN, detectFormatTest("book.md"))
         assertEquals(BookFormat.MARKDOWN, detectFormatTest("book.markdown"))
         assertEquals(BookFormat.UNKNOWN, detectFormatTest("book.exe"))
+    }
+
+    @Test
+    fun safeFileNameRemovesPathSegments() {
+        val fileName = SafeFileNames.forInternalBook("../../evil/Book Name.epub")
+
+        assertEquals("Book Name.epub", fileName)
+        assertFalse(fileName.contains('/'))
+        assertFalse(fileName.contains('\\'))
+    }
+
+    @Test
+    fun safeFileNameFallsBackForUnsafeNames() {
+        assertEquals("book.txt", SafeFileNames.forInternalBook("..", "txt"))
+        assertEquals("cover.jpg", SafeFileNames.forCover("../cover.png"))
     }
 
     private fun detectFormatTest(fileName: String): BookFormat {
