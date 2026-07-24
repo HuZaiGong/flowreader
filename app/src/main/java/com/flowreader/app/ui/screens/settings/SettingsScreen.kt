@@ -151,6 +151,12 @@ fun SettingsScreen(
             }
 
             SettingsSection(title = "关于") {
+                SettingsItem(
+                    icon = Icons.Default.Info,
+                    title = "关于心流阅读",
+                    subtitle = "版本 12.0.0",
+                    onClick = { showAboutDialog = true }
+                )
             }
         }
 
