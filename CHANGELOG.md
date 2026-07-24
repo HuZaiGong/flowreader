@@ -4,6 +4,26 @@
 
 ---
 
+## [v45.0.1] - 2026-07
+- **按书籍阅读统计**：BookDetailScreen 添加统计卡片，显示每本书累计阅读时长和页数。
+- **阅读趋势图表**：StatsScreen 以 Canvas 柱状图展示最近 7 天阅读时长趋势，替换原有纯文本列表。
+- **EPUB 内嵌图片**：BookParser 自动提取 EPUB 中的图片并渲染到阅读器正文中。
+- **EPUB 排版保留**：HTML 解析保留标题（`##`）、粗体（`**`）、斜体（`*`）格式标记，ReaderContent 渲染对应样式。
+- **自定义字体导入**：设置页导入 .ttf/.otf 字体文件，路径持久化到 DataStore，支持清除恢复默认。
+- **动态缓存容量**：CacheManager 注入 MemoryManager，根据设备可用内存动态调整 LRU 缓存上限。
+- **领域接口补齐**：README.md 目录树更新为当前实际结构（8 个 domain repository 接口）。
+
+## [v45.0.0] - 2026-07
+- **字体选择器**：ReaderSettingsDialog 添加 8 种字体（默认/衬线/无衬线/等宽/宋/黑/楷/仿宋）FilterChips。
+- **全文搜索**：集成 FTS5，阅读器控制栏添加搜索入口 + SearchDialog，结果跳转对应章节。
+- **标注高亮渲染**：ReaderContent 使用 `buildAnnotatedString` + `SpanStyle` 渲染标注背景色。
+- **书籍详情标注 Tab**：标注列表显示颜色、选中文本、备注，支持删除。
+- **缓存整合**：移除 `ChapterRepositoryImpl.contentCache`，统一通过 `CacheManager` 存取章节内容。
+- **领域接口拆分**：Chapter、Bookmark、Annotation、Category 接口从 `BookRepository.kt` 迁移到独立文件。
+- **SettingsRepository 抽象**：创建 `domain/repository/SettingsRepository.kt` 接口，`data/repository/SettingsRepository.kt` 更名为 `SettingsRepositoryImpl` 实现接口，ViewModel 全部注入接口。
+- **移除死代码**：`GetBookUseCase`、`SaveProgressUseCase`、`TextPaginator`、`ParagraphMode`、`BackgroundTexture`、`AmbientSound` 枚举、11 个未用的 `ReadingSettings` 字段。
+- **主题简化**：仅保留深色/浅色两种主题，全局统一生效，移除 autoTimeTheme/dynamicColor 等逻辑，净减约 260 行。
+
 ## [v43.0.0] - 2026-07
 *   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，连续旋转更流畅；转盘文字始终正向可读，不再倒置。
 *   **Gradle 升级**：Gradle Wrapper 从 `8.7` 升级到 `9.6.1`；重构 `gradle.properties`，添加 `UseParallelGC`、`vfs.watch`、`kotlin.daemon.jvmargs` 等优化项，提升构建性能。

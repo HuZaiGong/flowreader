@@ -41,14 +41,16 @@ FlowReader 是一款采用 **Jetpack Compose** 构建的 **Android 电子书阅�
 
 ### 📊 阅读数据统计
 *   **目标管理**：自定义每日阅读时长目标，实时查看当日完成进度。
-*   **多维统计**：按日统计阅读时长、阅读页数、阅读速度；提供阅读时长趋势分析。
+*   **多维统计**：按日统计阅读时长、阅读页数、阅读速度；提供阅读时长趋势分析（柱状图）。
 
 ### 🎡 决策转盘 (灵感工具)
 *   **决策辅助**：内置可定制的决策转盘工具，支持自定义选项和颜色，帮助用户解决阅读选择困难症。
 
 ### ⚙️ 更多贴心功能
 *   **全局搜索**：基于 SQLite FTS5 实现单本书籍内部全文检索，关键词高亮，快速定位。
-*   **笔记与批注**：支持文字高亮（黄、绿、蓝、粉、橙 5 色标注）、添加批注想法，并可导出。
+*   **笔记与批注**：支持文字高亮（黄、绿、蓝、粉、橙 5 色标注）、添加批注想法。
+*   **EPUB 图片与排版**：自动提取 EPUB 内嵌图片并渲染，保留标题/粗体/斜体排版样式。
+*   **自定义字体**：支持导入 .ttf/.otf 外部字体文件。
 *   **TTS 朗读**：接入系统 TTS 语音引擎，中英文多语速/音调朗读，解放双眼。
 *   **护眼提醒**：开启后每 20 分钟提醒用户适当休息，保护视力。
 
@@ -62,15 +64,15 @@ FlowReader 是一款采用 **Jetpack Compose** 构建的 **Android 电子书阅�
 
 ### 1. UI 层
 *   **职责**：负责页面渲染与用户交互。
-*   **构成**：`ui/screens/` 按屏幕维度组织（`library`, `reader`, `wheel` 等），每个 Screen 包含其 Composable 与 `*ViewModel`。根导航由 `Navigation.kt` 与 `FlowReaderApp.kt` 统一管理。
+*   **构成**：`ui/screens/` 按屏幕维度组织（`library`, `reader`, `wheel`, `stats`, `settings`, `bookdetail`），每个 Screen 包含 Composable 与 `*ViewModel`。根导航由 `Navigation.kt` 与 `FlowReaderApp.kt` 统一管理。
 
 ### 2. Domain 层
-*   **职责**：定义业务规则，是核心逻辑所在。
-*   **构成**：`domain/model/` 存放数据载体（如 `Book`, `AppException`）；`domain/repository/` 定义数据仓库接口；`domain/usecase/` 封装业务用例（如 `GetBookUseCase`, `SaveProgressUseCase`）。
+*   **职责**：定义业务规则与数据契约。
+*   **构成**：`domain/model/` 存放数据载体（`Book`, `ReadingSettings` 等）；`domain/repository/` 定义 8 个数据仓库接口。`domain/usecase/` 已删除（逻辑内聚到各 ViewModel）。
 
 ### 3. Data 层
 *   **职责**：负责数据的获取与持久化。
-*   **构成**：`data/local/` 基于 **Room** 实现本地数据库存储（含 DAO、Entity）；`data/repository/` 提供 Repository 接口的具体实现。
+*   **构成**：`data/local/` 基于 **Room** 实现本地数据库存储（6 DAO + 6 Entity）；`data/repository/` 提供 Repository 接口的具体实现。
 
 ---
 
@@ -120,23 +122,24 @@ flowreader/
 │       │   │   ├── di/
 │       │   │   │   └── AppModule.kt                 # Hilt 注入模块 (Database + Repository)
 │       │   │   │
-│       │   │   ├── domain/                          # 领域层
-│       │   │   │   ├── model/                       # 业务模型
-│   │   │   │   │   ├── Annotation.kt
-│   │   │   │   │   ├── AppException.kt          # 统一异常处理（当前未使用）
-│   │   │   │   │   ├── Book.kt
-│   │   │   │   │   ├── Bookmark.kt
-│   │   │   │   │   ├── ReadingSettings.kt
-│   │   │   │   │   ├── ReadingStats.kt
-│   │   │   │   │   └── WheelItem.kt
-│       │   │   │   ├── repository/                  # 数据仓库接口
-│       │   │   │   │   ├── BackupRepository.kt
-│       │   │   │   │   ├── BookRepository.kt
-│       │   │   │   │   └── ReadingStatsRepository.kt
-│       │   │   │   └── usecase/                     # 业务用例
-│       │   │   │       ├── GetBookUseCase.kt
-│       │   │   │       ├── SaveProgressUseCase.kt
-│       │   │   │       └── TextPaginator.kt
+│       │   │   │   ├── domain/                          # 领域层
+│       │   │   │   │   ├── model/                       # 业务模型
+│       │   │   │   │   │   ├── Annotation.kt
+│       │   │   │   │   │   ├── Book.kt
+│       │   │   │   │   │   ├── Bookmark.kt
+│       │   │   │   │   │   ├── ReadingSettings.kt
+│       │   │   │   │   │   ├── ReadingStats.kt
+│       │   │   │   │   │   └── WheelItem.kt
+│       │   │   │   │   ├── repository/                  # 数据仓库接口
+│       │   │   │   │   │   ├── AnnotationRepository.kt
+│       │   │   │   │   │   ├── BackupRepository.kt
+│       │   │   │   │   │   ├── BookRepository.kt
+│       │   │   │   │   │   ├── BookmarkRepository.kt
+│       │   │   │   │   │   ├── CategoryRepository.kt
+│       │   │   │   │   │   ├── ChapterRepository.kt
+│       │   │   │   │   │   ├── ReadingStatsRepository.kt
+│       │   │   │   │   │   └── SettingsRepository.kt
+│       │   │   │   │   └── usecase/                     # （已删除）
 │       │   │   │
 │       │   │   ├── ui/                              # 表现层 (UI Layer)
 │       │   │   │   ├── FlowReaderApp.kt             # 根 Composable
@@ -163,7 +166,7 @@ flowreader/
 │       │   │   │       ├── settings/                # 设置页面
 │       │   │   │       │   ├── SettingsScreen.kt
 │       │   │   │       │   └── SettingsViewModel.kt
-│       │   │   │       ├── stats/                 # 阅读统计页面
+│       │   │   │       ├── stats/                       # 阅读统计页面
 │       │   │   │       │   ├── StatsScreen.kt
 │       │   │   │       │   └── StatsViewModel.kt
 │       │   │   │       └── wheel/                   # 决策转盘页面
@@ -241,7 +244,15 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v45.0.0 (最新发布)
+### v45.0.1 (最新发布)
+- 按书籍统计：BookDetailScreen 阅读统计卡片（每本书阅读时长/页数）
+- 趋势图表：StatsScreen Canvas 柱状图展示最近 7 天阅读趋势
+- EPUB 图片：自动提取 EPUB 内嵌图片并渲染
+- EPUB 排版：保留标题（##）、粗体（**）、斜体（*）标记
+- 自定义字体：支持导入 .ttf/.otf 外部字体文件
+- 动态缓存：CacheManager 集成 MemoryManager，根据可用内存动态调整缓存上限
+
+### v45.0.0
 - 字体选择：阅读设置面板 8 种字体 FilterChips
 - 全文搜索：FTS5 集成，阅读器搜索入口 + SearchDialog
 - 标注高亮：`buildAnnotatedString` + `SpanStyle` 渲染标注背景色
@@ -250,10 +261,7 @@ cd flowreader
 - 领域接口拆分：Chapter/Bookmark/Annotation/Category 独立文件
 - SettingsRepository 抽象：创建领域接口，实现类更名
 - 移除死代码：`GetBookUseCase`、`SaveProgressUseCase`、`TextPaginator`、`ParagraphMode`、`BackgroundTexture`、`AmbientSound` 及 11 个未用的 `ReadingSettings` 字段
-*   **主题简化**：阅读主题仅保留"深色"和"浅色"两种模式，移除其余 8 种变体（护眼/羊皮纸/AMOLED 等）。
-*   **全局主题统一**：主题设置现在全局生效，底部导航栏、设置页等所有界面统一跟随当前主题。
-*   **界面精简**：移除了书架、统计、转盘、设置四个底部标签页顶栏的返回箭头按钮。
-*   **代码清理**：移除 `autoTimeTheme`、`dynamicColor` 等复杂逻辑，净减约 260 行代码。
+- 主题简化：阅读主题仅保留"深色"和"浅色"两种模式，全局统一生效
 
 ### v44.0.2
 *   **设置页完善**：为"关于"分区添加可点击入口项，点击后弹出版本信息与致谢对话框。

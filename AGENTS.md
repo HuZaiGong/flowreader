@@ -1,12 +1,10 @@
 # FlowReader
 
-**Current version: 45.0.0**
+**Current version: 45.0.1**
 
 Offline-first Android e-book reader (EPUB/TXT/PDF/Markdown). Single-module, Clean Architecture + MVVM.
 
-**Phase 2 features**: Font family selector in ReaderSettingsDialog, full-text search (FTS5 via FullTextSearch.kt, search button in reader controls + SearchDialog), annotation highlighting via `buildAnnotatedString` + `SpanStyle`, annotation Tab in BookDetailScreen.
-
-**Phase 3 refactors**: Cache consolidation (ChapterRepositoryImpl → CacheManager), domain interface split (Chapter/Bookmark/Annotation/Category → separate files), SettingsRepository abstraction (interface in domain, impl renamed to SettingsRepositoryImpl + Hilt binding), dead code removal (unused ReadingSettings fields, GetBookUseCase, SaveProgressUseCase, TextPaginator).
+All Phase 1-3 roadmap items are complete. Key features include: per-book reading stats, 7-day trend chart, EPUB image/CSS rendering, custom font import, font family selector, full-text search (FTS5), annotation highlighting, annotation/bookmark management, dynamic LRU cache with MemoryManager awareness.
 
 ---
 
