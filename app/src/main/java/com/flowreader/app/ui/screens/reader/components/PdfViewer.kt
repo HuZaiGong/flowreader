@@ -36,13 +36,24 @@ fun PdfViewer(
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
 
+    var loadError by remember { mutableStateOf(false) }
+
     LaunchedEffect(filePath, currentPage) {
         scale = 1f
         offsetX = 0f
         offsetY = 0f
+        loadError = false
+        if (filePath.isBlank()) {
+            loadError = true
+            return@LaunchedEffect
+        }
         withContext(Dispatchers.IO) {
             try {
                 val file = File(filePath)
+                if (!file.exists()) {
+                    withContext(Dispatchers.Main) { loadError = true }
+                    return@withContext
+                }
                 ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
                     PdfRenderer(pfd).use { renderer ->
                         pageCount = renderer.pageCount
@@ -62,6 +73,7 @@ fun PdfViewer(
                 }
             } catch (e: Exception) {
                 Log.e("PdfViewer", "Failed to render PDF page", e)
+                withContext(Dispatchers.Main) { loadError = true }
             }
         }
     }
@@ -92,24 +104,37 @@ fun PdfViewer(
             },
         contentAlignment = Alignment.Center
     ) {
-        pdfBitmap?.let { bitmap ->
-            Image(
-                bitmap = bitmap.asImageBitmap(),
-                contentDescription = "PDF第${currentPage + 1}页",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY
-                    )
-            )
-        } ?: Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = textColor)
+        if (loadError) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "PDF 文件无法加载",
+                    color = textColor,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+            }
+        } else {
+            pdfBitmap?.let { bitmap ->
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "PDF第${currentPage + 1}页",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY
+                        )
+                )
+            } ?: Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = textColor)
+            }
         }
 
         Column(

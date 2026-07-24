@@ -62,7 +62,25 @@ fun BookDetailScreen(
                 )
             }
         ) { paddingValues ->
-            if (uiState.isLoading) {
+            val error = uiState.error
+            if (error != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = error,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = onBackClick) { Text("返回") }
+                    }
+                }
+            } else if (uiState.isLoading) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()

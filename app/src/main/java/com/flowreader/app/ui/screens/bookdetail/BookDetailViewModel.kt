@@ -21,6 +21,7 @@ data class BookDetailUiState(
     val chapters: List<Chapter> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
     val isLoading: Boolean = true,
+    val error: String? = null,
     val appTheme: ReaderTheme = ReaderTheme.SYSTEM
 )
 
@@ -55,25 +56,34 @@ class BookDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val book = bookRepository.getBookById(bookId)
-            if (book != null) {
-                combine(
-                    chapterRepository.getChaptersByBookId(bookId),
-                    bookmarkRepository.getBookmarksByBookId(bookId)
-                ) { chapters, bookmarks ->
-                    Pair(chapters, bookmarks)
-                }.collect { (chapters, bookmarks) ->
-                    _uiState.update {
-                        it.copy(
-                            book = book,
-                            chapters = chapters,
-                            bookmarks = bookmarks,
-                            isLoading = false
-                        )
-                    }
+            try {
+                if (bookId <= 0L) {
+                    _uiState.update { it.copy(isLoading = false, error = "无效的书籍 ID") }
+                    return@launch
                 }
-            } else {
-                _uiState.update { it.copy(isLoading = false) }
+
+                val book = bookRepository.getBookById(bookId)
+                if (book != null) {
+                    combine(
+                        chapterRepository.getChaptersByBookId(bookId),
+                        bookmarkRepository.getBookmarksByBookId(bookId)
+                    ) { chapters, bookmarks ->
+                        Pair(chapters, bookmarks)
+                    }.collect { (chapters, bookmarks) ->
+                        _uiState.update {
+                            it.copy(
+                                book = book,
+                                chapters = chapters,
+                                bookmarks = bookmarks,
+                                isLoading = false
+                            )
+                        }
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false, error = "未找到书籍") }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "加载书籍失败: ${e.localizedMessage ?: "未知错误"}") }
             }
         }
     }

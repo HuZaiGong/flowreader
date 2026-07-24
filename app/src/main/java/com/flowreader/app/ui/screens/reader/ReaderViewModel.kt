@@ -43,6 +43,7 @@ data class ReaderUiState(
     val showBookmarks: Boolean = false,
     val showAnnotations: Boolean = false,
     val isLoading: Boolean = true,
+    val error: String? = null,
     val todayReadTime: Long = 0,
     val todayReadPages: Int = 0,
     val shareText: String? = null,
@@ -177,37 +178,47 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val book = bookRepository.getBookById(bookId)
-            val chapterMetadata = chapterRepository.getChapterMetadataList(bookId)
-            val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
-            val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
-
-            if (book != null && chapterMetadata.isNotEmpty()) {
-                val currentChapterIndex = book.currentChapter.coerceIn(0, chapterMetadata.size - 1)
-                val currentChapter = chapterMetadata.getOrNull(currentChapterIndex)?.let { meta ->
-                    val content = chapterRepository.getChapterContent(bookId, currentChapterIndex) ?: ""
-                    meta.copy(content = content)
+            try {
+                if (bookId <= 0L) {
+                    _uiState.update { it.copy(isLoading = false, error = "无效的书籍 ID") }
+                    return@launch
                 }
 
-                sessionStartTime = System.currentTimeMillis()
-                lastPositionUpdateTime = sessionStartTime
+                val book = bookRepository.getBookById(bookId)
+                val chapterMetadata = chapterRepository.getChapterMetadataList(bookId)
+                val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
+                val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
 
-                _uiState.update {
-                    it.copy(
-                        book = book,
-                        chapters = chapterMetadata,
-                        currentChapter = currentChapter,
-                        currentChapterIndex = currentChapterIndex,
-                        currentPosition = book.currentPosition,
-                        bookmarks = bookmarks,
-                        annotations = annotations,
-                        isLoading = false
-                    )
+                if (book != null && chapterMetadata.isNotEmpty()) {
+                    val currentChapterIndex = book.currentChapter.coerceIn(0, chapterMetadata.size - 1)
+                    val currentChapter = chapterMetadata.getOrNull(currentChapterIndex)?.let { meta ->
+                        val content = chapterRepository.getChapterContent(bookId, currentChapterIndex) ?: ""
+                        meta.copy(content = content)
+                    }
+
+                    sessionStartTime = System.currentTimeMillis()
+                    lastPositionUpdateTime = sessionStartTime
+
+                    _uiState.update {
+                        it.copy(
+                            book = book,
+                            chapters = chapterMetadata,
+                            currentChapter = currentChapter,
+                            currentChapterIndex = currentChapterIndex,
+                            currentPosition = book.currentPosition,
+                            bookmarks = bookmarks,
+                            annotations = annotations,
+                            isLoading = false
+                        )
+                    }
+
+                    calculateReadingPrediction()
+                } else {
+                    val errorMsg = if (book == null) "未找到书籍" else "书籍暂无章节内容"
+                    _uiState.update { it.copy(isLoading = false, error = errorMsg) }
                 }
-                
-                calculateReadingPrediction()
-            } else {
-                _uiState.update { it.copy(isLoading = false) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = "加载书籍失败: ${e.localizedMessage ?: "未知错误"}") }
             }
         }
     }

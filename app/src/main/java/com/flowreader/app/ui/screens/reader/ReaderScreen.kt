@@ -96,7 +96,25 @@ fun ReaderScreen(
             .fillMaxSize()
             .background(backgroundColor)
     ) {
-        if (uiState.isLoading) {
+        val error = uiState.error
+        if (error != null) {
+            Box(
+                modifier = Modifier.fillMaxSize().background(backgroundColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = error,
+                        color = textColor,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(onClick = onBackClick) {
+                        Text("返回")
+                    }
+                }
+            }
+        } else if (uiState.isLoading) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center)
             )
