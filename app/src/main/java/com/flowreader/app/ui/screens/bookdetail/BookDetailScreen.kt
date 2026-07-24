@@ -38,6 +38,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.runtime.key
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -401,10 +402,12 @@ private fun AnnotationListContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             annotations.forEach { annotation ->
-                AnnotationItem(
-                    annotation = annotation,
-                    onDelete = { onDelete(annotation.id) }
-                )
+                key(annotation.id) {
+                    AnnotationItem(
+                        annotation = annotation,
+                        onDelete = { onDelete(annotation.id) }
+                    )
+                }
             }
         }
     }
@@ -551,7 +554,7 @@ private fun BookmarkItem(
     }
     
     if (isDeleting) {
-        LaunchedEffect(Unit) {
+        LaunchedEffect(isDeleting) {
             onDelete()
         }
     }
@@ -578,7 +581,9 @@ private fun ChapterListContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             chapters.forEach { chapter ->
-                ChapterItem(chapter = chapter)
+                key(chapter.id) {
+                    ChapterItem(chapter = chapter)
+                }
             }
         }
     }
@@ -606,10 +611,12 @@ private fun BookmarkListContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             bookmarks.forEach { bookmark ->
-                BookmarkItem(
-                    bookmark = bookmark,
-                    onDelete = { onDelete(bookmark.id) }
-                )
+                key(bookmark.id) {
+                    BookmarkItem(
+                        bookmark = bookmark,
+                        onDelete = { onDelete(bookmark.id) }
+                    )
+                }
             }
         }
     }

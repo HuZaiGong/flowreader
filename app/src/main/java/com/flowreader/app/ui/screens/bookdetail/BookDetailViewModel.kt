@@ -13,6 +13,7 @@ import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingStatsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -58,18 +59,24 @@ class BookDetailViewModel @Inject constructor(
                     return@launch
                 }
 
-                val book = bookRepository.getBookById(bookId)
-                if (book != null) {
-                    val chapters = chapterRepository.getChapterMetadataList(bookId)
-                    val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
-                    val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
-                    var totalReadTime = 0L
-                    var totalReadPages = 0
+                val bookDeferred = async { bookRepository.getBookById(bookId) }
+                val chaptersDeferred = async { chapterRepository.getChapterMetadataList(bookId) }
+                val bookmarksDeferred = async { bookmarkRepository.getBookmarksListByBookId(bookId) }
+                val annotationsDeferred = async { annotationRepository.getAnnotationsListByBookId(bookId) }
+                val statsDeferred = async {
                     try {
-                        val stats = readingStatsRepository.getStatsByBookId(bookId).first()
-                        totalReadTime = stats.sumOf { it.readTimeSeconds }
-                        totalReadPages = stats.sumOf { it.readPages }
-                    } catch (_: Exception) { }
+                        readingStatsRepository.getStatsByBookId(bookId).first()
+                    } catch (_: Exception) { emptyList() }
+                }
+
+                val book = bookDeferred.await()
+                if (book != null) {
+                    val chapters = chaptersDeferred.await()
+                    val bookmarks = bookmarksDeferred.await()
+                    val annotations = annotationsDeferred.await()
+                    val stats = statsDeferred.await()
+                    val totalReadTime = stats.sumOf { it.readTimeSeconds }
+                    val totalReadPages = stats.sumOf { it.readPages }
                     _uiState.update {
                         it.copy(
                             book = book,

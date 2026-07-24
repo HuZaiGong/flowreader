@@ -240,7 +240,7 @@ private fun EditPanel(
                     .heightIn(max = 200.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                items(items) { item ->
+                items(items, key = { it.id }) { item ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,

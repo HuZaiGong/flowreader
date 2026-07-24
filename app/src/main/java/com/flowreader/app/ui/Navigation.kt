@@ -1,5 +1,8 @@
 package com.flowreader.app.ui
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -95,7 +98,9 @@ fun FlowReaderNavHost() {
             NavHost(
                 navController = navController,
                 startDestination = Screen.Library.route,
-                modifier = Modifier.padding(paddingValues)
+                modifier = Modifier.padding(paddingValues),
+                enterTransition = { fadeIn(animationSpec = tween(220)) },
+                exitTransition = { fadeOut(animationSpec = tween(220)) }
             ) {
                 composable(Screen.Library.route) {
                     LibraryScreen(

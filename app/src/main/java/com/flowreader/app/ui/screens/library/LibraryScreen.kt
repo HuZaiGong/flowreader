@@ -206,20 +206,15 @@ fun LibraryScreen(
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         if (uiState.recentlyRead.isNotEmpty()) {
-                            item {
-                                AnimatedVisibility(
-                                    visible = true,
-                                    enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
-                                ) {
-                                    Text(
-                                        text = "最近阅读",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        modifier = Modifier.padding(bottom = 8.dp)
-                                    )
-                                }
+                            item(key = "recent_label") {
+                                Text(
+                                    text = "最近阅读",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
                             }
 
-                            item {
+                            item(key = "recent_list") {
                                 LazyRow(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
@@ -232,35 +227,25 @@ fun LibraryScreen(
                                 }
                             }
 
-                            item {
+                            item(key = "recent_divider") {
                                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                             }
                         }
 
-                        item {
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = slideInVertically(initialOffsetY = { -it }) + fadeIn()
-                            ) {
-                                Text(
-                                    text = "全部书籍",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    modifier = Modifier.padding(bottom = 8.dp)
-                                )
-                            }
+                        item(key = "all_label") {
+                            Text(
+                                text = "全部书籍",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
                         }
 
                         items(uiState.books, key = { it.id }) { book ->
-                            AnimatedVisibility(
-                                visible = true,
-                                enter = fadeIn(animationSpec = tween(300))
-                            ) {
-                                BookListItem(
-                                    book = book,
-                                    onClick = { onBookClick(book.id) },
-                                    onDelete = { viewModel.deleteBook(book.id) }
-                                )
-                            }
+                            BookListItem(
+                                book = book,
+                                onClick = { onBookClick(book.id) },
+                                onDelete = { viewModel.deleteBook(book.id) }
+                            )
                         }
                     }
                     
@@ -329,13 +314,16 @@ private fun RecentBookCard(
         shape = RoundedCornerShape(8.dp)
     ) {
         Column {
+            val coverExists = remember(book.coverPath) {
+                book.coverPath != null && File(book.coverPath).exists()
+            }
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
                     .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
             ) {
-                if (book.coverPath != null && File(book.coverPath).exists()) {
+                if (coverExists) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(File(book.coverPath))
@@ -406,12 +394,15 @@ private fun BookListItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val coverExists = remember(book.coverPath) {
+                book.coverPath != null && File(book.coverPath).exists()
+            }
             Box(
                 modifier = Modifier
                     .size(70.dp, 100.dp)
                     .clip(RoundedCornerShape(8.dp))
             ) {
-                if (book.coverPath != null && File(book.coverPath).exists()) {
+                if (coverExists) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(File(book.coverPath))

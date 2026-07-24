@@ -73,13 +73,11 @@ fun FlowReaderTheme(
 ) {
     val darkTheme = theme == ReaderTheme.DARK
 
+    val context = LocalContext.current
     val colorScheme = when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            when {
-                darkTheme -> dynamicDarkColorScheme(context)
-                else -> dynamicLightColorScheme(context)
-            }
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> when {
+            darkTheme -> dynamicDarkColorScheme(context)
+            else -> dynamicLightColorScheme(context)
         }
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
