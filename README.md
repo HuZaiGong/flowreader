@@ -241,10 +241,9 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v42 (最新发布)
-*   **交互体验**：全面优化页面交互动画，列表项添加 `AnimatedVisibility` 淡入效果，交互更平滑自然。
-*   **书架优化**：新增下拉刷新功能（PullToRefresh），列表加载动画优化。
-*   **书籍详情**：改善 Tab 切换动画与书签删除淡出效果。
+### v43 (最新发布)
+*   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，连续旋转更流畅；转盘文字始终正向可读，不再倒置。
+*   **Gradle 升级**：Gradle Wrapper 从 `8.7` 升级到 `9.7`；重构 `gradle.properties`，添加 `UseParallelGC`、`vfs.watch`、`kotlin.daemon.jvmargs` 等优化项，提升构建性能。
 
 ### v41
 *   **决策转盘**：新增可定制的决策转盘功能，支持自定义选项和颜色。

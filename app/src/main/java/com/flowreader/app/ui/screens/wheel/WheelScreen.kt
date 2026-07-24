@@ -80,13 +80,8 @@ fun WheelScreen(
 
             // 旋转按钮
             Spacer(modifier = Modifier.height(16.dp))
-            var triggerSpin by remember { mutableStateOf(false) }
             Button(
-                onClick = {
-                    if (!uiState.isSpinning) {
-                        triggerSpin = true
-                    }
-                },
+                onClick = { viewModel.spin() },
                 enabled = !uiState.isSpinning,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -102,13 +97,6 @@ fun WheelScreen(
                     text = if (uiState.isSpinning) "旋转中..." else "开始旋转",
                     style = MaterialTheme.typography.titleMedium
                 )
-            }
-
-            LaunchedEffect(triggerSpin) {
-                if (triggerSpin) {
-                    viewModel.spin()
-                    triggerSpin = false
-                }
             }
 
             // 结果展示

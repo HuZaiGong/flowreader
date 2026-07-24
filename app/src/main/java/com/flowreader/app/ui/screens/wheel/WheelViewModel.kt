@@ -1,12 +1,14 @@
 package com.flowreader.app.ui.screens.wheel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -31,40 +33,44 @@ class WheelViewModel @Inject constructor() : ViewModel() {
     /**
      * 旋转转盘
      */
-    suspend fun spin() {
+    fun spin() {
         val state = _uiState.value
         if (state.isSpinning || state.items.isEmpty()) return
 
+        val currentAngle = state.rotationAngle
         _uiState.update { it.copy(isSpinning = true, result = null, showResultDialog = false) }
 
         // 随机选择结果
         val selectedIndex = selectWeightedRandom(state.items)
         val selectedItem = state.items[selectedIndex]
 
-        // 计算旋转角度：旋转到选中项的位置
+        // 计算旋转角度：从当前角度平滑旋转到选中项
         val sliceAngle = 360f / state.items.size
         val targetAngle = 360f - (selectedIndex * sliceAngle + sliceAngle / 2)
-        val totalRotation = 360f * 5 + targetAngle // 旋转 5 圈 + 目标角度
+        val additionalAngle = ((targetAngle - currentAngle) % 360 + 360) % 360
+        val totalRotation = 360f * 5 + additionalAngle
 
-        // 动画旋转
-        val steps = 60
-        val stepDuration = 4000L / steps
-        for (i in 1..steps) {
-            val progress = i.toFloat() / steps
-            val easedProgress = easeOutCubic(progress)
-            _uiState.update {
-                it.copy(rotationAngle = totalRotation * easedProgress)
+        viewModelScope.launch {
+            // 动画旋转
+            val steps = 60
+            val stepDuration = 4000L / steps
+            for (i in 1..steps) {
+                val progress = i.toFloat() / steps
+                val easedProgress = easeOutCubic(progress)
+                _uiState.update {
+                    it.copy(rotationAngle = (currentAngle + totalRotation * easedProgress) % 360f)
+                }
+                delay(stepDuration)
             }
-            delay(stepDuration)
-        }
 
-        _uiState.update {
-            it.copy(
-                isSpinning = false,
-                result = com.flowreader.app.domain.model.WheelResult(selectedItem, selectedIndex),
-                showResultDialog = true,
-                rotationAngle = totalRotation % 360f
-            )
+            _uiState.update {
+                it.copy(
+                    isSpinning = false,
+                    result = com.flowreader.app.domain.model.WheelResult(selectedItem, selectedIndex),
+                    showResultDialog = true,
+                    rotationAngle = targetAngle
+                )
+            }
         }
     }
 

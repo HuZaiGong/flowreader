@@ -87,7 +87,13 @@ fun WheelSpinner(
             drawContext.canvas.nativeCanvas.apply {
                 save()
                 translate(textX, textY)
-                rotate(textAngle + 90f)
+
+                val normalizedAngle = ((textAngle % 360) + 360) % 360
+                if (normalizedAngle in 0f..180f) {
+                    rotate(textAngle - 90f)
+                } else {
+                    rotate(textAngle + 90f)
+                }
 
                 val textPaint = Paint().apply {
                     color = android.graphics.Color.WHITE

@@ -34,6 +34,10 @@ ui/screens    domain/usecase  data/repository  data/local/dao
 | `util/MemoryManager.kt` | Memory pressure handling |
 | `data/repository/BackupRepository.kt` | Import/export backup (domain interface at `domain/repository/BackupRepository.kt`) |
 | `data/repository/SettingsRepository.kt` | DataStore wrapper; no domain interface layer |
+| `ui/screens/wheel/WheelViewModel.kt` | Spin logic uses `viewModelScope.launch` (non-suspend `spin()`) |
+| `ui/screens/wheel/components/WheelSpinner.kt` | Canvas text orientation flips for readability |
+| `gradle.properties` | Parallel GC, VFS watch, incremental Kotlin, daemon JVM args |
+| `gradle/wrapper/gradle-wrapper.properties` | Gradle 9.7 wrapper, 60s network timeout |
 
 ## Build & Test
 
