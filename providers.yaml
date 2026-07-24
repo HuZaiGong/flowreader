@@ -1,0 +1,36 @@
+# providers.yaml - 第三方 LLM 提供商配置
+# 增删改后重启 opencode 即可生效
+# 支持 {env:VAR_NAME} 语法引用环境变量
+
+ollama:
+  name: "Ollama (local)"
+  npm: "@ai-sdk/openai-compatible"
+  base_url: "http://localhost:11434/v1"
+  models:
+    llama3.2:
+      name: "Llama 3.2"
+
+deepseek:
+  name: "DeepSeek"
+  npm: "@ai-sdk/openai-compatible"
+  base_url: "https://api.deepseek.com/v1"
+  api_key: "{env:DEEPSEEK_API_KEY}"
+  models:
+    deepseek-chat:
+      name: "DeepSeek V3"
+      limit:
+        context: 65536
+        output: 8192
+
+# 在此添加更多 provider:
+# my-custom:
+#   name: "My Custom API"
+#   npm: "@ai-sdk/openai-compatible"
+#   base_url: "https://api.my-service.com/v1"
+#   api_key: "{env:MY_API_KEY}"
+#   models:
+#     my-model:
+#       name: "My Model"
+#       limit:
+#         context: 128000
+#         output: 4096
