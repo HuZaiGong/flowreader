@@ -23,136 +23,93 @@ UI 层（Compose 页面 + ViewModel）
 ```
 
 - **UI 层**：`ui/screens/` 中每个子包对应一个页面（包含 Composable 和 `*ViewModel`）。根导航置于 `Navigation.kt`。
-- **领域层**：`domain/model/` 存放数据类与密封类；`domain/repository/` 存放接口；`domain/usecase/` 存放业务逻辑（如 `GetBookUseCase`）。
-- **数据层**：`data/local/`（Room 数据库、DAO、实体）和 `data/repository/`（实现类）。`BackupRepository.kt` 也在此处。
+- **领域层**：`domain/model/` 存放数据类；`domain/repository/` 存放接口（Chapter、Bookmark、Annotation、Category 接口在 `BookRepository.kt` 中）；`domain/usecase/` 存放业务用例。
+- **数据层**：`data/local/`（Room 数据库、DAO、实体）和 `data/repository/`（实现类）。
+- **DI**：`di/AppModule.kt` 包含 `DatabaseModule`（`@Provides` 提供 6 个 DAO）和 `RepositoryModule`（`@Binds` 绑定 7 个 Repository）。
 
-数据流：**Composable → ViewModel → UseCase/Repository → Room DAO → SQLite**。
-
-关键 DI 配置：`di/AppModule.kt` 同时包含 `DatabaseModule`（`@Provides`）和 `RepositoryModule`（`@Binds`）。
-
----
-
-## 关键目录
-
-| 目录 | 用途 |
-|-----------|---------|
-| `app/src/main/java/com/flowreader/app/` | 全部 Kotlin 源代码 |
-| `data/local/entity/` | Room 实体（6 张表） |
-| `data/local/dao/` | Room DAO |
-| `data/repository/` | 仓库实现 |
-| `domain/model/` | 领域模型（Book、Chapter、ReadingSettings 等） |
-| `domain/usecase/` | 业务逻辑 / 用例 |
-| `ui/screens/` | 页面目录（`library/`、`reader/`、`bookdetail/`、`settings/`、`stats/`、`wheel/`） |
-| `ui/theme/` | Compose 主题（`Color.kt`、`Theme.kt`、`Typography.kt`） |
-| `util/` | 工具类：`BookParser`、`BookLoader`、`TtsManager`、`FullTextSearch`、`MemoryManager`、`CacheManager` |
-| `ui/screens/wheel/WheelViewModel.kt` | 转盘逻辑：`spin()` 使用 `viewModelScope.launch` 自管理协程 |
-| `ui/screens/wheel/components/WheelSpinner.kt` | Canvas 文字方向根据角度自动翻转，保持正向可读 |
-| `gradle.properties` | 并行 GC、VFS 监控、Kotlin 增量编译、Daemon JVM 参数 |
-| `gradle/wrapper/gradle-wrapper.properties` | Gradle 9.6.1、网络超时 60s |
-| `app/src/test/java/...` | 单元测试（JUnit 4） |
-| `.github/workflows/` | CI/CD（GitHub Actions） |
+数据流：**Composable → ViewModel → UseCase/Repository → Room DAO → SQLite**
 
 ---
 
-## 开发命令
+## 重要提醒 / Gotchas
+
+### 领域接口文件位置
+
+Chapter、Bookmark、Annotation、Category 的接口**都定义在 `domain/repository/BookRepository.kt` 中**，不是独立文件。新增方法时编辑该文件即可。
+
+### SettingsRepository 没有领域接口
+
+`data/repository/SettingsRepository.kt` 直接注入到 ViewModel，没有对应的 `domain/repository/` 接口层。
+
+### sessionReadPages 必须手动递增
+
+ViewModel 声明的 `sessionReadPages` **不会自动递增**。必须在 `updatePosition()` 中调用 `sessionReadPages += pages`，否则阅读统计永远不保存。
+
+### Release 构建使用 Debug 签名
+
+`app/build.gradle.kts:31`: `signingConfig = signingConfigs.getByName("debug")`。这是为了 CI 能产出 `app-release.apk`（而非 `-unsigned`），APK 使用 Android SDK debug 密钥库签名，仅用于测试分发。
+
+### bookId 默认值为 0L
+
+从 `SavedStateHandle` 取出的 `bookId` 默认值为 `0L`。在 DAO 查询前必须校验 `bookId > 0`，否则会导致静默失败或闪退。
+
+### WheelViewModel.spin() 非挂起函数
+
+`spin()` 是普通函数，内部通过 `viewModelScope.launch` 启动协程。Composable 中不需要 `LaunchedEffect`。
+
+### 嵌套 LazyColumn 会闪退
+
+`LazyColumn` 内部 `item` 中不可再放 `LazyColumn`，否则因内层可滚动组件高度测量为 0，Compose 会抛出 `IllegalStateException` 崩溃。应使用 `Column` 替代。
+
+### 3 秒防抖
+
+`ReaderViewModel.debouncedSaveProgress()` 取消前一个 Job 后延迟 3000ms 再写入。快速滚动时每 3 秒只触发一次写入。
+
+---
+
+## 构建与测试
 
 ```bash
-# 构建 Debug APK
-./gradlew assembleDebug
-
-# 构建 Release APK（R8 压缩）
-./gradlew assembleRelease
-
-# 运行单元测试
-./gradlew testDebugUnitTest
-
-# 清理构建
+./gradlew assembleDebug          # 构建 Debug APK
+./gradlew assembleRelease        # 构建 Release APK（R8 混淆 + 资源压缩）
+./gradlew testDebugUnitTest      # 运行单元测试（JUnit 4 + MockK）
 ./gradlew clean
 ```
 
-**环境要求**：JDK 17，Android SDK 35。
+- **无 lint/detekt/ktlint**，仅 `.editorconfig` 控制代码风格。
+- **单测试文件**：`app/src/test/java/com/flowreader/app/util/BookParserTest.kt`。
+- Room KSP 输出目录：`app/build/generated/ksp/`。
+- 启用 `coreLibraryDesugaring` 以兼容 `java.time`。
+- **需 JDK 17**，Android SDK 35。
+
+### CI（GitHub Actions）
+
+| 触发 | 任务 |
+|------|------|
+| PR | 运行单元测试 + 构建 Debug APK → 上传 `app-debug.apk` |
+| Push 到 `main` | 同上 + 构建 Release APK → 创建 GitHub Release（`v$versionName`）+ 上传 `app-release.apk` |
 
 ---
 
-## 代码规范与常见模式
+## 目录约定
 
-### 命名规范
-- **包名**：全部小写，与目录结构一致。
-- **类名**：`PascalCase`，例如：`BookRepositoryImpl`、`ReaderViewModel`。
-- **函数 / 变量**：`camelCase`。
-- **常量**：`SCREAMING_SNAKE_CASE` 或 Object 中的顶层 `val`。
+| 目录 | 说明 |
+|------|------|
+| `ui/screens/*/` | 每个页面含 `*Screen.kt`（Composable）和 `*ViewModel.kt`（Hilt） |
+| `domain/repository/` | 接口定义（Chapter 等在 `BookRepository.kt` 中） |
+| `data/repository/` | 接口实现 |
+| `data/local/dao/` | Room DAO |
+| `data/local/entity/` | Room 实体 |
+| `util/` | 工具类：BookParser、BookLoader、CacheManager、TtsManager、FullTextSearch、MemoryManager |
+| `app/src/test/` | 单元测试 |
 
-### 依赖注入
-- 使用 **Hilt** 进行依赖注入。
-- `FlowReaderApplication.kt` 标注 `@HiltAndroidApp`。
-- `di/AppModule.kt` 包含 `@Provides`（DatabaseModule）和 `@Binds`（RepositoryModule）。
-- 在 Composable 中使用 `hiltViewModel()` 注入 ViewModel。
+全部 Kotlin 源码位于 `app/src/main/java/com/flowreader/app/`。
 
-### 状态管理
-- ViewModel 暴露 Compose `StateFlow`，在 Composable 中收集。
-- 使用 `derivedStateOf` 缓存昂贵的 UI 计算。
-- 阅读进度保存采用 **3 秒防抖** 以减少数据库写入。
-
-### 错误处理
-- 使用 `kotlin.Result` 包装可能失败的操作（自定义 `AppException` 密封类及 `Result<T>` 已被移除）。
-- ViewModel 的 `loadBook()` / `loadBookDetails()` 等函数包含 `try-catch`，错误通过 `UiState.error` 字段传递到 UI 展示，避免未捕获异常导致应用闪退。
-
-### 异步模式
-- 使用 Kotlin **Coroutines + Flow** 处理异步任务。
-- Room 查询返回 `Flow<T>`。
-- 在 ViewModel 中使用 `viewModelScope.launch`。
-
-### Compose 规范
-- 根 Composable：`FlowReaderRoot()`（位于 `ui/FlowReaderApp.kt`）。
-- 导航使用 `sealed class Screen` 定义路由。
-- 底部导航有 4 个标签：书架、转盘、统计、设置。
-- 采用 Material 3 主题，支持动态颜色（Material You）。
-
----
-
-## 重要文件
+### 配置文件
 
 | 文件 | 作用 |
 |------|------|
-| `app/build.gradle.kts` | App 级构建配置（AGP 8.6.0、Kotlin 2.0.21、Compose BOM 2024.12.01） |
+| `app/build.gradle.kts` | AGP 8.6.0, Kotlin 2.0.21, Compose BOM 2024.12.01 |
 | `build.gradle.kts` | 根项目插件（Hilt、KSP、Compose） |
-| `settings.gradle.kts` | 项目名称与包含模块 |
-| `gradle.properties` | Gradle JVM 参数、AndroidX、缓存标志 |
-| `app/src/main/AndroidManifest.xml` | 应用清单、权限、MainActivity |
-| `FlowReaderApplication.kt` | `@HiltAndroidApp` 入口 |
-| `MainActivity.kt` | 设置 Compose 内容根布局，支持 edge-to-edge |
-| `Navigation.kt` | `NavHost`、底部导航、`Screen` 密封类 |
-| `di/AppModule.kt` | Hilt 模块：数据库与仓库 |
-| `data/local/AppDatabase.kt` | Room 数据库（v4），`flowreader_db` |
-| `proguard-rules.pro` | Release 构建的 R8 ProGuard 规则 |
-
----
-
-## 运行时/工具偏好
-
-- **构建系统**：Gradle（wrapper 9.6.1）
-- **AGP**：8.6.0
-- **Kotlin**：2.0.21（KSP 2.0.21-1.0.27）
-- **JDK**：17
-- **无额外运行时**（无 Bun、Node、Python 等）
-- 启用 `coreLibraryDesugaring` 以向后兼容 `java.time`
-
----
-
-## 测试与质量保障
-
-- **框架**：JUnit 4 + MockK
-- **协程测试**：`kotlinx-coroutines-test`
-- **测试位置**：`app/src/test/java/com/flowreader/app/util/BookParserTest.kt`
-- **CI**：GitHub Actions（`build.yml`）
-  - PR：运行单元测试 + 构建 Debug APK + 上传构建产物
-  - Push 到 `main`：运行单元测试 + 构建 Debug + 构建 Release + 创建 GitHub Release
-  - 使用 JDK 17 Temurin，缓存 Gradle 包
-
-### 运行测试
-```bash
-./gradlew testDebugUnitTest    # 仅单元测试
-./gradlew test                 # 所有测试（如有连接设备则包含仪器化测试）
-```
-
-未配置 lint/detekt/ktlint；仅使用 `.editorconfig` 进行代码风格管理。
+| `gradle.properties` | 并行 GC、VFS 监控、Kotlin 增量编译、Daemon JVM 参数 |
+| `gradle/wrapper/gradle-wrapper.properties` | Gradle 9.6.1、网络超时 60s |

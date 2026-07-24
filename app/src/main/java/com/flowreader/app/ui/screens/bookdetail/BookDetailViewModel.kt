@@ -64,20 +64,15 @@ class BookDetailViewModel @Inject constructor(
 
                 val book = bookRepository.getBookById(bookId)
                 if (book != null) {
-                    combine(
-                        chapterRepository.getChaptersByBookId(bookId),
-                        bookmarkRepository.getBookmarksByBookId(bookId)
-                    ) { chapters, bookmarks ->
-                        Pair(chapters, bookmarks)
-                    }.collect { (chapters, bookmarks) ->
-                        _uiState.update {
-                            it.copy(
-                                book = book,
-                                chapters = chapters,
-                                bookmarks = bookmarks,
-                                isLoading = false
-                            )
-                        }
+                    val chapters = chapterRepository.getChapterMetadataList(bookId)
+                    val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
+                    _uiState.update {
+                        it.copy(
+                            book = book,
+                            chapters = chapters,
+                            bookmarks = bookmarks,
+                            isLoading = false
+                        )
                     }
                 } else {
                     _uiState.update { it.copy(isLoading = false, error = "未找到书籍") }

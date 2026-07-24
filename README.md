@@ -241,9 +241,15 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v44.0.0 (最新发布)
+### v44.0.1 (最新发布)
+*   **闪退修复**：修复书籍详情页嵌套 `LazyColumn` 引发的 `IllegalStateException` 崩溃（内层 `LazyColumn` 替换为 `Column`）。
+*   **性能优化**：书籍详情页改为使用元数据查询（`getChapterMetadataList`），不再加载章节全文内容，避免大文件书籍 OOM 风险。
+*   **代码清理**：移除 `BookDetailViewModel` 中永不终止的 `combine(...).collect`，改用一次性加载模式，释放 coroutine 资源。
+*   **阅读统计修复**：`ReaderViewModel.sessionReadPages` 从未递增导致阅读数据永不保存；现根据滚动字符增量合理累计页数。
+*   **闪退防护**：所有书籍加载流程添加 `try-catch` 和 `bookId > 0` 校验。
+
+### v44.0.0
 *   **CI 修复**：Release APK 现在使用 debug 签名配置构建，修复 GitHub Actions 中 `build-and-release` 因 APK 文件名不匹配导致的产物上传失败和 Release 创建失败。
-*   **版本升级**：v43.0.0 → v44.0.0
 
 ### v43.0.0
 *   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，连续旋转更流畅；转盘文字始终正向可读，不再倒置。

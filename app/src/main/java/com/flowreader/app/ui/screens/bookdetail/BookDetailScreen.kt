@@ -2,8 +2,6 @@ package com.flowreader.app.ui.screens.bookdetail
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -402,17 +400,11 @@ private fun ChapterListContent(
             )
         }
     } else {
-        LazyColumn(
+        Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(chapters, key = { it.id }) { chapter ->
-                AnimatedVisibility(
-                    visible = true,
-                    enter = fadeIn(animationSpec = tween(300)),
-                    label = "ChapterItemAnimation"
-                ) {
-                    ChapterItem(chapter = chapter)
-                }
+            chapters.forEach { chapter ->
+                ChapterItem(chapter = chapter)
             }
         }
     }
@@ -436,10 +428,10 @@ private fun BookmarkListContent(
             )
         }
     } else {
-        LazyColumn(
+        Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(bookmarks, key = { it.id }) { bookmark ->
+            bookmarks.forEach { bookmark ->
                 BookmarkItem(
                     bookmark = bookmark,
                     onDelete = { onDelete(bookmark.id) }
