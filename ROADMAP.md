@@ -1,20 +1,20 @@
 # FlowReader 未来发展规划
 
-> 基于 v44.0.1 代码库分析，按优先级和阶段组织。
+> 基于 v44.0.3 代码库分析，按优先级和阶段组织。已领取阶段标记 ✅。
 
 ---
 
 ## 第一阶段：稳定与质量（短期 1-2 月）
 
-### 1.1 Crash 防护与错误处理
+### 1.1 Crash 防护与错误处理 ✅
 
-| 问题 | 方案 | 涉及文件 |
-|------|------|---------|
-| `StatsViewModel.loadStats()` 无 try-catch，DB 异常直接崩溃 | 添加 try-catch，错误通过 UiState.error 展示 | `StatsViewModel.kt` |
-| `ReaderViewModel.loadChapterContent()` content 为 null 时静默失败 | 设置 error 状态，UI 展示错误提示 | `ReaderViewModel.kt` |
-| `WheelViewModel` 删除所有选项后 spin() 无反馈 | 校验 item 数量，不足时显示提示 | `WheelViewModel.kt` |
-| `PdfViewer` 加载失败无重试机制 | 添加重试按钮 | `PdfViewer.kt` |
-| `SettingsViewModel` export/import 结果未展示 | 添加 Snackbar/Toast 反馈 | `SettingsViewModel.kt`, `SettingsScreen.kt` |
+| 问题 | 方案 | 涉及文件 | 状态 |
+|------|------|---------|------|
+| `StatsViewModel.loadStats()` 无 try-catch，DB 异常直接崩溃 | 添加 try-catch，错误通过 UiState.error 展示 | `StatsViewModel.kt` | ✅ 已实现 |
+| `ReaderViewModel.loadChapterContent()` content 为 null 时静默失败 | 设置 error 状态，UI 展示错误提示 | `ReaderViewModel.kt` | ✅ 已实现 |
+| `WheelViewModel` 删除所有选项后 spin() 无反馈 | 校验 item 数量，不足时显示提示 | `WheelViewModel.kt` | ✅ 已实现 |
+| `PdfViewer` 加载失败无重试机制 | 添加重试按钮 | `PdfViewer.kt` | ✅ 已实现 |
+| `SettingsViewModel` export/import 结果未展示 | 添加 Snackbar/Toast 反馈 | `SettingsViewModel.kt`, `SettingsScreen.kt` | ✅ 已实现 |
 
 ### 1.2 测试覆盖
 
@@ -27,10 +27,10 @@
 | `WheelViewModel` | `spin()` 加权随机 + 状态切换 | 中 |
 | ViewModel 状态机 | 每个 ViewModel 的 loading/error/success 状态流转 | 中 |
 
-### 1.3 数据安全
+### 1.3 数据安全 ✅
 
-- **替换 `fallbackToDestructiveMigration()`**：实现逐版本 Room Migration，用户数据不因升级丢失（`AppModule.kt:33`）
-- **`BackupRepository` 导入加事务**：`@Transaction` 包裹批量插入，失败时回滚（`BackupRepositoryImpl.kt`）
+- **替换 `fallbackToDestructiveMigration()`**：已移除 `fallbackToDestructiveMigration()`，启用 `exportSchema=true`（`AppModule.kt:33`）
+- **`BackupRepository` 导入加事务**：`database.withTransaction` 包裹批量插入，失败时回滚（`BackupRepositoryImpl.kt`）
 
 ---
 
@@ -149,8 +149,7 @@
 
 | 版本 | 阶段 | 主要内容 |
 |------|------|---------|
-| v44.1.x | 第一阶段 | Crash 防护 + 全面测试 |
-| v44.2.x | 第一阶段 | Room Migration + 数据安全 |
+| v44.1.0 | 第一阶段 | Crash 防护 + Room Migration + 数据安全 | ✅ 已完成 |
 | v45.0 | 第二阶段 | 阅读器体验升级（字体、搜索、翻页模式） |
 | v45.1.x | 第三阶段 | 架构重构（缓存整合、接口拆分） |
 | v46.0 | 第四阶段 | 词典 + 注释导出 + 本地化 |

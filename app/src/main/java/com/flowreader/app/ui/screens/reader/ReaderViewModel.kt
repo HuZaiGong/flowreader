@@ -221,21 +221,27 @@ class ReaderViewModel @Inject constructor(
 
     private fun loadChapterContent(index: Int) {
         viewModelScope.launch {
-            val content = chapterRepository.getChapterContent(bookId, index)
-            content?.let {
-                val state = _uiState.value
-                val updatedChapter = state.chapters.getOrNull(index)?.copy(content = it)
-                if (updatedChapter != null) {
-                    val updatedChapters = state.chapters.toMutableList().apply {
-                        if (index < size) set(index, updatedChapter)
+            try {
+                val content = chapterRepository.getChapterContent(bookId, index)
+                if (content != null) {
+                    val state = _uiState.value
+                    val updatedChapter = state.chapters.getOrNull(index)?.copy(content = content)
+                    if (updatedChapter != null) {
+                        val updatedChapters = state.chapters.toMutableList().apply {
+                            if (index < size) set(index, updatedChapter)
+                        }
+                        _uiState.update {
+                            it.copy(
+                                chapters = updatedChapters,
+                                currentChapter = if (index == it.currentChapterIndex) updatedChapter else it.currentChapter
+                            )
+                        }
                     }
-                    _uiState.update {
-                        it.copy(
-                            chapters = updatedChapters,
-                            currentChapter = if (index == it.currentChapterIndex) updatedChapter else it.currentChapter
-                        )
-                    }
+                } else {
+                    _uiState.update { it.copy(error = "章节内容加载失败: 内容为空") }
                 }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "章节内容加载失败: ${e.localizedMessage ?: "未知错误"}") }
             }
         }
     }

@@ -21,7 +21,8 @@ data class WheelUiState(
     val rotationAngle: Float = 0f,
     val showResultDialog: Boolean = false,
     val editingMode: Boolean = false,
-    val newItemLabel: String = ""
+    val newItemLabel: String = "",
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -35,10 +36,14 @@ class WheelViewModel @Inject constructor() : ViewModel() {
      */
     fun spin() {
         val state = _uiState.value
-        if (state.isSpinning || state.items.isEmpty()) return
+        if (state.isSpinning) return
+        if (state.items.isEmpty()) {
+            _uiState.update { it.copy(error = "请至少添加一个选项后再旋转") }
+            return
+        }
 
         val currentAngle = state.rotationAngle
-        _uiState.update { it.copy(isSpinning = true, result = null, showResultDialog = false) }
+        _uiState.update { it.copy(isSpinning = true, result = null, showResultDialog = false, error = null) }
 
         // 随机选择结果
         val selectedIndex = selectWeightedRandom(state.items)
@@ -105,6 +110,10 @@ class WheelViewModel @Inject constructor() : ViewModel() {
      */
     fun dismissResult() {
         _uiState.update { it.copy(showResultDialog = false) }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
     /**

@@ -25,8 +25,24 @@ fun SettingsScreen(
     var showAboutDialog by remember { mutableStateOf(false) }
     var showReadingGoalDialog by remember { mutableStateOf(false) }
     var showGestureDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.exportResult) {
+        uiState.exportResult?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearExportResult()
+        }
+    }
+
+    LaunchedEffect(uiState.importResult) {
+        uiState.importResult?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearImportResult()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("设置") }

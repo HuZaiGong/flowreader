@@ -37,8 +37,9 @@ fun PdfViewer(
     var offsetY by remember { mutableFloatStateOf(0f) }
 
     var loadError by remember { mutableStateOf(false) }
+    var retryTrigger by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(filePath, currentPage) {
+    LaunchedEffect(filePath, currentPage, retryTrigger) {
         scale = 1f
         offsetX = 0f
         offsetY = 0f
@@ -109,11 +110,17 @@ fun PdfViewer(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "PDF 文件无法加载",
-                    color = textColor,
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "PDF 文件无法加载",
+                        color = textColor,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedButton(onClick = { retryTrigger++ }) {
+                        Text("重试")
+                    }
+                }
             }
         } else {
             pdfBitmap?.let { bitmap ->

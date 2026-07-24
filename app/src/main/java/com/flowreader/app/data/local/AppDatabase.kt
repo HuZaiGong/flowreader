@@ -25,7 +25,7 @@ import com.flowreader.app.data.local.entity.ReadingStatsEntity
         ReadingStatsEntity::class
     ],
     version = 4,
-    exportSchema = false
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao

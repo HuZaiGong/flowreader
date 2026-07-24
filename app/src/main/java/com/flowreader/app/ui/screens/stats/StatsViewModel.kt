@@ -13,6 +13,7 @@ import javax.inject.Inject
 
 data class StatsUiState(
     val isLoading: Boolean = true,
+    val error: String? = null,
     val todayReadTime: Long = 0,
     val todayReadPages: Int = 0,
     val totalReadTime: Long = 0,
@@ -38,29 +39,38 @@ class StatsViewModel @Inject constructor(
 
     private fun loadStats() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-
-            readingStatsRepository.getRecentDailyStats(7).collect { dailyStats ->
-                val todayReadTime = readingStatsRepository.getTodayReadTime()
-                val todayReadPages = readingStatsRepository.getTodayReadPages()
-                val totalReadTime = readingStatsRepository.getTotalReadTime()
-                val totalReadPages = readingStatsRepository.getTotalReadPages()
-                val summary = readingStatsRepository.getReadingSummary()
+            _uiState.update { it.copy(isLoading = true, error = null) }
+            try {
+                readingStatsRepository.getRecentDailyStats(7).collect { dailyStats ->
+                    val todayReadTime = readingStatsRepository.getTodayReadTime()
+                    val todayReadPages = readingStatsRepository.getTodayReadPages()
+                    val totalReadTime = readingStatsRepository.getTotalReadTime()
+                    val totalReadPages = readingStatsRepository.getTotalReadPages()
+                    val summary = readingStatsRepository.getReadingSummary()
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            todayReadTime = todayReadTime,
+                            todayReadPages = todayReadPages,
+                            totalReadTime = totalReadTime,
+                            totalReadPages = totalReadPages,
+                            totalBooks = summary.totalBooks,
+                            currentStreak = summary.currentStreak,
+                            longestStreak = summary.longestStreak,
+                            recentDailyStats = dailyStats
+                        )
+                    }
+                }
+            } catch (e: Exception) {
                 _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        todayReadTime = todayReadTime,
-                        todayReadPages = todayReadPages,
-                        totalReadTime = totalReadTime,
-                        totalReadPages = totalReadPages,
-                        totalBooks = summary.totalBooks,
-                        currentStreak = summary.currentStreak,
-                        longestStreak = summary.longestStreak,
-                        recentDailyStats = dailyStats
-                    )
+                    it.copy(isLoading = false, error = "加载统计失败: ${e.localizedMessage ?: "未知错误"}")
                 }
             }
         }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 
     fun refresh() {

@@ -92,6 +92,34 @@ fun WheelScreen(
                 )
             }
 
+            // 错误提示
+            val error = uiState.error
+            if (error != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = error,
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        TextButton(onClick = { viewModel.clearError() }) {
+                            Text("确定")
+                        }
+                    }
+                }
+            }
+
             // 结果展示
             val result = uiState.result
             if (result != null && !uiState.isSpinning) {

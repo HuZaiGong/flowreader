@@ -18,6 +18,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import androidx.room.withTransaction
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
@@ -29,6 +30,7 @@ import javax.inject.Singleton
 @Singleton
 class BackupRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val database: AppDatabase,
     private val bookDao: BookDao,
     private val chapterDao: ChapterDao,
     private val bookmarkDao: BookmarkDao,
@@ -81,20 +83,22 @@ class BackupRepositoryImpl @Inject constructor(
                     var booksImported = 0
                     var bookmarksImported = 0
 
-                    val booksArray = json.optJSONArray("books") ?: JSONArray()
-                    for (i in 0 until booksArray.length()) {
-                        val bookJson = booksArray.getJSONObject(i)
-                        val book = BookEntity.fromJson(bookJson)
-                        bookDao.insertBook(book)
-                        booksImported++
-                    }
+                    database.withTransaction {
+                        val booksArray = json.optJSONArray("books") ?: JSONArray()
+                        for (i in 0 until booksArray.length()) {
+                            val bookJson = booksArray.getJSONObject(i)
+                            val book = BookEntity.fromJson(bookJson)
+                            bookDao.insertBook(book)
+                            booksImported++
+                        }
 
-                    val bookmarksArray = json.optJSONArray("bookmarks") ?: JSONArray()
-                    for (i in 0 until bookmarksArray.length()) {
-                        val bookmarkJson = bookmarksArray.getJSONObject(i)
-                        val bookmark = BookmarkEntity.fromJson(bookmarkJson)
-                        bookmarkDao.insertBookmark(bookmark)
-                        bookmarksImported++
+                        val bookmarksArray = json.optJSONArray("bookmarks") ?: JSONArray()
+                        for (i in 0 until bookmarksArray.length()) {
+                            val bookmarkJson = bookmarksArray.getJSONObject(i)
+                            val bookmark = BookmarkEntity.fromJson(bookmarkJson)
+                            bookmarkDao.insertBookmark(bookmark)
+                            bookmarksImported++
+                        }
                     }
 
                     Result.success(ImportResult(booksImported, bookmarksImported))
