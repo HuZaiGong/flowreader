@@ -30,6 +30,10 @@
 *   **构建修复**：修复 `LibraryViewModel` 中缺失的 `Job` 导入，消除 Kotlin 2.0 编译错误。
 *   **APK 构建完成**：通过 `./gradlew assembleDebug` 验证，单元测试通过。
 
+## [v44.0.0] - 2026-07
+*   **CI 修复**：Release 构建类型添加 `signingConfig = signingConfigs.getByName("debug")`，修复 GitHub Actions 中 `build-and-release` Job 因产物路径 `app-release.apk` 不存在而导致上传失败和 Release 创建失败的问题。
+*   版本号更新至 44.0.0。
+
 ## [v42] - 2025-06
 *   **交互体验**：全面优化页面交互动画，列表项添加 `AnimatedVisibility` 淡入效果，使交互更平滑自然。
 *   **书架优化**：新增下拉刷新功能（使用 Material 3 PullToRefresh 组件替代旧版），优化书籍列表加载动画。

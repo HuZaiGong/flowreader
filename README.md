@@ -241,7 +241,11 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v43.0.0 (最新发布)
+### v44.0.0 (最新发布)
+*   **CI 修复**：Release APK 现在使用 debug 签名配置构建，修复 GitHub Actions 中 `build-and-release` 因 APK 文件名不匹配导致的产物上传失败和 Release 创建失败。
+*   **版本升级**：v43.0.0 → v44.0.0
+
+### v43.0.0
 *   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，连续旋转更流畅；转盘文字始终正向可读，不再倒置。
 *   **Gradle 升级**：Gradle Wrapper 从 `8.7` 升级到 `9.6.1`；重构 `gradle.properties`，添加 `UseParallelGC`、`vfs.watch`、`kotlin.daemon.jvmargs` 等优化项，提升构建性能。
 *   **漏洞修复**：修复 `StatsViewModel` 中阅读统计数据快照只获取一次、永不刷新的问题；修复 `FullTextSearch` 中不安全 `!!` 操作符；修复 `WheelViewModel` 中 scope 取消后 `isSpinning` 永久卡死；修复转盘结果对话框的 NPE 隐患；修复 `PdfViewer` 中 `printStackTrace` 错误日志输出；修复 `ParagraphSpacing` 浮点数精度丢失。

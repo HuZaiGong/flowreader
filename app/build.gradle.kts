@@ -14,8 +14,8 @@ android {
         applicationId = "com.flowreader.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4300
-        versionName = "43.0.0"
+        versionCode = 4400
+        versionName = "44.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -28,6 +28,7 @@ android {
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
