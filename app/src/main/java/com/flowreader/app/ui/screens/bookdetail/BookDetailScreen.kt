@@ -25,6 +25,7 @@ import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
 import java.io.File
+import androidx.compose.ui.text.font.FontWeight
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.compose.animation.AnimatedVisibility
@@ -105,6 +106,13 @@ fun BookDetailScreen(
                         }
 
                         item {
+                            ReadingStatsCard(
+                                totalReadTime = uiState.totalReadTime,
+                                totalReadPages = uiState.totalReadPages
+                            )
+                        }
+
+                        item {
                             TabRow(selectedTabIndex = selectedTab) {
                                 Tab(
                                     selected = selectedTab == 0,
@@ -173,6 +181,72 @@ fun BookDetailScreen(
                 }
             }
         }
+}
+
+@Composable
+private fun ReadingStatsCard(
+    totalReadTime: Long,
+    totalReadPages: Int
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.Timer,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = formatMinutes(totalReadTime),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "阅读时长",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Default.MenuBook,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${totalReadPages}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "阅读页数",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+            }
+        }
+    }
+}
+
+private fun formatMinutes(seconds: Long): String = when {
+    seconds < 60 -> "${seconds}秒"
+    seconds < 3600 -> "${seconds / 60}分钟"
+    else -> "${seconds / 3600}小时${(seconds % 3600) / 60}分钟"
 }
 
 @Composable

@@ -11,6 +11,7 @@ import com.flowreader.app.domain.repository.AnnotationRepository
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.ChapterRepository
+import com.flowreader.app.domain.repository.ReadingStatsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,6 +22,8 @@ data class BookDetailUiState(
     val chapters: List<Chapter> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
     val annotations: List<Annotation> = emptyList(),
+    val totalReadTime: Long = 0,
+    val totalReadPages: Int = 0,
     val isLoading: Boolean = true,
     val isAnnotating: Boolean = false,
     val error: String? = null
@@ -32,7 +35,8 @@ class BookDetailViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val chapterRepository: ChapterRepository,
     private val bookmarkRepository: BookmarkRepository,
-    private val annotationRepository: AnnotationRepository
+    private val annotationRepository: AnnotationRepository,
+    private val readingStatsRepository: ReadingStatsRepository
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
@@ -59,12 +63,21 @@ class BookDetailViewModel @Inject constructor(
                     val chapters = chapterRepository.getChapterMetadataList(bookId)
                     val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
                     val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
+                    var totalReadTime = 0L
+                    var totalReadPages = 0
+                    try {
+                        val stats = readingStatsRepository.getStatsByBookId(bookId).first()
+                        totalReadTime = stats.sumOf { it.readTimeSeconds }
+                        totalReadPages = stats.sumOf { it.readPages }
+                    } catch (_: Exception) { }
                     _uiState.update {
                         it.copy(
                             book = book,
                             chapters = chapters,
                             bookmarks = bookmarks,
                             annotations = annotations,
+                            totalReadTime = totalReadTime,
+                            totalReadPages = totalReadPages,
                             isLoading = false
                         )
                     }

@@ -1,30 +1,36 @@
 package com.flowreader.app.ui.screens.reader.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.model.ReadingSettings
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
+import java.io.File
 
 @Composable
 fun ReaderContent(
@@ -100,55 +106,97 @@ fun ReaderContent(
                 val paraEnd = paraStart + paraTrimmed.length
 
                 if (paraTrimmed.isNotBlank()) {
-                    val paraAnnotations = annotations.filter {
-                        it.startPosition >= paraStart && it.endPosition <= paraEnd
-                    }
-
-                    val baseStyle = MaterialTheme.typography.bodyLarge.copy(
-                        fontSize = fontSizeValue.sp,
-                        lineHeight = (fontSizeValue * lineSpacingValue).sp,
-                        textAlign = TextAlign.Justify
-                    )
-
-                    val text = if (paraAnnotations.isNotEmpty()) {
-                        buildAnnotatedString {
-                            var lastEnd = paraStart
-                            paraAnnotations.sortedBy { it.startPosition }.forEach { ann ->
-                                val relStart = ann.startPosition - paraStart
-                                val relEnd = ann.endPosition - paraStart
-                                if (relStart > lastEnd - paraStart) {
-                                    append(paraTrimmed.substring(lastEnd - paraStart, relStart))
-                                }
-                                withStyle(SpanStyle(background = Color(ann.color.colorValue).copy(alpha = 0.4f))) {
-                                    append(paraTrimmed.substring(relStart, relEnd))
-                                }
-                                lastEnd = ann.endPosition
-                            }
-                            if (lastEnd - paraStart < paraTrimmed.length) {
-                                append(paraTrimmed.substring(lastEnd - paraStart))
-                            }
-                        }
-                    } else {
-                        buildAnnotatedString { append(paraTrimmed) }
-                    }
-
-                    Text(
-                        text = text,
-                        style = baseStyle,
-                        color = textColor,
-                        modifier = Modifier
-                            .padding(bottom = settings.paragraphSpacing.dp)
-                            .pointerInput(Unit) {
-                                detectTapGestures(
-                                    onLongPress = {
-                                        selectedText = paraTrimmed
-                                        selectionStart = 0
-                                        selectionEnd = paraTrimmed.length
-                                        showHighlightMenu = true
-                                    }
+                    when {
+                        paraTrimmed.startsWith("[IMG:") && paraTrimmed.endsWith("]") -> {
+                            val imgPath = paraTrimmed.removePrefix("[IMG:").removeSuffix("]")
+                            val imgFile = File(imgPath)
+                            if (imgFile.exists()) {
+                                AsyncImage(
+                                    model = imgFile,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 8.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
+                                    contentScale = ContentScale.Fit
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.BrokenImage,
+                                    contentDescription = null,
+                                    tint = textColor.copy(alpha = 0.3f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp)
+                                        .padding(vertical = 8.dp)
                                 )
                             }
-                    )
+                        }
+                        paraTrimmed.startsWith("## ") -> {
+                            val headingText = paraTrimmed.removePrefix("## ")
+                            Text(
+                                text = headingText,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontSize = (fontSizeValue + 6).sp,
+                                    lineHeight = (fontSizeValue * lineSpacingValue + 12).sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                color = textColor,
+                                modifier = Modifier.padding(bottom = 12.dp, top = 8.dp)
+                            )
+                        }
+                        else -> {
+                            val paraAnnotations = annotations.filter {
+                                it.startPosition >= paraStart && it.endPosition <= paraEnd
+                            }
+
+                            val baseStyle = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = fontSizeValue.sp,
+                                lineHeight = (fontSizeValue * lineSpacingValue).sp,
+                                textAlign = TextAlign.Justify
+                            )
+
+                            val text = if (paraAnnotations.isNotEmpty()) {
+                                buildAnnotatedString {
+                                    var lastEnd = paraStart
+                                    paraAnnotations.sortedBy { it.startPosition }.forEach { ann ->
+                                        val relStart = ann.startPosition - paraStart
+                                        val relEnd = ann.endPosition - paraStart
+                                        if (relStart > lastEnd - paraStart) {
+                                            append(paraTrimmed.substring(lastEnd - paraStart, relStart))
+                                        }
+                                        withStyle(SpanStyle(background = Color(ann.color.colorValue).copy(alpha = 0.4f))) {
+                                            append(paraTrimmed.substring(relStart, relEnd))
+                                        }
+                                        lastEnd = ann.endPosition
+                                    }
+                                    if (lastEnd - paraStart < paraTrimmed.length) {
+                                        append(paraTrimmed.substring(lastEnd - paraStart))
+                                    }
+                                }
+                            } else {
+                                buildFormattedText(paraTrimmed)
+                            }
+
+                            Text(
+                                text = text,
+                                style = baseStyle,
+                                color = textColor,
+                                modifier = Modifier
+                                    .padding(bottom = settings.paragraphSpacing.dp)
+                                    .pointerInput(Unit) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                selectedText = paraTrimmed
+                                                selectionStart = 0
+                                                selectionEnd = paraTrimmed.length
+                                                showHighlightMenu = true
+                                            }
+                                        )
+                                    }
+                            )
+                        }
+                    }
                 }
                 cumulativeOffset += paragraph.length + 2
             }
@@ -173,6 +221,58 @@ fun ReaderContent(
                 backgroundColor = backgroundColor,
                 selectedText = selectedText
             )
+        }
+    }
+}
+
+private fun buildFormattedText(text: String): androidx.compose.ui.text.AnnotatedString {
+    return buildAnnotatedString {
+        var i = 0
+        while (i < text.length) {
+            val boldStart = text.indexOf("**", i)
+            val italicStart = text.indexOf("*", i)
+
+            val nextMarker = when {
+                boldStart >= 0 && italicStart >= 0 -> minOf(boldStart, italicStart)
+                boldStart >= 0 -> boldStart
+                italicStart >= 0 -> italicStart
+                else -> -1
+            }
+
+            if (nextMarker < 0) {
+                append(text.substring(i))
+                break
+            }
+
+            if (nextMarker > i) {
+                append(text.substring(i, nextMarker))
+            }
+
+            if (boldStart >= 0 && boldStart == nextMarker) {
+                val boldEnd = text.indexOf("**", boldStart + 2)
+                if (boldEnd >= 0) {
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(text.substring(boldStart + 2, boldEnd))
+                    }
+                    i = boldEnd + 2
+                } else {
+                    append("**")
+                    i = boldStart + 2
+                }
+            } else if (italicStart >= 0 && italicStart == nextMarker) {
+                val italicEnd = text.indexOf("*", italicStart + 1)
+                if (italicEnd >= 0 && (italicEnd > italicStart + 1) && !text.startsWith("*", italicEnd + 1)) {
+                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                        append(text.substring(italicStart + 1, italicEnd))
+                    }
+                    i = italicEnd + 1
+                } else {
+                    append("*")
+                    i = italicStart + 1
+                }
+            } else {
+                i = nextMarker + 1
+            }
         }
     }
 }

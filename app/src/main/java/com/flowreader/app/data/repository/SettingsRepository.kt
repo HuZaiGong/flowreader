@@ -44,6 +44,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val GESTURE_DOUBLE_TAP = stringPreferencesKey("gesture_double_tap")
         val GESTURE_LONG_PRESS = stringPreferencesKey("gesture_long_press")
         val GESTURE_EDGE_ENABLED = booleanPreferencesKey("gesture_edge_enabled")
+        val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
@@ -102,6 +103,7 @@ class SettingsRepositoryImpl @Inject constructor(
                     } catch (e: Exception) {
                         ReaderTheme.LIGHT
                     },
+                    customFontPath = preferences[PreferencesKeys.CUSTOM_FONT_PATH],
                     pageMode = try {
                         PageMode.valueOf(preferences[PreferencesKeys.PAGE_MODE] ?: PageMode.SLIDE.name)
                     } catch (e: Exception) {
@@ -133,6 +135,11 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.PAGE_MODE] = settings.pageMode.name
             preferences[PreferencesKeys.KEEP_SCREEN_ON] = settings.keepScreenOn
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = settings.screenTimeoutMinutes
+            if (settings.customFontPath != null) {
+                preferences[PreferencesKeys.CUSTOM_FONT_PATH] = settings.customFontPath
+            } else {
+                preferences.remove(PreferencesKeys.CUSTOM_FONT_PATH)
+            }
         }
     }
 
@@ -241,4 +248,20 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.ONBOARDING_COMPLETED] = true
         }
     }
+
+    override suspend fun updateCustomFontPath(path: String?) {
+        context.dataStore.edit { preferences ->
+            if (path != null) {
+                preferences[PreferencesKeys.CUSTOM_FONT_PATH] = path
+            } else {
+                preferences.remove(PreferencesKeys.CUSTOM_FONT_PATH)
+            }
+        }
+    }
+
+    override fun getCustomFontPath(): Flow<String?> = context.dataStore.data
+        .retry(3) { it is IOException }
+        .map { preferences ->
+            preferences[PreferencesKeys.CUSTOM_FONT_PATH]
+        }
 }

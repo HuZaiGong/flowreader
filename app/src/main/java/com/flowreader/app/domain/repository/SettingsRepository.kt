@@ -3,6 +3,7 @@ package com.flowreader.app.domain.repository
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.GestureSettings
 import com.flowreader.app.domain.model.PageMode
+import android.net.Uri
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.model.ReadingSettings
 import kotlinx.coroutines.flow.Flow
@@ -31,4 +32,6 @@ interface SettingsRepository {
     suspend fun updateGestureSettings(settings: GestureSettings)
     fun isOnboardingCompleted(): Flow<Boolean>
     suspend fun setOnboardingCompleted()
+    suspend fun updateCustomFontPath(path: String?)
+    fun getCustomFontPath(): Flow<String?>
 }

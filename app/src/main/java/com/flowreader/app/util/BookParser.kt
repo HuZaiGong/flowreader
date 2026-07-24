@@ -15,6 +15,9 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import org.jsoup.nodes.Node
+import org.jsoup.nodes.TextNode
 import java.io.*
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
@@ -208,6 +211,25 @@ class BookParser @Inject constructor(
                     itemMap[refId]?.let { spineRefs.add(it) }
                 }
 
+                val imageDir = File(context.cacheDir, "epub_images_${System.currentTimeMillis()}")
+                imageDir.mkdirs()
+                val imageHrefs = mutableMapOf<String, String>()
+                opfDoc.select("manifest > item").forEach { item ->
+                    val href = item.attr("href")
+                    val mediaType = item.attr("media-type")
+                    if (mediaType.startsWith("image/")) {
+                        val entryPath = if (opfBaseDir.isNotEmpty()) "$opfBaseDir/$href" else href
+                        val imageEntry = zip.getEntry(entryPath)
+                        if (imageEntry != null) {
+                            val imageBytes = zip.getInputStream(imageEntry).readBytes()
+                            val fileName = "img_${href.replace("/", "_").replace("\\", "_")}"
+                            val imageFile = File(imageDir, fileName)
+                            FileOutputStream(imageFile).use { it.write(imageBytes) }
+                            imageHrefs[href] = imageFile.absolutePath
+                        }
+                    }
+                }
+
                 var chapterIndex = 0
                 for (href in spineRefs) {
                     val entry = zip.getEntry(href) ?: continue
@@ -215,7 +237,8 @@ class BookParser @Inject constructor(
                     val htmlDoc = Jsoup.parse(htmlText)
                     htmlDoc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml)
                     htmlDoc.select("script, style, nav").remove()
-                    val bodyText = htmlDoc.body().text().trim()
+
+                    val bodyText = htmlToFormattedText(htmlDoc.body(), imageHrefs).trim()
                     if (bodyText.isBlank()) continue
 
                     val chapterTitle = htmlDoc.select("title").firstOrNull()?.text()
@@ -341,6 +364,71 @@ class BookParser @Inject constructor(
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun htmlToFormattedText(
+        element: Element,
+        imageHrefs: Map<String, String>
+    ): String {
+        val sb = StringBuilder()
+        for (node in element.childNodes()) {
+            when (node) {
+                is TextNode -> {
+                    val text = node.text()
+                    if (text.isNotBlank()) sb.append(text)
+                }
+                is Element -> {
+                    val tag = node.tagName()
+                    when {
+                        tag == "br" -> sb.appendLine()
+                        tag.startsWith("h") && tag.length == 2 && tag[1] in '1'..'6' -> {
+                            sb.appendLine()
+                            sb.append("## ")
+                            sb.append(htmlToFormattedText(node, imageHrefs))
+                            sb.appendLine()
+                        }
+                        tag == "b" || tag == "strong" -> {
+                            sb.append("**")
+                            sb.append(htmlToFormattedText(node, imageHrefs))
+                            sb.append("**")
+                        }
+                        tag == "i" || tag == "em" -> {
+                            sb.append("*")
+                            sb.append(htmlToFormattedText(node, imageHrefs))
+                            sb.append("*")
+                        }
+                        tag == "img" -> {
+                            val src = node.attr("src")
+                            val savedPath = imageHrefs[src]
+                            if (savedPath != null) {
+                                sb.appendLine()
+                                sb.append("[IMG:$savedPath]")
+                                sb.appendLine()
+                            }
+                        }
+                        tag == "p" || tag == "div" -> {
+                            val inner = htmlToFormattedText(node, imageHrefs).trim()
+                            if (inner.isNotBlank()) {
+                                sb.appendLine(inner)
+                                sb.appendLine()
+                            }
+                        }
+                        tag == "span" || tag == "a" || tag == "li" -> {
+                            sb.append(htmlToFormattedText(node, imageHrefs))
+                        }
+                        tag == "ul" || tag == "ol" -> {
+                            sb.appendLine()
+                            sb.append(htmlToFormattedText(node, imageHrefs))
+                            sb.appendLine()
+                        }
+                        else -> {
+                            sb.append(htmlToFormattedText(node, imageHrefs))
+                        }
+                    }
+                }
+            }
+        }
+        return sb.toString()
     }
 
     private fun parseTxtStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {

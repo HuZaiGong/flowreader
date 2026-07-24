@@ -12,14 +12,23 @@ import javax.inject.Singleton
 
 @Singleton
 class CacheManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val memoryManager: MemoryManager
 ) : ComponentCallbacks2 {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val maxBooks: Int
+    private val maxChaptersPerBook: Int
+
+    init {
+        val recommended = memoryManager.getRecommendedCacheSize()
+        maxBooks = recommended.coerceIn(1, 5)
+        maxChaptersPerBook = (recommended + 2).coerceIn(3, 7)
+    }
     
     private val chapterCache = object : LinkedHashMap<Long, MutableMap<Int, String>>(32, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, MutableMap<Int, String>>?): Boolean {
-            if (size > MAX_BOOKS_IN_MEMORY) {
+            if (size > maxBooks) {
                 eldest?.key?.let { bookId ->
                     bookMetadataCache.remove(bookId)
                 }
@@ -53,8 +62,6 @@ class CacheManager @Inject constructor(
     )
 
     companion object {
-        private const val MAX_BOOKS_IN_MEMORY = 3
-        private const val MAX_CHAPTERS_PER_BOOK = 5
         private const val MAX_COVERS = 20
         private const val CACHE_EXPIRY_MS = 30 * 60 * 1000L
     }
@@ -68,9 +75,9 @@ class CacheManager @Inject constructor(
     fun putChapterContent(bookId: Long, chapterIndex: Int, content: String) {
         synchronized(chapterCache) {
             val bookChapters = chapterCache.getOrPut(bookId) { 
-                object : LinkedHashMap<Int, String>(MAX_CHAPTERS_PER_BOOK, 0.75f, true) {
+                object : LinkedHashMap<Int, String>(maxChaptersPerBook, 0.75f, true) {
                     override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?): Boolean {
-                        return size > MAX_CHAPTERS_PER_BOOK
+                        return size > maxChaptersPerBook
                     }
                 }
             }

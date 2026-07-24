@@ -1,5 +1,8 @@
 package com.flowreader.app.ui.screens.settings
 
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.domain.model.*
@@ -65,6 +69,43 @@ fun SettingsScreen(
                         viewModel.updateAppTheme(if (dark) ReaderTheme.DARK else ReaderTheme.LIGHT)
                     }
                 )
+            }
+
+            SettingsSection(title = "字体管理") {
+                val context = LocalContext.current
+                val fontPickerLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.GetContent()
+                ) { uri ->
+                    if (uri != null) {
+                        viewModel.onCustomFontSelected(uri)
+                    }
+                }
+                val fontName = remember(uiState.customFontPath) {
+                    uiState.customFontPath?.let { path ->
+                        try {
+                            val file = java.io.File(path)
+                            if (file.exists()) file.name else null
+                        } catch (e: Exception) { null }
+                    }
+                }
+
+                SettingsItem(
+                    icon = Icons.Default.TextFields,
+                    title = "自定义字体",
+                    subtitle = fontName ?: "点击选择 .ttf 字体文件",
+                    onClick = {
+                        fontPickerLauncher.launch("font/*")
+                    }
+                )
+
+                if (uiState.customFontPath != null) {
+                    SettingsItem(
+                        icon = Icons.Default.Delete,
+                        title = "清除自定义字体",
+                        subtitle = "恢复默认字体",
+                        onClick = { viewModel.clearCustomFont() }
+                    )
+                }
             }
 
             SettingsSection(title = "提醒") {
@@ -408,7 +449,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
         },
         text = {
             Column {
-                Text("版本: 45.0.0")
+                Text("版本: 45.0.1")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("一款简洁优雅的电子书阅读应用")
                 Spacer(modifier = Modifier.height(8.dp))

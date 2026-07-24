@@ -1,8 +1,8 @@
 package com.flowreader.app.ui.screens.stats
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
@@ -10,8 +10,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.domain.model.DailyStats
@@ -155,14 +159,19 @@ fun StatsScreen(
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "最近7天",
+                            text = "最近7天趋势",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    items(uiState.recentDailyStats) { dayStat ->
-                        DailyStatItem(stats = dayStat)
+                    item {
+                        ReadTimeBarChart(
+                            dailyStats = uiState.recentDailyStats,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp)
+                        )
                     }
                 }
             }
@@ -217,55 +226,83 @@ private fun StatCard(
 }
 
 @Composable
-private fun DailyStatItem(stats: DailyStats) {
+private fun ReadTimeBarChart(
+    dailyStats: List<DailyStats>,
+    modifier: Modifier = Modifier
+) {
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
+    val onSurface = MaterialTheme.colorScheme.onSurface
+
+    val maxReadTime = dailyStats.maxOfOrNull { it.totalReadTime } ?: 1L
+    val barCount = dailyStats.size
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = formatDate(stats.date),
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(24.dp)
+        Column(modifier = Modifier.padding(16.dp)) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                if (barCount == 0) return@Canvas
+                val barWidth = (size.width / barCount) * 0.6f
+                val gap = (size.width / barCount) * 0.4f
+                val chartHeight = size.height - 20f
+
+                dailyStats.forEachIndexed { index, stat ->
+                    val barHeight = if (maxReadTime > 0) {
+                        (stat.totalReadTime.toFloat() / maxReadTime) * chartHeight
+                    } else 0f
+                    val x = index * (barWidth + gap) + gap / 2
+
+                    drawRect(
+                        color = surfaceVariant,
+                        topLeft = Offset(x, chartHeight - barHeight),
+                        size = Size(barWidth, barHeight),
+                        alpha = 1f
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = formatReadTime(stats.totalReadTime),
-                        style = MaterialTheme.typography.bodySmall
+                    drawRect(
+                        color = primaryColor,
+                        topLeft = Offset(x, chartHeight - barHeight),
+                        size = Size(barWidth, barHeight),
+                        alpha = 0.7f
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.MenuBook,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                dailyStats.forEach { stat ->
                     Text(
-                        text = "${stats.totalReadPages}页",
-                        style = MaterialTheme.typography.bodySmall
+                        text = formatDateShort(stat.date),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = onSurface.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
+    }
+}
+
+private fun formatDateShort(dateStr: String): String {
+    return try {
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val outputFormat = SimpleDateFormat("MM/dd", Locale.getDefault())
+        val date = inputFormat.parse(dateStr)
+        date?.let { outputFormat.format(it) } ?: dateStr
+    } catch (e: Exception) {
+        dateStr
     }
 }
 

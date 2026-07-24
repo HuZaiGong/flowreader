@@ -1,5 +1,6 @@
 package com.flowreader.app.ui.screens.settings
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +8,7 @@ import com.flowreader.app.domain.model.*
 import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.domain.repository.BackupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,11 +25,13 @@ data class SettingsUiState(
     val importResult: String? = null,
     val isExporting: Boolean = false,
     val isImporting: Boolean = false,
-    val isOnboardingCompleted: Boolean = false
+    val isOnboardingCompleted: Boolean = false,
+    val customFontPath: String? = null
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
     private val backupRepository: BackupRepository
 ) : ViewModel() {
@@ -44,8 +48,9 @@ class SettingsViewModel @Inject constructor(
             combine(
                 settingsRepository.appSettings,
                 settingsRepository.getDailyReadingGoal(),
-                settingsRepository.isOnboardingCompleted()
-            ) { settings, goal, onboardingCompleted ->
+                settingsRepository.isOnboardingCompleted(),
+                settingsRepository.getCustomFontPath()
+            ) { settings, goal, onboardingCompleted, fontPath ->
                 SettingsUiState(
                     appTheme = settings.theme,
                     readingSettings = settings.defaultReadingSettings,
@@ -54,7 +59,8 @@ class SettingsViewModel @Inject constructor(
                     readingReminderHour = settings.readingReminderHour,
                     readingReminderMinute = settings.readingReminderMinute,
                     dailyReadingGoal = goal,
-                    isOnboardingCompleted = onboardingCompleted
+                    isOnboardingCompleted = onboardingCompleted,
+                    customFontPath = fontPath
                 )
             }.collect { state ->
                 _uiState.value = state
@@ -178,6 +184,40 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val currentSettings = _uiState.value.readingSettings
             settingsRepository.updateReadingSettings(currentSettings.copy(gestureSettings = gestureSettings))
+        }
+    }
+
+    fun onCustomFontSelected(uri: Uri) {
+        viewModelScope.launch {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                    ?: return@launch
+                val fontDir = java.io.File(context.filesDir, "fonts")
+                if (!fontDir.exists()) fontDir.mkdirs()
+                val fileName = "custom_font_${System.currentTimeMillis()}.ttf"
+                val targetFile = java.io.File(fontDir, fileName)
+                java.io.FileOutputStream(targetFile).use { output ->
+                    inputStream.copyTo(output)
+                }
+                inputStream.close()
+                settingsRepository.updateCustomFontPath(targetFile.absolutePath)
+                val currentSettings = _uiState.value.readingSettings
+                settingsRepository.updateReadingSettings(
+                    currentSettings.copy(customFontPath = targetFile.absolutePath)
+                )
+            } catch (e: Exception) {
+                _uiState.update { it.copy(exportResult = "导入字体失败: ${e.message}") }
+            }
+        }
+    }
+
+    fun clearCustomFont() {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            settingsRepository.updateCustomFontPath(null)
+            settingsRepository.updateReadingSettings(
+                currentSettings.copy(customFontPath = null)
+            )
         }
     }
 }
