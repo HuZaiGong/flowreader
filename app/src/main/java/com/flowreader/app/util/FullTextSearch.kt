@@ -114,12 +114,8 @@ class FullTextSearch @Inject constructor(
 
         if (query.isBlank()) return@withContext emptyList()
 
-        // Escape FTS5 special characters to prevent syntax errors and injection
-        val escapedQuery = query
-            .replace("\"", "\"\"")
-            .replace("*", "")
-            .replace("(", "")
-            .replace(")", "")
+        // Escape double quotes for FTS5 phrase query; other special chars are literal inside "..."
+        val escapedQuery = query.replace("\"", "\"\"")
 
         val safeMatch = "\"$escapedQuery\"*"
 

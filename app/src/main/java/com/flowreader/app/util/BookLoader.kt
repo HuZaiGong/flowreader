@@ -1,22 +1,19 @@
 package com.flowreader.app.util
 
 import kotlinx.coroutines.*
-import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BookLoader @Inject constructor() {
     
-    private val ioDispatcher = Dispatchers.IO.limitedParallelism(4)
-    private val bookExecutor = Executors.newFixedThreadPool(2)
-    private val bookDispatcher = Dispatchers.IO
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     
     fun loadChapterAsync(
         bookId: Long,
         chapterIndex: Int,
         loadContent: suspend (Long, Int) -> String?
-    ): Deferred<String?> = CoroutineScope(bookDispatcher).async {
+    ): Deferred<String?> = scope.async {
         try {
             loadContent(bookId, chapterIndex)
         } catch (e: Exception) {
@@ -30,7 +27,7 @@ class BookLoader @Inject constructor() {
         totalChapters: Int,
         loadContent: suspend (Long, Int) -> String?
     ) {
-        CoroutineScope(bookDispatcher + SupervisorJob()).launch {
+        scope.launch {
             val preloadIndices = mutableListOf<Int>()
             
             if (currentIndex > 0) preloadIndices.add(currentIndex - 1)
@@ -47,7 +44,7 @@ class BookLoader @Inject constructor() {
     }
     
     fun cancelAll() {
-        bookExecutor.shutdownNow()
+        scope.cancel()
     }
 }
 

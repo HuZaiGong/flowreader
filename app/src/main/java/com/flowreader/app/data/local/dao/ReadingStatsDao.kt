@@ -9,8 +9,11 @@ interface ReadingStatsDao {
     @Query("SELECT * FROM reading_stats WHERE bookId = :bookId ORDER BY date DESC")
     fun getStatsByBookId(bookId: Long): Flow<List<ReadingStatsEntity>>
 
-    @Query("SELECT * FROM reading_stats WHERE date = :date")
-    suspend fun getStatsByDate(date: String): ReadingStatsEntity?
+    @Query("SELECT * FROM reading_stats WHERE bookId = :bookId AND date = :date")
+    suspend fun getStatsByDate(bookId: Long, date: String): ReadingStatsEntity?
+
+    @Query("SELECT * FROM reading_stats WHERE date = :date LIMIT 1")
+    suspend fun getStatsByDateOnly(date: String): ReadingStatsEntity?
 
     @Query("SELECT * FROM reading_stats")
     suspend fun getAllStats(): List<ReadingStatsEntity>

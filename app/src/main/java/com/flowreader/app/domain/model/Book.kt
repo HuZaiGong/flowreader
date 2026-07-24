@@ -38,15 +38,6 @@ data class Chapter(
     val endPosition: Int = 0
 )
 
-data class Bookmark(
-    val id: Long = 0,
-    val bookId: Long,
-    val chapterIndex: Int,
-    val position: Int,
-    val text: String,
-    val createdTime: Date = Date()
-)
-
 data class Category(
     val id: Long = 0,
     val name: String,

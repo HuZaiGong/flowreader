@@ -9,6 +9,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retry
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -74,6 +75,7 @@ class SettingsRepository @Inject constructor(
     )
 
     val appSettings: Flow<AppSettings> = context.dataStore.data
+        .retry(3) { it is IOException }
         .catch { exception ->
             if (exception is IOException) {
                 emit(emptyPreferences())
@@ -209,6 +211,7 @@ class SettingsRepository @Inject constructor(
     }
 
     fun getSearchHistory(): Flow<List<String>> = context.dataStore.data
+        .retry(3) { it is IOException }
         .map { preferences ->
             val history = preferences[PreferencesKeys.SEARCH_HISTORY] ?: ""
             if (history.isNotEmpty()) history.split("|") else emptyList()
@@ -227,6 +230,7 @@ class SettingsRepository @Inject constructor(
     }
 
     fun getDailyReadingGoal(): Flow<Int> = context.dataStore.data
+        .retry(3) { it is IOException }
         .map { preferences ->
             preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] ?: 30
         }
@@ -245,6 +249,7 @@ class SettingsRepository @Inject constructor(
     }
 
     fun isOnboardingCompleted(): Flow<Boolean> = context.dataStore.data
+        .retry(3) { it is IOException }
         .map { preferences ->
             preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false
         }

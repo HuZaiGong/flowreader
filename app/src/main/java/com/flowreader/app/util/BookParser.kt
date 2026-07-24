@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 import java.io.*
+import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -81,56 +82,62 @@ class BookParser @Inject constructor(
         emit(ParseProgress.Starting)
         
         try {
-            val inputStream = context.contentResolver.openInputStream(uri)
-                ?: throw Exception("无法打开文件")
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                val fileName = getFileName(uri)
+                val format = detectFormat(fileName)
+                val fileSize = getFileSize(uri)
 
-            val fileName = getFileName(uri)
-            val format = detectFormat(fileName)
-            val fileSize = getFileSize(uri)
-
-            when (format) {
-                BookFormat.EPUB -> {
-                    emit(ParseProgress.Reading(0, fileSize))
-                    val result = parseEpubStream(inputStream, fileName, fileSize)
-                    emit(ParseProgress.Parsing)
-                    result
+                when (format) {
+                    BookFormat.EPUB -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        val result = parseEpubStream(inputStream, fileName, fileSize)
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
+                    BookFormat.TXT -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        val result = parseTxtStream(inputStream, fileName, fileSize)
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
+                    BookFormat.PDF -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        inputStream.close()
+                        val result = parsePdfStream(uri, fileName, fileSize)
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
+                    BookFormat.MARKDOWN -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        val result = parseMarkdownStream(inputStream, fileName, fileSize)
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
+                    else -> Result.failure(Exception("不支持的格式: $format"))
+                }.onSuccess {
+                    emit(ParseProgress.Complete)
+                }.onFailure {
+                    emit(ParseProgress.Error(it.message ?: "解析失败"))
                 }
-                BookFormat.TXT -> {
-                    emit(ParseProgress.Reading(0, fileSize))
-                    val result = parseTxtStream(inputStream, fileName, fileSize)
-                    emit(ParseProgress.Parsing)
-                    result
-                }
-                BookFormat.PDF -> {
-                    emit(ParseProgress.Reading(0, fileSize))
-                    val result = parsePdfStream(uri, fileName, fileSize)
-                    emit(ParseProgress.Parsing)
-                    result
-                }
-                BookFormat.MARKDOWN -> {
-                    emit(ParseProgress.Reading(0, fileSize))
-                    val result = parseMarkdownStream(inputStream, fileName, fileSize)
-                    emit(ParseProgress.Parsing)
-                    result
-                }
-                else -> Result.failure(Exception("不支持的格式: $format"))
-            }.onSuccess {
-                emit(ParseProgress.Complete)
-            }.onFailure {
-                emit(ParseProgress.Error(it.message ?: "解析失败"))
-            }
+            } ?: throw Exception("无法打开文件")
         } catch (e: Exception) {
             emit(ParseProgress.Error(e.message ?: "解析失败"))
         }
     }.flowOn(Dispatchers.IO)
 
     private fun detectFormat(fileName: String): BookFormat {
-        return when {
-            fileName.endsWith(".epub", ignoreCase = true) -> BookFormat.EPUB
-            fileName.endsWith(".txt", ignoreCase = true) -> BookFormat.TXT
-            fileName.endsWith(".pdf", ignoreCase = true) -> BookFormat.PDF
-            fileName.endsWith(".md", ignoreCase = true) || fileName.endsWith(".markdown", ignoreCase = true) -> BookFormat.MARKDOWN
-            else -> BookFormat.UNKNOWN
+        return detectFormatStatic(fileName)
+    }
+
+    companion object {
+        fun detectFormatStatic(fileName: String): BookFormat {
+            return when {
+                fileName.endsWith(".epub", ignoreCase = true) -> BookFormat.EPUB
+                fileName.endsWith(".txt", ignoreCase = true) -> BookFormat.TXT
+                fileName.endsWith(".pdf", ignoreCase = true) -> BookFormat.PDF
+                fileName.endsWith(".md", ignoreCase = true) || fileName.endsWith(".markdown", ignoreCase = true) -> BookFormat.MARKDOWN
+                else -> BookFormat.UNKNOWN
+            }
         }
     }
 
@@ -162,28 +169,84 @@ class BookParser @Inject constructor(
 
     private fun parseEpubStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
-            val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
-            val doc = Jsoup.parse(text)
-            val bodyText = doc.body().text()
+            val tempFile = File(context.cacheDir, "temp_epub_parse_${System.currentTimeMillis()}.zip")
+            inputStream.use { input ->
+                FileOutputStream(tempFile).use { output ->
+                    input.copyTo(output)
+                }
+            }
 
             val title = fileName.removeSuffix(".epub")
-
             val chapters = mutableListOf<Chapter>()
-            appendChunkedChapter(
-                chapters = chapters,
-                title = "第 1 章",
-                content = bodyText,
-                startPosition = 0
-            )
+            var author = "未知作者"
+            var description = ""
+
+            ZipFile(tempFile).use { zip ->
+                val containerEntry = zip.getEntry("META-INF/container.xml")
+                    ?: return@use
+                val containerXml = Jsoup.parse(zip.getInputStream(containerEntry).bufferedReader().readText())
+                val opfPath = containerXml.select("rootfile").attr("full-path")
+                if (opfPath.isBlank()) return@use
+
+                val opfEntry = zip.getEntry(opfPath) ?: return@use
+                val opfDoc = Jsoup.parse(zip.getInputStream(opfEntry).bufferedReader().readText())
+
+                opfDoc.select("creator").firstOrNull()?.let { author = it.text() }
+                opfDoc.select("description").firstOrNull()?.let { description = it.text() }
+
+                val opfBaseDir = opfPath.substringBeforeLast("/", "")
+                val itemMap = mutableMapOf<String, String>()
+                opfDoc.select("manifest > item").forEach { item ->
+                    val itemId = item.attr("id")
+                    val href = item.attr("href")
+                    itemMap[itemId] = if (opfBaseDir.isNotEmpty()) "$opfBaseDir/$href" else href
+                }
+
+                val spineRefs = mutableListOf<String>()
+                opfDoc.select("spine > itemref").forEach { ref ->
+                    val refId = ref.attr("idref")
+                    itemMap[refId]?.let { spineRefs.add(it) }
+                }
+
+                var chapterIndex = 0
+                for (href in spineRefs) {
+                    val entry = zip.getEntry(href) ?: continue
+                    val htmlText = zip.getInputStream(entry).bufferedReader().readText()
+                    val htmlDoc = Jsoup.parse(htmlText)
+                    htmlDoc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml)
+                    htmlDoc.select("script, style, nav").remove()
+                    val bodyText = htmlDoc.body().text().trim()
+                    if (bodyText.isBlank()) continue
+
+                    val chapterTitle = htmlDoc.select("title").firstOrNull()?.text()
+                        ?: "第 ${chapterIndex + 1} 章"
+
+                    chapterIndex = appendChunkedChapter(
+                        chapters = chapters,
+                        title = chapterTitle,
+                        content = bodyText,
+                        startPosition = 0,
+                        startIndex = chapterIndex
+                    )
+                }
+            }
+
+            if (tempFile.exists()) {
+                tempFile.delete()
+            }
+
+            if (chapters.isEmpty()) {
+                return Result.failure(Exception("未找到可解析的章节内容"))
+            }
 
             Result.success(
                 BookParseResult(
                     book = Book(
                         title = title,
-                        author = "未知作者",
+                        author = author,
                         filePath = "",
                         coverPath = null,
-                        description = "",
+                        description = description,
                         fileSize = fileSize,
                         format = BookFormat.EPUB,
                         totalChapters = chapters.size

@@ -20,8 +20,9 @@ class CacheManager @Inject constructor(
     private val chapterCache = object : LinkedHashMap<Long, MutableMap<Int, String>>(32, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, MutableMap<Int, String>>?): Boolean {
             if (size > MAX_BOOKS_IN_MEMORY) {
-                val removed = eldest?.key
-                removed?.let { evictBook(it) }
+                eldest?.key?.let { bookId ->
+                    bookMetadataCache.remove(bookId)
+                }
                 return true
             }
             return false
@@ -200,14 +201,6 @@ class CacheManager @Inject constructor(
         val estimatedMemory: Int
     )
 }
-
-data class ChapterMeta(
-    val id: Long,
-    val index: Int,
-    val title: String,
-    val startPosition: Int,
-    val endPosition: Int
-)
 
 fun CacheManager.ChapterMeta.toDomain() = com.flowreader.app.domain.model.Chapter(
     id = id,

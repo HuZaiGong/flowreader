@@ -7,6 +7,7 @@ import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.repository.ChapterRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -15,7 +16,7 @@ class ChapterRepositoryImpl @Inject constructor(
     private val chapterDao: ChapterDao
 ) : ChapterRepository {
 
-    private val contentCache = mutableMapOf<Long, MutableMap<Int, String>>()
+    private val contentCache = ConcurrentHashMap<Long, ConcurrentHashMap<Int, String>>()
 
     override fun getChaptersByBookId(bookId: Long): Flow<List<Chapter>> {
         return chapterDao.getChaptersByBookId(bookId).map { entities ->
@@ -55,7 +56,7 @@ class ChapterRepositoryImpl @Inject constructor(
         
         val content = cachedContent ?: chapterDao.getChapterContent(bookId, index) ?: ""
         
-        contentCache.getOrPut(bookId) { mutableMapOf() }[index] = content
+        contentCache.getOrPut(bookId) { ConcurrentHashMap() }[index] = content
         
         return Chapter(
             id = meta.id,
@@ -74,7 +75,7 @@ class ChapterRepositoryImpl @Inject constructor(
         
         val content = chapterDao.getChapterContent(bookId, index)
         if (content != null) {
-            contentCache.getOrPut(bookId) { mutableMapOf() }[index] = content
+            contentCache.getOrPut(bookId) { ConcurrentHashMap() }[index] = content
         }
         return content
     }

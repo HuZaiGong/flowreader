@@ -399,8 +399,8 @@ class ReaderViewModel @Inject constructor(
                 text = text,
                 position = state.currentPosition
             )
-            bookmarkRepository.insertBookmark(bookmark)
-            _uiState.update { it.copy(bookmarks = it.bookmarks + bookmark) }
+            val newId = bookmarkRepository.insertBookmark(bookmark)
+            _uiState.update { it.copy(bookmarks = it.bookmarks + bookmark.copy(id = newId)) }
         }
     }
 
@@ -423,8 +423,8 @@ class ReaderViewModel @Inject constructor(
                 color = AnnotationColor.YELLOW,
                 note = ""
             )
-            annotationRepository.insertAnnotation(annotation)
-            _uiState.update { it.copy(annotations = it.annotations + annotation) }
+            val newId = annotationRepository.insertAnnotation(annotation)
+            _uiState.update { it.copy(annotations = it.annotations + annotation.copy(id = newId)) }
         }
     }
 

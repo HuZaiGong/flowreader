@@ -8,21 +8,11 @@ class BookParserTest {
 
     @Test
     fun testDetectFormat() {
-        assertEquals(BookFormat.EPUB, detectFormatTest("book.epub"))
-        assertEquals(BookFormat.TXT, detectFormatTest("book.txt"))
-        assertEquals(BookFormat.PDF, detectFormatTest("book.pdf"))
-        assertEquals(BookFormat.MARKDOWN, detectFormatTest("book.md"))
-        assertEquals(BookFormat.MARKDOWN, detectFormatTest("book.markdown"))
-        assertEquals(BookFormat.UNKNOWN, detectFormatTest("book.exe"))
-    }
-
-    private fun detectFormatTest(fileName: String): BookFormat {
-        return when {
-            fileName.endsWith(".epub", ignoreCase = true) -> BookFormat.EPUB
-            fileName.endsWith(".txt", ignoreCase = true) -> BookFormat.TXT
-            fileName.endsWith(".pdf", ignoreCase = true) -> BookFormat.PDF
-            fileName.endsWith(".md", ignoreCase = true) || fileName.endsWith(".markdown", ignoreCase = true) -> BookFormat.MARKDOWN
-            else -> BookFormat.UNKNOWN
-        }
+        assertEquals(BookFormat.EPUB, BookParser.detectFormatStatic("book.epub"))
+        assertEquals(BookFormat.TXT, BookParser.detectFormatStatic("book.txt"))
+        assertEquals(BookFormat.PDF, BookParser.detectFormatStatic("book.pdf"))
+        assertEquals(BookFormat.MARKDOWN, BookParser.detectFormatStatic("book.md"))
+        assertEquals(BookFormat.MARKDOWN, BookParser.detectFormatStatic("book.markdown"))
+        assertEquals(BookFormat.UNKNOWN, BookParser.detectFormatStatic("book.exe"))
     }
 }

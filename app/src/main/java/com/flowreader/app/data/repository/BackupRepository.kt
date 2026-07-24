@@ -53,11 +53,7 @@ class BackupRepositoryImpl @Inject constructor(
             }
             json.put("categories", categoriesArray)
 
-            val allBookmarks = mutableListOf<BookmarkEntity>()
-            books.forEach { book ->
-                val bookmarks = bookmarkDao.getBookmarksByBookId(book.id).first()
-                allBookmarks.addAll(bookmarks)
-            }
+            val allBookmarks = bookmarkDao.getAllBookmarks().first()
             val bookmarksArray = JSONArray()
             allBookmarks.forEach { bookmark ->
                 bookmarksArray.put(bookmark.toJson())
@@ -85,22 +81,15 @@ class BackupRepositoryImpl @Inject constructor(
                     var booksImported = 0
                     var bookmarksImported = 0
 
-                    val booksArray = json.getJSONArray("books")
+                    val booksArray = json.optJSONArray("books") ?: JSONArray()
                     for (i in 0 until booksArray.length()) {
                         val bookJson = booksArray.getJSONObject(i)
                         val book = BookEntity.fromJson(bookJson)
                         bookDao.insertBook(book)
                         booksImported++
-
-                        val chaptersArray = bookJson.getJSONArray("chapters")
-                        for (j in 0 until chaptersArray.length()) {
-                            val chapterJson = chaptersArray.getJSONObject(j)
-                            val chapter = ChapterEntity.fromJson(chapterJson)
-                            chapterDao.insertChapter(chapter)
-                        }
                     }
 
-                    val bookmarksArray = json.getJSONArray("bookmarks")
+                    val bookmarksArray = json.optJSONArray("bookmarks") ?: JSONArray()
                     for (i in 0 until bookmarksArray.length()) {
                         val bookmarkJson = bookmarksArray.getJSONObject(i)
                         val bookmark = BookmarkEntity.fromJson(bookmarkJson)
@@ -147,7 +136,7 @@ private fun BookEntity.toJson(): JSONObject = JSONObject().apply {
     put("title", title)
     put("author", author)
     put("filePath", filePath)
-    put("coverPath", coverPath)
+    putOpt("coverPath", coverPath)
     put("description", description)
     put("fileSize", fileSize)
     put("format", format)
@@ -155,9 +144,9 @@ private fun BookEntity.toJson(): JSONObject = JSONObject().apply {
     put("currentChapter", currentChapter)
     put("currentPosition", currentPosition)
     put("readingProgress", readingProgress)
-    put("lastReadTime", lastReadTime)
+    putOpt("lastReadTime", lastReadTime)
     put("addedTime", addedTime)
-    put("categoryId", categoryId)
+    putOpt("categoryId", categoryId)
 }
 
 private fun BookEntity.Companion.fromJson(json: JSONObject): BookEntity = BookEntity(

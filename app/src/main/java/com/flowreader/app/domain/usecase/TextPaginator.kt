@@ -26,13 +26,14 @@ class TextPaginator(
         var currentLength = 0
         
         for (paragraph in paragraphs) {
-            val paraLen = paragraph.length
+            val paraText = "$paragraph\n\n"
+            val paraLen = paraText.length
             if (currentLength + paraLen > charsPerPage && currentLength > 0) {
                 result.add(currentPage.toString())
                 currentPage = StringBuilder()
                 currentLength = 0
             }
-            currentPage.append(paragraph)
+            currentPage.append(paraText)
             currentLength += paraLen
         }
         

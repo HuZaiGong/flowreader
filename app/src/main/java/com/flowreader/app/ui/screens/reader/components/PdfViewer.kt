@@ -36,6 +36,9 @@ fun PdfViewer(
     var offsetY by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(filePath, currentPage) {
+        scale = 1f
+        offsetX = 0f
+        offsetY = 0f
         withContext(Dispatchers.IO) {
             try {
                 val file = File(filePath)
@@ -45,11 +48,12 @@ fun PdfViewer(
                         if (currentPage in 0 until pageCount) {
                             renderer.openPage(currentPage).use { page ->
                                 val bitmap = Bitmap.createBitmap(
-                                    page.width * 2,
-                                    page.height * 2,
+                                    page.width,
+                                    page.height,
                                     Bitmap.Config.ARGB_8888
                                 )
                                 page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                                pdfBitmap?.recycle()
                                 pdfBitmap = bitmap
                             }
                         }

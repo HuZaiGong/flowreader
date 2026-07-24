@@ -3,7 +3,10 @@ package com.flowreader.app.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "reading_stats")
+@Entity(
+    tableName = "reading_stats",
+    indices = [androidx.room.Index(value = ["bookId", "date"], unique = true)]
+)
 data class ReadingStatsEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,

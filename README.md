@@ -122,12 +122,13 @@ flowreader/
 │       │   │   │
 │       │   │   ├── domain/                          # 领域层
 │       │   │   │   ├── model/                       # 业务模型
-│       │   │   │   │   ├── Annotation.kt
-│       │   │   │   │   ├── AppException.kt          # 统一异常处理
-│       │   │   │   │   ├── Book.kt
-│       │   │   │   │   ├── ReadingSettings.kt
-│       │   │   │   │   ├── ReadingStats.kt
-│       │   │   │   │   └── WheelItem.kt
+│   │   │   │   │   ├── Annotation.kt
+│   │   │   │   │   ├── AppException.kt          # 统一异常处理（当前未使用）
+│   │   │   │   │   ├── Book.kt
+│   │   │   │   │   ├── Bookmark.kt
+│   │   │   │   │   ├── ReadingSettings.kt
+│   │   │   │   │   ├── ReadingStats.kt
+│   │   │   │   │   └── WheelItem.kt
 │       │   │   │   ├── repository/                  # 数据仓库接口
 │       │   │   │   │   ├── BackupRepository.kt
 │       │   │   │   │   ├── BookRepository.kt

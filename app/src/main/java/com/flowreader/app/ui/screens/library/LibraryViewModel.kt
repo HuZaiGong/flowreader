@@ -54,11 +54,12 @@ class LibraryViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     private val _sortOrder = MutableStateFlow(SortOrder.ADDED_TIME)
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
+    private var booksCollectionJob: Job? = null
 
     init {
-        loadBooks()
         loadSettings()
         loadCategories()
+        loadBooks()
     }
 
     private fun loadSettings() {
@@ -78,7 +79,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     private fun loadBooks() {
-        viewModelScope.launch {
+        booksCollectionJob?.cancel()
+        booksCollectionJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
             combine(
@@ -124,7 +126,6 @@ class LibraryViewModel @Inject constructor(
 
     fun selectCategory(categoryId: Long?) {
         _selectedCategoryId.value = categoryId
-        _uiState.update { it.copy(selectedCategoryId = categoryId) }
     }
 
     fun addCategory(name: String) {
@@ -167,12 +168,10 @@ class LibraryViewModel @Inject constructor(
 
     fun updateSortOrder(order: SortOrder) {
         _sortOrder.value = order
-        _uiState.update { it.copy(sortOrder = order) }
     }
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
-        _uiState.update { it.copy(searchQuery = query) }
     }
 
     fun importBook(uri: Uri) {

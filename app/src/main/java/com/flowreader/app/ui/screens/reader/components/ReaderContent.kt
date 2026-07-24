@@ -99,11 +99,15 @@ fun ReaderContent(
                         color = textColor,
                         modifier = Modifier
                             .padding(bottom = settings.paragraphSpacing.toInt().dp)
-                            .clickable {
-                                selectedText = paragraph.trim()
-                                selectionStart = 0
-                                selectionEnd = selectedText.length
-                                showHighlightMenu = true
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onLongPress = {
+                                        selectedText = paragraph.trim()
+                                        selectionStart = 0
+                                        selectionEnd = selectedText.length
+                                        showHighlightMenu = true
+                                    }
+                                )
                             }
                     )
                 }
