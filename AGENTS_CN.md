@@ -1,6 +1,6 @@
 # 项目指南（Repository Guidelines）
 
-**当前版本：44.0.2**
+**当前版本：44.0.3**
 
 ## 项目概述
 
@@ -32,6 +32,10 @@ UI 层（Compose 页面 + ViewModel）
 数据流：**Composable → ViewModel → UseCase/Repository → Room DAO → SQLite**
 
 ---
+
+## 主题说明
+
+主题仅深色和浅色两种，在 `FlowReaderNavHost` 层通过 `FlowReaderTheme` 全局包裹 `Scaffold` 生效，不在各页面单独包裹。设置页以开关形式切换深色模式。
 
 ## 重要提醒 / Gotchas
 

@@ -1,6 +1,6 @@
 # FlowReader
 
-**Current version: 44.0.2**
+**Current version: 44.0.3**
 
 Offline-first Android e-book reader (EPUB/TXT/PDF/Markdown). Single-module, Clean Architecture + MVVM.
 
@@ -27,6 +27,11 @@ ui/screens    domain/usecase  data/repository  data/local/dao
 ### State
 
 Each ViewModel exposes `StateFlow<XxxUiState>` via private `_uiState`. Progress save uses 3-second debounce (`debouncedSaveProgress()` in `ReaderViewModel.kt`).
+
+### Theme / 主题
+
+Only **DARK** and **LIGHT** themes. Applied globally at the `FlowReaderNavHost` level via `FlowReaderTheme` wrapping the outer `Scaffold`. No per-screen theme wrappers. The settings page exposes a simple dark mode toggle instead of a theme picker dialog. ->
+主题仅深色和浅色两种，在 `FlowReaderNavHost` 层通过 `FlowReaderTheme` 全局包裹 `Scaffold` 生效，不在各页面单独包裹。设置页以开关形式切换深色模式。
 
 ### Error Handling / 错误处理
 

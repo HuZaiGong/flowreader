@@ -392,7 +392,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
         },
         text = {
             Column {
-                Text("版本: 44.0.2")
+                Text("版本: 44.0.3")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("一款简洁优雅的电子书阅读应用")
                 Spacer(modifier = Modifier.height(8.dp))
