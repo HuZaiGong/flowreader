@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -15,7 +16,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import com.flowreader.app.domain.model.Annotation
+import com.flowreader.app.util.FtsSearchResult
 
 @Composable
 fun AnnotationsDialog(
@@ -162,6 +167,90 @@ fun ShareProgressDialog(
             TextButton(onClick = onDismiss) {
                 Text("取消")
             }
+        }
+    )
+}
+
+@Composable
+fun SearchDialog(
+    query: String,
+    results: List<FtsSearchResult>,
+    isSearching: Boolean,
+    onQueryChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onResultClick: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("全文搜索") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = onQueryChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text("输入搜索关键词") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearch() })
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onSearch,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = query.isNotBlank() && !isSearching
+                ) {
+                    if (isSearching) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    } else {
+                        Text("搜索")
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                if (results.isNotEmpty()) {
+                    Text(
+                        "搜索结果 (${results.size})",
+                        style = MaterialTheme.typography.titleSmall
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
+                        items(results.size) { index ->
+                            val result = results[index]
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)
+                                    .clickable { onResultClick(result.chapterIndex) }
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        text = result.chapterTitle,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = result.matchedText,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        maxLines = 3,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else if (!isSearching && query.isNotEmpty()) {
+                    Text(
+                        "未找到匹配结果",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("关闭") }
         }
     )
 }

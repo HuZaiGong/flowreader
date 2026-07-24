@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import com.flowreader.app.domain.model.*
+import com.flowreader.app.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -17,13 +18,9 @@ import javax.inject.Singleton
 internal val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
-class SettingsRepository @Inject constructor(
+class SettingsRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
-) {
-    companion object {
-        val THEME_KEY = stringPreferencesKey("theme")
-    }
-
+) : SettingsRepository {
     private object PreferencesKeys {
         val THEME = stringPreferencesKey("theme")
         val FONT_SIZE = intPreferencesKey("font_size")
@@ -75,7 +72,7 @@ class SettingsRepository @Inject constructor(
         edgeGestureEnabled = preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] ?: true
     )
 
-    val appSettings: Flow<AppSettings> = context.dataStore.data
+    override val appSettings: Flow<AppSettings> = context.dataStore.data
         .retry(3) { it is IOException }
         .catch { exception ->
             if (exception is IOException) {
@@ -120,13 +117,13 @@ class SettingsRepository @Inject constructor(
             )
         }
 
-    suspend fun updateTheme(theme: ReaderTheme) {
+    override suspend fun updateTheme(theme: ReaderTheme) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.THEME] = theme.name
         }
     }
 
-    suspend fun updateReadingSettings(settings: ReadingSettings) {
+    override suspend fun updateReadingSettings(settings: ReadingSettings) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.FONT_SIZE] = settings.fontSize
             preferences[PreferencesKeys.LINE_SPACING] = settings.lineSpacing
@@ -139,43 +136,43 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    suspend fun updateReaderTheme(theme: ReaderTheme) {
+    override suspend fun updateReaderTheme(theme: ReaderTheme) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.READER_THEME] = theme.name
         }
     }
 
-    suspend fun updateFontSize(size: Int) {
+    override suspend fun updateFontSize(size: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.FONT_SIZE] = size
         }
     }
 
-    suspend fun updateLineSpacing(spacing: Float) {
+    override suspend fun updateLineSpacing(spacing: Float) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.LINE_SPACING] = spacing
         }
     }
 
-    suspend fun updatePageMode(mode: PageMode) {
+    override suspend fun updatePageMode(mode: PageMode) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.PAGE_MODE] = mode.name
         }
     }
 
-    suspend fun updateKeepScreenOn(keepOn: Boolean) {
+    override suspend fun updateKeepScreenOn(keepOn: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.KEEP_SCREEN_ON] = keepOn
         }
     }
 
-    suspend fun updateScreenTimeout(minutes: Int) {
+    override suspend fun updateScreenTimeout(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = minutes
         }
     }
 
-    suspend fun updateReadingReminder(enabled: Boolean, hour: Int = 20, minute: Int = 0) {
+    override suspend fun updateReadingReminder(enabled: Boolean, hour: Int, minute: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.READING_REMINDER_ENABLED] = enabled
             preferences[PreferencesKeys.READING_REMINDER_HOUR] = hour
@@ -183,7 +180,7 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    suspend fun addSearchHistory(query: String) {
+    override suspend fun addSearchHistory(query: String) {
         context.dataStore.edit { preferences ->
             val current = preferences[PreferencesKeys.SEARCH_HISTORY] ?: ""
             val historyList = if (current.isNotEmpty()) current.split("|").toMutableList() else mutableListOf()
@@ -195,32 +192,32 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    fun getSearchHistory(): Flow<List<String>> = context.dataStore.data
+    override fun getSearchHistory(): Flow<List<String>> = context.dataStore.data
         .retry(3) { it is IOException }
         .map { preferences ->
             val history = preferences[PreferencesKeys.SEARCH_HISTORY] ?: ""
             if (history.isNotEmpty()) history.split("|") else emptyList()
         }
 
-    suspend fun clearSearchHistory() {
+    override suspend fun clearSearchHistory() {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SEARCH_HISTORY] = ""
         }
     }
 
-    suspend fun updateDailyReadingGoal(minutes: Int) {
+    override suspend fun updateDailyReadingGoal(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] = minutes
         }
     }
 
-    fun getDailyReadingGoal(): Flow<Int> = context.dataStore.data
+    override fun getDailyReadingGoal(): Flow<Int> = context.dataStore.data
         .retry(3) { it is IOException }
         .map { preferences ->
             preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] ?: 30
         }
 
-    suspend fun updateGestureSettings(settings: GestureSettings) {
+    override suspend fun updateGestureSettings(settings: GestureSettings) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.GESTURE_LEFT_TAP] = settings.leftTapAction.name
             preferences[PreferencesKeys.GESTURE_MIDDLE_TAP] = settings.middleTapAction.name
@@ -233,13 +230,13 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    fun isOnboardingCompleted(): Flow<Boolean> = context.dataStore.data
+    override fun isOnboardingCompleted(): Flow<Boolean> = context.dataStore.data
         .retry(3) { it is IOException }
         .map { preferences ->
             preferences[PreferencesKeys.ONBOARDING_COMPLETED] ?: false
         }
 
-    suspend fun setOnboardingCompleted() {
+    override suspend fun setOnboardingCompleted() {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.ONBOARDING_COMPLETED] = true
         }

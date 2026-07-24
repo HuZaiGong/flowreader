@@ -24,13 +24,6 @@ enum class FontFamily(val displayName: String) {
     FANGSONG("仿宋")
 }
 
-enum class ParagraphMode(val displayName: String) {
-    COMPACT("紧凑"),
-    STANDARD("标准"),
-    RELAXED("宽松"),
-    IMMERSIVE("沉浸")
-}
-
 enum class GestureAction {
     PREVIOUS_PAGE,
     NEXT_PAGE,
@@ -53,34 +46,12 @@ data class GestureSettings(
     val edgeGestureEnabled: Boolean = true,
     val leftEdgeWidth: Int = 20,
     val rightEdgeWidth: Int = 20,
-    val edgeSwipeThreshold: Int = 100,
-    val enableSystemGestureExclusion: Boolean = true,
-    val preventSystemBackGesture: Boolean = true
 )
-
-enum class BackgroundTexture(val displayName: String) {
-    NONE("无"),
-    PAPER("纸张"),
-    CANVAS("画布"),
-    WOOD("木纹"),
-    MARBLE("大理石"),
-    GRADIENT("渐变")
-}
-
-enum class AmbientSound(val displayName: String) {
-    NONE("无"),
-    RAIN("雨声"),
-    WIND("风声"),
-    FIREPLACE("柴火"),
-    CAFE("咖啡馆"),
-    OCEAN("海浪")
-}
 
 data class ReadingSettings(
     val fontSize: Int = 18,
     val lineSpacing: Float = 1.5f,
     val paragraphSpacing: Float = 1.0f,
-    val paragraphMode: ParagraphMode = ParagraphMode.STANDARD,
     val fontFamily: FontFamily = FontFamily.DEFAULT,
     val customFontPath: String? = null,
     val theme: ReaderTheme = ReaderTheme.LIGHT,
@@ -88,18 +59,7 @@ data class ReadingSettings(
     val keepScreenOn: Boolean = true,
     val screenTimeoutMinutes: Int = 0,
     val tapZoneRatio: Float = 0.3f,
-    val gestureSettings: GestureSettings = GestureSettings(),
-    val backgroundTexture: BackgroundTexture = BackgroundTexture.NONE,
-    val backgroundColor: Long = 0xFFF5F5DC,
-    val textColor: Long = 0xFF000000,
-    val autoHideControls: Boolean = true,
-    val controlsHideDelay: Long = 3000L,
-    val fullScreenMode: Boolean = true,
-    val ambientSound: AmbientSound = AmbientSound.NONE,
-    val ambientSoundVolume: Float = 0.5f,
-    val firstLineIndent: Boolean = true,
-    val justifyText: Boolean = true,
-    val simplifiedChinese: Boolean = true
+    val gestureSettings: GestureSettings = GestureSettings()
 )
 
 data class AppSettings(

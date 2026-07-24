@@ -11,16 +11,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.flowreader.app.domain.model.Bookmark
+import com.flowreader.app.domain.model.FontFamily
 import com.flowreader.app.domain.model.PageMode
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.model.ReadingSettings
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ReaderSettingsDialog(
     settings: ReadingSettings,
     onFontSizeChange: (Int) -> Unit,
     onLineSpacingChange: (Float) -> Unit,
+    onFontFamilyChange: (FontFamily) -> Unit,
     onThemeChange: (ReaderTheme) -> Unit,
     onPageModeChange: (PageMode) -> Unit,
     onTtsPlay: () -> Unit,
@@ -52,6 +54,20 @@ fun ReaderSettingsDialog(
                 }
 
                 HorizontalDivider()
+
+                Text("字体", style = MaterialTheme.typography.bodyMedium)
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    FontFamily.entries.forEach { font ->
+                        FilterChip(
+                            selected = settings.fontFamily == font,
+                            onClick = { onFontFamilyChange(font) },
+                            label = { Text(font.displayName) }
+                        )
+                    }
+                }
 
                 Text("字体大小: ${settings.fontSize}sp", style = MaterialTheme.typography.bodyMedium)
                 Slider(

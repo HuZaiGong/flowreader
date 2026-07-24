@@ -11,15 +11,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.model.ReadingSettings
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 
 @Composable
 fun ReaderContent(
@@ -28,6 +33,7 @@ fun ReaderContent(
     textColor: androidx.compose.ui.graphics.Color,
     backgroundColor: androidx.compose.ui.graphics.Color,
     scrollState: androidx.compose.foundation.ScrollState,
+    annotations: List<Annotation> = emptyList(),
     onTap: (Offset, Size) -> Unit,
     onPositionChanged: (Int) -> Unit,
     onTextSelected: (String, Int, Int) -> Unit = { _, _, _ -> },
@@ -87,30 +93,64 @@ fun ReaderContent(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
+            var cumulativeOffset = 0
             paragraphs.forEachIndexed { index, paragraph ->
-                if (paragraph.isNotBlank()) {
+                val paraTrimmed = paragraph.trim()
+                val paraStart = cumulativeOffset + paragraph.indexOf(paraTrimmed)
+                val paraEnd = paraStart + paraTrimmed.length
+
+                if (paraTrimmed.isNotBlank()) {
+                    val paraAnnotations = annotations.filter {
+                        it.startPosition >= paraStart && it.endPosition <= paraEnd
+                    }
+
+                    val baseStyle = MaterialTheme.typography.bodyLarge.copy(
+                        fontSize = fontSizeValue.sp,
+                        lineHeight = (fontSizeValue * lineSpacingValue).sp,
+                        textAlign = TextAlign.Justify
+                    )
+
+                    val text = if (paraAnnotations.isNotEmpty()) {
+                        buildAnnotatedString {
+                            var lastEnd = paraStart
+                            paraAnnotations.sortedBy { it.startPosition }.forEach { ann ->
+                                val relStart = ann.startPosition - paraStart
+                                val relEnd = ann.endPosition - paraStart
+                                if (relStart > lastEnd - paraStart) {
+                                    append(paraTrimmed.substring(lastEnd - paraStart, relStart))
+                                }
+                                withStyle(SpanStyle(background = Color(ann.color.colorValue).copy(alpha = 0.4f))) {
+                                    append(paraTrimmed.substring(relStart, relEnd))
+                                }
+                                lastEnd = ann.endPosition
+                            }
+                            if (lastEnd - paraStart < paraTrimmed.length) {
+                                append(paraTrimmed.substring(lastEnd - paraStart))
+                            }
+                        }
+                    } else {
+                        buildAnnotatedString { append(paraTrimmed) }
+                    }
+
                     Text(
-                        text = paragraph.trim(),
-                        style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = fontSizeValue.sp,
-                            lineHeight = (fontSizeValue * lineSpacingValue).sp,
-                            textAlign = TextAlign.Justify
-                        ),
+                        text = text,
+                        style = baseStyle,
                         color = textColor,
                         modifier = Modifier
                             .padding(bottom = settings.paragraphSpacing.dp)
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onLongPress = {
-                                        selectedText = paragraph.trim()
+                                        selectedText = paraTrimmed
                                         selectionStart = 0
-                                        selectionEnd = selectedText.length
+                                        selectionEnd = paraTrimmed.length
                                         showHighlightMenu = true
                                     }
                                 )
                             }
                     )
                 }
+                cumulativeOffset += paragraph.length + 2
             }
 
             Spacer(modifier = Modifier.height(100.dp))

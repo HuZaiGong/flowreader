@@ -22,6 +22,7 @@ fun ReaderControls(
     onBackClick: () -> Unit,
     onChapterClick: () -> Unit,
     onSettingsClick: () -> Unit,
+    onSearchClick: () -> Unit,
     onBookmarkClick: () -> Unit,
     onAddBookmark: () -> Unit,
     onAnnotationClick: () -> Unit,
@@ -95,6 +96,13 @@ fun ReaderControls(
                     Icon(
                         Icons.Default.Share,
                         contentDescription = "分享进度",
+                        tint = textColor
+                    )
+                }
+                IconButton(onClick = onSearchClick) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = "搜索",
                         tint = textColor
                     )
                 }

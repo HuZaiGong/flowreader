@@ -116,6 +116,7 @@ fun ReaderScreen(
                         textColor = textColor,
                         backgroundColor = backgroundColor,
                         scrollState = contentScrollState,
+                        annotations = uiState.annotations,
                         onTap = { offset, size ->
                             val tapZoneWidth = size.width * uiState.readingSettings.tapZoneRatio
                             val middle = size.width / 2
@@ -146,6 +147,7 @@ fun ReaderScreen(
                     onBackClick = onBackClick,
                     onChapterClick = { viewModel.showChapterList(true) },
                     onSettingsClick = { viewModel.showSettings(true) },
+                    onSearchClick = { viewModel.showSearch(true) },
                     onBookmarkClick = { viewModel.showBookmarks(true) },
                     onAddBookmark = {
                         val text = uiState.currentChapter?.content?.take(50) ?: ""
@@ -173,11 +175,24 @@ fun ReaderScreen(
                 )
             }
 
+            if (uiState.showSearch) {
+                SearchDialog(
+                    query = uiState.searchQuery,
+                    results = uiState.searchResults,
+                    isSearching = uiState.isSearching,
+                    onQueryChange = { viewModel.updateSearchQuery(it) },
+                    onSearch = { viewModel.searchInBook() },
+                    onResultClick = { viewModel.goToSearchResult(it) },
+                    onDismiss = { viewModel.showSearch(false) }
+                )
+            }
+
             if (uiState.showSettings) {
                 ReaderSettingsDialog(
                     settings = uiState.readingSettings,
                     onFontSizeChange = { viewModel.updateFontSize(it) },
                     onLineSpacingChange = { viewModel.updateLineSpacing(it) },
+                    onFontFamilyChange = { viewModel.updateFontFamily(it) },
                     onThemeChange = { viewModel.updateReaderTheme(it) },
                     onPageModeChange = { viewModel.updatePageMode(it) },
                     onTtsPlay = { viewModel.playTts() },

@@ -8,6 +8,7 @@ import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
+import com.flowreader.app.domain.model.FontFamily
 import com.flowreader.app.domain.model.PageMode
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.model.ReadingSettings
@@ -16,8 +17,10 @@ import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingStatsRepository
-import com.flowreader.app.data.repository.SettingsRepository
+import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.util.CacheManager
+import com.flowreader.app.util.FullTextSearch
+import com.flowreader.app.util.FtsSearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -40,6 +43,10 @@ data class ReaderUiState(
     val showSettings: Boolean = false,
     val showBookmarks: Boolean = false,
     val showAnnotations: Boolean = false,
+    val showSearch: Boolean = false,
+    val searchQuery: String = "",
+    val searchResults: List<FtsSearchResult> = emptyList(),
+    val isSearching: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
     val todayReadTime: Long = 0,
@@ -64,7 +71,8 @@ class ReaderViewModel @Inject constructor(
     private val readingStatsRepository: ReadingStatsRepository,
     private val cacheManager: CacheManager,
     private val bookLoader: com.flowreader.app.util.BookLoader,
-    private val ttsManager: com.flowreader.app.util.TtsManager
+    private val ttsManager: com.flowreader.app.util.TtsManager,
+    private val fullTextSearch: FullTextSearch
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
@@ -209,6 +217,7 @@ class ReaderViewModel @Inject constructor(
                     }
 
                     calculateReadingPrediction()
+                    indexBookForSearch(book, chapterMetadata)
                 } else {
                     val errorMsg = if (book == null) "未找到书籍" else "书籍暂无章节内容"
                     _uiState.update { it.copy(isLoading = false, error = errorMsg) }
@@ -395,6 +404,49 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    private fun indexBookForSearch(book: Book, chapters: List<Chapter>) {
+        viewModelScope.launch {
+            try {
+                fullTextSearch.initialize()
+                fullTextSearch.deleteBookContent(bookId)
+                chapters.forEachIndexed { index, chapter ->
+                    chapterRepository.getChapterContent(bookId, index)?.let { content ->
+                        fullTextSearch.indexChapter(bookId, index, chapter.title, content)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ReaderViewModel", "Failed to index book for search", e)
+            }
+        }
+    }
+
+    fun showSearch(show: Boolean) {
+        _uiState.update { it.copy(showSearch = show, searchQuery = "", searchResults = emptyList()) }
+    }
+
+    fun updateSearchQuery(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun searchInBook() {
+        val query = _uiState.value.searchQuery
+        if (query.isBlank()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSearching = true) }
+            try {
+                val results = fullTextSearch.search(bookId, query)
+                _uiState.update { it.copy(searchResults = results, isSearching = false) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isSearching = false) }
+            }
+        }
+    }
+
+    fun goToSearchResult(chapterIndex: Int) {
+        goToChapter(chapterIndex)
+        _uiState.update { it.copy(showSearch = false) }
+    }
+
     fun dismissEyeProtectionReminder() {
         _uiState.update { it.copy(showEyeProtectionReminder = false) }
         startEyeProtectionTimer()
@@ -507,6 +559,15 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             val currentSettings = _uiState.value.readingSettings
             val newSettings = currentSettings.copy(theme = theme)
+            settingsRepository.updateReadingSettings(newSettings)
+            _uiState.update { it.copy(readingSettings = newSettings) }
+        }
+    }
+
+    fun updateFontFamily(family: FontFamily) {
+        viewModelScope.launch {
+            val currentSettings = _uiState.value.readingSettings
+            val newSettings = currentSettings.copy(fontFamily = family)
             settingsRepository.updateReadingSettings(newSettings)
             _uiState.update { it.copy(readingSettings = newSettings) }
         }

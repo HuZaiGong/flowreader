@@ -1,8 +1,10 @@
 package com.flowreader.app.ui.screens.bookdetail
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -19,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
 import java.io.File
@@ -113,6 +116,11 @@ fun BookDetailScreen(
                                     onClick = { selectedTab = 1 },
                                     text = { Text("书签 (${uiState.bookmarks.size})") }
                                 )
+                                Tab(
+                                    selected = selectedTab == 2,
+                                    onClick = { selectedTab = 2 },
+                                    text = { Text("标注 (${uiState.annotations.size})") }
+                                )
                             }
                         }
 
@@ -150,6 +158,12 @@ fun BookDetailScreen(
                                         BookmarkListContent(
                                             bookmarks = uiState.bookmarks,
                                             onDelete = { bookmarkId -> viewModel.deleteBookmark(bookmarkId) }
+                                        )
+                                    }
+                                    2 -> {
+                                        AnnotationListContent(
+                                            annotations = uiState.annotations,
+                                            onDelete = { annotationId -> viewModel.deleteAnnotation(annotationId) }
                                         )
                                     }
                                 }
@@ -286,6 +300,93 @@ private fun BookInfoHeader(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(if (book.readingProgress > 0) "继续阅读" else "开始阅读")
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnnotationListContent(
+    annotations: List<Annotation>,
+    onDelete: (Long) -> Unit
+) {
+    if (annotations.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "暂无标注",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            )
+        }
+    } else {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            annotations.forEach { annotation ->
+                AnnotationItem(
+                    annotation = annotation,
+                    onDelete = { onDelete(annotation.id) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnnotationItem(
+    annotation: Annotation,
+    onDelete: () -> Unit
+) {
+    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(annotation.color.colorValue))
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = annotation.selectedText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "第 ${annotation.chapterIndex + 1} 章 · ${dateFormat.format(annotation.createdTime)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+                if (annotation.note.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "备注: ${annotation.note}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                    )
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "删除",
+                    tint = MaterialTheme.colorScheme.error
+                )
             }
         }
     }

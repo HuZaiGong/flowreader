@@ -3,13 +3,14 @@ package com.flowreader.app.ui.screens.bookdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
+import com.flowreader.app.domain.repository.AnnotationRepository
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.ChapterRepository
-import com.flowreader.app.data.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -19,7 +20,9 @@ data class BookDetailUiState(
     val book: Book? = null,
     val chapters: List<Chapter> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
+    val annotations: List<Annotation> = emptyList(),
     val isLoading: Boolean = true,
+    val isAnnotating: Boolean = false,
     val error: String? = null
 )
 
@@ -29,7 +32,7 @@ class BookDetailViewModel @Inject constructor(
     private val bookRepository: BookRepository,
     private val chapterRepository: ChapterRepository,
     private val bookmarkRepository: BookmarkRepository,
-    private val settingsRepository: SettingsRepository
+    private val annotationRepository: AnnotationRepository
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
@@ -55,11 +58,13 @@ class BookDetailViewModel @Inject constructor(
                 if (book != null) {
                     val chapters = chapterRepository.getChapterMetadataList(bookId)
                     val bookmarks = bookmarkRepository.getBookmarksListByBookId(bookId)
+                    val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
                     _uiState.update {
                         it.copy(
                             book = book,
                             chapters = chapters,
                             bookmarks = bookmarks,
+                            annotations = annotations,
                             isLoading = false
                         )
                     }
@@ -75,6 +80,14 @@ class BookDetailViewModel @Inject constructor(
     fun deleteBookmark(bookmarkId: Long) {
         viewModelScope.launch {
             bookmarkRepository.deleteBookmarkById(bookmarkId)
+            _uiState.update { it.copy(bookmarks = it.bookmarks.filter { b -> b.id != bookmarkId }) }
+        }
+    }
+
+    fun deleteAnnotation(annotationId: Long) {
+        viewModelScope.launch {
+            annotationRepository.deleteAnnotationById(annotationId)
+            _uiState.update { it.copy(annotations = it.annotations.filter { a -> a.id != annotationId }) }
         }
     }
 }

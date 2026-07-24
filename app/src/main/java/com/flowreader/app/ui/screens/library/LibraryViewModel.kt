@@ -3,7 +3,7 @@ package com.flowreader.app.ui.screens.library
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.flowreader.app.data.repository.SettingsRepository
+import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Category
 import com.flowreader.app.domain.repository.BookRepository

@@ -21,8 +21,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.flowreader.app.data.repository.SettingsRepository
 import com.flowreader.app.data.repository.dataStore
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.ui.screens.bookdetail.BookDetailScreen
 import com.flowreader.app.ui.screens.library.LibraryScreen
@@ -53,7 +53,7 @@ fun FlowReaderNavHost() {
     val context = LocalContext.current
     val theme by context.dataStore.data.map { prefs ->
         try {
-            ReaderTheme.valueOf(prefs[SettingsRepository.THEME_KEY] ?: ReaderTheme.LIGHT.name)
+            ReaderTheme.valueOf(prefs[stringPreferencesKey("theme")] ?: ReaderTheme.LIGHT.name)
         } catch (e: Exception) {
             ReaderTheme.LIGHT
         }

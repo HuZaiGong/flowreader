@@ -241,7 +241,15 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v44.0.3 (最新发布)
+### v45.0.0 (最新发布)
+- 字体选择：阅读设置面板 8 种字体 FilterChips
+- 全文搜索：FTS5 集成，阅读器搜索入口 + SearchDialog
+- 标注高亮：`buildAnnotatedString` + `SpanStyle` 渲染标注背景色
+- 书籍详情标注 Tab：标注颜色、文本、备注展示，支持删除
+- 缓存整合：移除 `ChapterRepositoryImpl.contentCache`，统一走 `CacheManager`
+- 领域接口拆分：Chapter/Bookmark/Annotation/Category 独立文件
+- SettingsRepository 抽象：创建领域接口，实现类更名
+- 移除死代码：`GetBookUseCase`、`SaveProgressUseCase`、`TextPaginator`、`ParagraphMode`、`BackgroundTexture`、`AmbientSound` 及 11 个未用的 `ReadingSettings` 字段
 *   **主题简化**：阅读主题仅保留"深色"和"浅色"两种模式，移除其余 8 种变体（护眼/羊皮纸/AMOLED 等）。
 *   **全局主题统一**：主题设置现在全局生效，底部导航栏、设置页等所有界面统一跟随当前主题。
 *   **界面精简**：移除了书架、统计、转盘、设置四个底部标签页顶栏的返回箭头按钮。

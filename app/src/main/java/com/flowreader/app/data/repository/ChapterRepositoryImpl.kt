@@ -5,18 +5,17 @@ import com.flowreader.app.data.local.entity.ChapterEntity
 import com.flowreader.app.data.local.entity.ChapterMetadata
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.repository.ChapterRepository
+import com.flowreader.app.util.CacheManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ChapterRepositoryImpl @Inject constructor(
-    private val chapterDao: ChapterDao
+    private val chapterDao: ChapterDao,
+    private val cacheManager: CacheManager
 ) : ChapterRepository {
-
-    private val contentCache = ConcurrentHashMap<Long, ConcurrentHashMap<Int, String>>()
 
     override fun getChaptersByBookId(bookId: Long): Flow<List<Chapter>> {
         return chapterDao.getChaptersByBookId(bookId).map { entities ->
@@ -25,8 +24,7 @@ class ChapterRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getChaptersListByBookId(bookId: Long): List<Chapter> {
-        val chapters = chapterDao.getChaptersListByBookId(bookId).map { it.toDomain() }
-        return chapters
+        return chapterDao.getChaptersListByBookId(bookId).map { it.toDomain() }
     }
 
     override suspend fun getChapterMetadataList(bookId: Long): List<Chapter> {
@@ -45,19 +43,21 @@ class ChapterRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getChapter(bookId: Long, index: Int): Chapter? {
-        val cachedContent = contentCache[bookId]?.get(index)
-        
         val meta = chapterDao.getChapterMetadataList(bookId).firstOrNull { it.index == index }
-        
+
         if (meta == null) {
             val entity = chapterDao.getChapter(bookId, index) ?: return null
             return entity.toDomain()
         }
-        
-        val content = cachedContent ?: chapterDao.getChapterContent(bookId, index) ?: ""
-        
-        contentCache.getOrPut(bookId) { ConcurrentHashMap() }[index] = content
-        
+
+        val content = cacheManager.getChapterContent(bookId, index)
+            ?: chapterDao.getChapterContent(bookId, index)
+            ?: ""
+
+        if (content.isNotEmpty()) {
+            cacheManager.putChapterContent(bookId, index, content)
+        }
+
         return Chapter(
             id = meta.id,
             bookId = meta.bookId,
@@ -70,12 +70,12 @@ class ChapterRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getChapterContent(bookId: Long, index: Int): String? {
-        val cached = contentCache[bookId]?.get(index)
+        val cached = cacheManager.getChapterContent(bookId, index)
         if (cached != null) return cached
-        
+
         val content = chapterDao.getChapterContent(bookId, index)
         if (content != null) {
-            contentCache.getOrPut(bookId) { ConcurrentHashMap() }[index] = content
+            cacheManager.putChapterContent(bookId, index, content)
         }
         return content
     }
@@ -85,24 +85,19 @@ class ChapterRepositoryImpl @Inject constructor(
     }
 
     override suspend fun insertChapter(chapter: Chapter): Long {
-        val id = chapterDao.insertChapter(ChapterEntity.fromDomain(chapter))
-        contentCache[chapter.bookId]?.remove(chapter.index)
-        return id
+        return chapterDao.insertChapter(ChapterEntity.fromDomain(chapter))
     }
 
     override suspend fun insertChapters(chapters: List<Chapter>) {
         chapterDao.insertChapters(chapters.map { ChapterEntity.fromDomain(it) })
-        chapters.firstOrNull()?.let { contentCache.remove(it.bookId) }
     }
 
     override suspend fun updateChapter(chapter: Chapter) {
         chapterDao.updateChapter(ChapterEntity.fromDomain(chapter))
-        contentCache[chapter.bookId]?.remove(chapter.index)
     }
 
     override suspend fun deleteChaptersByBookId(bookId: Long) {
         chapterDao.deleteChaptersByBookId(bookId)
-        contentCache.remove(bookId)
     }
 
     override suspend fun getChapterCount(bookId: Long): Int {

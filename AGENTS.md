@@ -1,8 +1,12 @@
 # FlowReader
 
-**Current version: 44.0.3**
+**Current version: 45.0.0**
 
 Offline-first Android e-book reader (EPUB/TXT/PDF/Markdown). Single-module, Clean Architecture + MVVM.
+
+**Phase 2 features**: Font family selector in ReaderSettingsDialog, full-text search (FTS5 via FullTextSearch.kt, search button in reader controls + SearchDialog), annotation highlighting via `buildAnnotatedString` + `SpanStyle`, annotation Tab in BookDetailScreen.
+
+**Phase 3 refactors**: Cache consolidation (ChapterRepositoryImpl → CacheManager), domain interface split (Chapter/Bookmark/Annotation/Category → separate files), SettingsRepository abstraction (interface in domain, impl renamed to SettingsRepositoryImpl + Hilt binding), dead code removal (unused ReadingSettings fields, GetBookUseCase, SaveProgressUseCase, TextPaginator).
 
 ---
 
@@ -18,7 +22,7 @@ ui/screens    domain/usecase  data/repository  data/local/dao
 
 `di/AppModule.kt` has two modules:
 - `DatabaseModule` (`@Provides`) — 6 DAOs: Book, Chapter, Bookmark, Annotation, Category, ReadingStats.
-- `RepositoryModule` (`@Binds`) — 7 repos: Book, Chapter, Bookmark, Annotation, Category, ReadingStats, Backup.
+- `RepositoryModule` (`@Binds`) — 8 repos: Book, Chapter, Bookmark, Annotation, Category, ReadingStats, Backup, **Settings**.
 
 ### Navigation
 
@@ -27,6 +31,14 @@ ui/screens    domain/usecase  data/repository  data/local/dao
 ### State
 
 Each ViewModel exposes `StateFlow<XxxUiState>` via private `_uiState`. Progress save uses 3-second debounce (`debouncedSaveProgress()` in `ReaderViewModel.kt`).
+
+### Full-Text Search
+
+`FullTextSearch` (FTS5) is injected into `ReaderViewModel`. On book load, chapters are indexed in the background. Search is accessible via a search icon in the reader controls, opening a `SearchDialog` with results that navigate to the matching chapter. -> 阅读器加载书籍后自动索引全部章节，点击搜索按钮打开 SearchDialog 搜索，点击结果跳转到对应章节。
+
+### Font Family
+
+`FontFamily` enum (8 variants: DEFAULT, SERIF, SANS_SERIF, MONOSPACE, SONG, HEI, KAI, FANGSONG) can be selected via FilterChips in `ReaderSettingsDialog`. The selection is persisted in DataStore and applied to reader text rendering. -> 阅读设置面板支持 8 种字体选择，字体设置持久化到 DataStore。
 
 ### Theme / 主题
 
@@ -40,6 +52,7 @@ Only **DARK** and **LIGHT** themes. Applied globally at the `FlowReaderNavHost` 
 - `WheelViewModel.spin()` validates `items` is non-empty before spinning; shows error if empty. -> 转盘旋转前校验是否有选项，无选项则展示错误提示。
 - `PdfViewer` has retry button on load failure via `retryTrigger` state. -> PDF 加载失败时展示重试按钮。
 - `SettingsScreen` shows Snackbar for export/import success/failure results. -> 设置页导入导出结果通过 Snackbar 展示。
+- ReaderContent renders annotation highlights via `buildAnnotatedString` + `SpanStyle(background=color)`. -> ReaderContent 使用 buildAnnotatedString 渲染标注高亮背景色。
 - Custom `AppException.kt` (sealed class + custom `Result<T>`) and `DataManager.kt` have been removed — they were dead code.
 
 ### Performance / 性能关键点
@@ -57,6 +70,8 @@ Only **DARK** and **LIGHT** themes. Applied globally at the `FlowReaderNavHost` 
 - All DAO and Entity files are in `data/local/dao/` and `data/local/entity/` respectively, mirroring 1:1.
 - `BackupRepositoryImpl.importData()` uses `database.withTransaction` for atomic batch insert.
 - `fallbackToDestructiveMigration()` has been removed — migrations use explicit `addMigrations()` for future version bumps.
+- `ChapterRepositoryImpl` routes all chapter content through `CacheManager` (single cache layer with LRU eviction + `ComponentCallbacks2`).
+- Domain repository interfaces are now in separate files under `domain/repository/` (BookRepository.kt is the only one that previously contained 4 additional interfaces).
 
 ### Indexes / 索引
 
@@ -74,9 +89,9 @@ Only **DARK** and **LIGHT** themes. Applied globally at the `FlowReaderNavHost` 
 Domain interfaces for Chapter, Bookmark, Annotation, and Category are **all inside `domain/repository/BookRepository.kt`**, not in separate files. When adding new methods to these interfaces, edit that file. ->
 Chapter、Bookmark、Annotation、Category 的接口都定义在 `domain/repository/BookRepository.kt` 中，不是独立文件。
 
-### `SettingsRepository` has no domain interface
+### `SettingsRepository` now has a domain interface
 
-`data/repository/SettingsRepository.kt` is injected directly into ViewModels. No `domain/repository/` counterpart exists.
+`domain/repository/SettingsRepository.kt` interface exists with `data/repository/SettingsRepositoryImpl` (renamed from `SettingsRepository`, implements the interface). Injected via Hilt `@Binds` in `AppModule.kt`.
 
 ### `sessionReadPages` must be incremented manually
 
