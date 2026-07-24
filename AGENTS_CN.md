@@ -40,7 +40,7 @@ UI 层（Compose 页面 + ViewModel）
 | `data/local/entity/` | Room 实体（6 张表） |
 | `data/local/dao/` | Room DAO |
 | `data/repository/` | 仓库实现 |
-| `domain/model/` | 领域模型与 `AppException` |
+| `domain/model/` | 领域模型（Book、Chapter、ReadingSettings 等） |
 | `domain/usecase/` | 业务逻辑 / 用例 |
 | `ui/screens/` | 页面目录（`library/`、`reader/`、`bookdetail/`、`settings/`、`stats/`、`wheel/`） |
 | `ui/theme/` | Compose 主题（`Color.kt`、`Theme.kt`、`Typography.kt`） |
@@ -94,7 +94,8 @@ UI 层（Compose 页面 + ViewModel）
 - 阅读进度保存采用 **3 秒防抖** 以减少数据库写入。
 
 ### 错误处理
-- 使用 `kotlin.Result` 包装可能失败的操作（`AppException` 密封类及自定义 `Result` 已被移除）。
+- 使用 `kotlin.Result` 包装可能失败的操作（自定义 `AppException` 密封类及 `Result<T>` 已被移除）。
+- ViewModel 的 `loadBook()` / `loadBookDetails()` 等函数包含 `try-catch`，错误通过 `UiState.error` 字段传递到 UI 展示，避免未捕获异常导致应用闪退。
 
 ### 异步模式
 - 使用 Kotlin **Coroutines + Flow** 处理异步任务。

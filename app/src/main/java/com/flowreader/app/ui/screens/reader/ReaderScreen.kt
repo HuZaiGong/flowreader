@@ -2,11 +2,6 @@
 
 package com.flowreader.app.ui.screens.reader
 
-import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.pdf.PdfRenderer
-import android.os.ParcelFileDescriptor
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.animation.*
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -28,7 +23,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.domain.model.Annotation
-import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.Bookmark
@@ -38,7 +32,6 @@ import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.model.ReadingSettings
 import com.flowreader.app.ui.screens.reader.components.*
 import com.flowreader.app.ui.theme.ReaderColors
-import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.AnnotationColor
-import com.flowreader.app.domain.model.AnnotationType
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
@@ -19,7 +18,6 @@ import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingStatsRepository
 import com.flowreader.app.data.repository.SettingsRepository
 import com.flowreader.app.util.CacheManager
-import com.flowreader.app.util.MemoryManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -65,7 +63,6 @@ class ReaderViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val cacheManager: CacheManager,
-    private val memoryManager: MemoryManager,
     private val bookLoader: com.flowreader.app.util.BookLoader,
     private val ttsManager: com.flowreader.app.util.TtsManager
 ) : ViewModel() {
@@ -85,7 +82,6 @@ class ReaderViewModel @Inject constructor(
     
     private var sessionStartTime: Long = 0
     private var sessionReadPages: Int = 0
-    private var sessionCharactersRead: Int = 0
     private var lastPositionUpdateTime: Long = 0
     private var lastPosition: Int = 0
     
@@ -314,10 +310,10 @@ class ReaderViewModel @Inject constructor(
     fun updatePosition(position: Int) {
         val state = _uiState.value
         val now = System.currentTimeMillis()
+        val positionDelta = if (lastPositionUpdateTime > 0) (position - lastPosition).coerceAtLeast(0) else 0
         
         if (lastPositionUpdateTime > 0) {
             val timeDelta = now - lastPositionUpdateTime
-            val positionDelta = position - lastPosition
             
             if (timeDelta > 0 && positionDelta > 0) {
                 val charsPerSecond = positionDelta.toFloat() / (timeDelta / 1000f)
@@ -332,14 +328,15 @@ class ReaderViewModel @Inject constructor(
                 }
                 
                 _uiState.update { it.copy(readingSpeed = newSpeed) }
+                
+                val charsPerPage = 2000
+                sessionReadPages += (positionDelta + charsPerPage - 1) / charsPerPage
             }
         }
         
         lastPositionUpdateTime = now
         lastPosition = position
-        
-        sessionCharactersRead += position
-        
+
         val progress = if (state.chapters.isNotEmpty()) {
             val currentChapter = state.chapters.getOrNull(state.currentChapterIndex)
             val contentLength = currentChapter?.content?.length?.coerceAtLeast(1) ?: 1

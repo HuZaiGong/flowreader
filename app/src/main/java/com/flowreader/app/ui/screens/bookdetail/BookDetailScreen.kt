@@ -56,7 +56,7 @@ fun BookDetailScreen(
                     title = { Text(uiState.book?.title ?: "书籍详情") },
                     navigationIcon = {
                         IconButton(onClick = onBackClick) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "返回")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
                         }
                     }
                 )

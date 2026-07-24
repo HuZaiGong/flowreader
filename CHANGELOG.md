@@ -30,6 +30,11 @@
 *   **构建修复**：修复 `LibraryViewModel` 中缺失的 `Job` 导入，消除 Kotlin 2.0 编译错误。
 *   **APK 构建完成**：通过 `./gradlew assembleDebug` 验证，单元测试通过。
 
+## [v44.0.1] - 2026-07
+*   **阅读统计修复**：`ReaderViewModel.sessionReadPages` 从未递增导致阅读数据永不保存；现根据滚动字符增量合理累计页数。
+*   **代码清理**：移除 `ReaderViewModel` 中未使用的 `MemoryManager` 注入、`AnnotationType` 导入、未使用的 `sessionCharactersRead` 字段；移除 `ReaderScreen` 中 7 个未使用的导入（`Intent`、`Bitmap`、`PdfRenderer` 等）；修复 `BookDetailScreen` 中 `Icons.Default.ArrowBack` 废弃用法。
+*   **闪退修复**：所有书籍加载流程添加 `try-catch` 和 `bookId > 0` 校验，数据库异常或文件缺失时显示错误提示而非崩溃。
+
 ## [v44.0.0] - 2026-07
 *   **CI 修复**：Release 构建类型添加 `signingConfig = signingConfigs.getByName("debug")`，修复 GitHub Actions 中 `build-and-release` Job 因产物路径 `app-release.apk` 不存在而导致上传失败和 Release 创建失败的问题。
 *   版本号更新至 44.0.0。
