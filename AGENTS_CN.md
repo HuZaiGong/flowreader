@@ -48,7 +48,7 @@ UI 层（Compose 页面 + ViewModel）
 | `ui/screens/wheel/WheelViewModel.kt` | 转盘逻辑：`spin()` 使用 `viewModelScope.launch` 自管理协程 |
 | `ui/screens/wheel/components/WheelSpinner.kt` | Canvas 文字方向根据角度自动翻转，保持正向可读 |
 | `gradle.properties` | 并行 GC、VFS 监控、Kotlin 增量编译、Daemon JVM 参数 |
-| `gradle/wrapper/gradle-wrapper.properties` | Gradle 9.7、网络超时 60s |
+| `gradle/wrapper/gradle-wrapper.properties` | Gradle 9.6.1、网络超时 60s |
 | `app/src/test/java/...` | 单元测试（JUnit 4） |
 | `.github/workflows/` | CI/CD（GitHub Actions） |
 
@@ -130,7 +130,7 @@ UI 层（Compose 页面 + ViewModel）
 
 ## 运行时/工具偏好
 
-- **构建系统**：Gradle（wrapper 9.7）
+- **构建系统**：Gradle（wrapper 9.6.1）
 - **AGP**：8.6.0
 - **Kotlin**：2.0.21（KSP 2.0.21-1.0.27）
 - **JDK**：17

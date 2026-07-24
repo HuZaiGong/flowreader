@@ -13,6 +13,7 @@ import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.util.BookParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
