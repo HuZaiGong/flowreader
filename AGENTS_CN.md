@@ -1,5 +1,7 @@
 # 项目指南（Repository Guidelines）
 
+**当前版本：44.0.2**
+
 ## 项目概述
 
 **FlowReader** 是一款离线优先的 Android 电子书阅读器，支持 EPUB、TXT、PDF 和 Markdown 格式。采用 Jetpack Compose 构建，遵循 Clean Architecture + MVVM。所有数据均为本地存储，没有网络功能。

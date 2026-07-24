@@ -14,8 +14,8 @@ android {
         applicationId = "com.flowreader.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4401
-        versionName = "44.0.1"
+        versionCode = 4402
+        versionName = "44.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

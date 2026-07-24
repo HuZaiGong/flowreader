@@ -1,5 +1,7 @@
 # FlowReader
 
+**Current version: 44.0.2**
+
 Offline-first Android e-book reader (EPUB/TXT/PDF/Markdown). Single-module, Clean Architecture + MVVM.
 
 ---

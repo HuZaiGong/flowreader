@@ -241,7 +241,10 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v44.0.1 (最新发布)
+### v44.0.2 (最新发布)
+*   **设置页完善**：为"关于"分区添加可点击入口项，点击后弹出版本信息与致谢对话框。
+
+### v44.0.1
 *   **闪退修复**：修复书籍详情页嵌套 `LazyColumn` 引发的 `IllegalStateException` 崩溃（内层 `LazyColumn` 替换为 `Column`）。
 *   **性能优化**：书籍详情页改为使用元数据查询（`getChapterMetadataList`），不再加载章节全文内容，避免大文件书籍 OOM 风险。
 *   **代码清理**：移除 `BookDetailViewModel` 中永不终止的 `combine(...).collect`，改用一次性加载模式，释放 coroutine 资源。
