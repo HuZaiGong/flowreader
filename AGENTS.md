@@ -35,8 +35,11 @@ Only **DARK** and **LIGHT** themes. Applied globally at the `FlowReaderNavHost` 
 
 ### Error Handling / 错误处理
 
-- ViewModel load methods (`loadBook()`, `loadBookDetails()`): wrap in `try-catch`, store error in `UiState.error` (`String?`). This prevents uncaught exceptions from crashing the app. -> ViewModel 的加载方法用 try-catch 包裹，错误通过 UiState.error 展示，避免闪退。
+- ViewModel load methods (`loadBook()`, `loadBookDetails()`, `loadStats()`, `loadChapterContent()`): wrap in `try-catch`, store error in `UiState.error` (`String?`). This prevents uncaught exceptions from crashing the app. -> ViewModel 的加载方法用 try-catch 包裹，错误通过 UiState.error 展示，避免闪退。
 - `bookId` from `SavedStateHandle` defaults to `0L` — always validate `bookId > 0` before DB queries. -> SavedStateHandle 取出的 bookId 可能为 null（默认 0L），必须校验 > 0。
+- `WheelViewModel.spin()` validates `items` is non-empty before spinning; shows error if empty. -> 转盘旋转前校验是否有选项，无选项则展示错误提示。
+- `PdfViewer` has retry button on load failure via `retryTrigger` state. -> PDF 加载失败时展示重试按钮。
+- `SettingsScreen` shows Snackbar for export/import success/failure results. -> 设置页导入导出结果通过 Snackbar 展示。
 - Custom `AppException.kt` (sealed class + custom `Result<T>`) and `DataManager.kt` have been removed — they were dead code.
 
 ### Performance / 性能关键点
@@ -50,8 +53,10 @@ Only **DARK** and **LIGHT** themes. Applied globally at the `FlowReaderNavHost` 
 
 ## Room DB
 
-- 6 entities, DB version 4, `exportSchema=false`.
+- 6 entities, DB version 4, `exportSchema=true` (schema JSON in `app/schemas/`).
 - All DAO and Entity files are in `data/local/dao/` and `data/local/entity/` respectively, mirroring 1:1.
+- `BackupRepositoryImpl.importData()` uses `database.withTransaction` for atomic batch insert.
+- `fallbackToDestructiveMigration()` has been removed — migrations use explicit `addMigrations()` for future version bumps.
 
 ### Indexes / 索引
 
