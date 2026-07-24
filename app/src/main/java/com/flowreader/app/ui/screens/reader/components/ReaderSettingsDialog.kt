@@ -74,19 +74,15 @@ fun ReaderSettingsDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    ReaderTheme.values().filter { it != ReaderTheme.SYSTEM }.forEach { theme ->
+                    listOf(ReaderTheme.LIGHT, ReaderTheme.DARK).forEach { theme ->
                         FilterChip(
                             selected = settings.theme == theme,
                             onClick = { onThemeChange(theme) },
                             label = {
                                 Text(
                                     when (theme) {
-                                        ReaderTheme.LIGHT -> "浅"
-                                        ReaderTheme.DARK -> "深"
-                                        ReaderTheme.SEPIA -> "护眼"
-                                        ReaderTheme.PAPER -> "羊皮"
-                                        ReaderTheme.AMOLED -> "夜间"
-                                        else -> ""
+                                        ReaderTheme.LIGHT -> "浅色"
+                                        ReaderTheme.DARK -> "深色"
                                     }
                                 )
                             }

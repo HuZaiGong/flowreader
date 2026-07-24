@@ -12,10 +12,9 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingsUiState(
-    val appTheme: ReaderTheme = ReaderTheme.SYSTEM,
+    val appTheme: ReaderTheme = ReaderTheme.LIGHT,
     val readingSettings: ReadingSettings = ReadingSettings(),
     val isLoading: Boolean = true,
-    val autoTimeTheme: Boolean = false,
     val readingReminderEnabled: Boolean = false,
     val readingReminderHour: Int = 20,
     val readingReminderMinute: Int = 0,
@@ -51,7 +50,6 @@ class SettingsViewModel @Inject constructor(
                     appTheme = settings.theme,
                     readingSettings = settings.defaultReadingSettings,
                     isLoading = false,
-                    autoTimeTheme = settings.autoTimeTheme,
                     readingReminderEnabled = settings.readingReminderEnabled,
                     readingReminderHour = settings.readingReminderHour,
                     readingReminderMinute = settings.readingReminderMinute,
@@ -102,11 +100,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             backupRepository.importData(uri)
                 .onSuccess { result ->
-                    _uiState.update { 
+                    _uiState.update {
                         it.copy(
-                            isImporting = false, 
+                            isImporting = false,
                             importResult = "导入成功: ${result.booksImported}本书, ${result.bookmarksImported}个书签"
-                        ) 
+                        )
                     }
                 }
                 .onFailure { e ->
@@ -126,12 +124,6 @@ class SettingsViewModel @Inject constructor(
     fun updateAppTheme(theme: ReaderTheme) {
         viewModelScope.launch {
             settingsRepository.updateTheme(theme)
-        }
-    }
-
-    fun updateReaderTheme(theme: ReaderTheme) {
-        viewModelScope.launch {
-            settingsRepository.updateReaderTheme(theme)
         }
     }
 
@@ -167,12 +159,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val currentSettings = _uiState.value.readingSettings
             settingsRepository.updateReadingSettings(currentSettings.copy(screenTimeoutMinutes = minutes))
-        }
-    }
-
-    fun updateAutoTimeTheme(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.updateAutoTimeTheme(enabled)
         }
     }
 

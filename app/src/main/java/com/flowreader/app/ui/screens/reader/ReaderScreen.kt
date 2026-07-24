@@ -61,27 +61,14 @@ fun ReaderScreen(
         }
     }
 
-    LaunchedEffect(uiState.readingSettings.theme) {
-        when (uiState.readingSettings.theme) {
-            ReaderTheme.AMOLED -> activity?.window?.decorView?.setBackgroundColor(Color.Black.toArgb())
-            else -> activity?.window?.decorView?.setBackgroundColor(Color.Transparent.toArgb())
-        }
-    }
-
     val backgroundColor = when (uiState.readingSettings.theme) {
         ReaderTheme.LIGHT -> ReaderColors.LightBackground
-        ReaderTheme.DARK, ReaderTheme.SYSTEM, ReaderTheme.MORNING, ReaderTheme.NOON, ReaderTheme.EVENING, ReaderTheme.NIGHT -> ReaderColors.DarkBackground
-        ReaderTheme.SEPIA -> ReaderColors.SepiaBackground
-        ReaderTheme.PAPER -> ReaderColors.PaperBackground
-        ReaderTheme.AMOLED -> ReaderColors.AmoledBackground
+        ReaderTheme.DARK -> ReaderColors.DarkBackground
     }
 
     val textColor = when (uiState.readingSettings.theme) {
         ReaderTheme.LIGHT -> ReaderColors.LightText
-        ReaderTheme.DARK, ReaderTheme.SYSTEM, ReaderTheme.MORNING, ReaderTheme.NOON, ReaderTheme.EVENING, ReaderTheme.NIGHT -> ReaderColors.DarkText
-        ReaderTheme.SEPIA -> ReaderColors.SepiaText
-        ReaderTheme.PAPER -> ReaderColors.PaperText
-        ReaderTheme.AMOLED -> ReaderColors.AmoledText
+        ReaderTheme.DARK -> ReaderColors.DarkText
     }
 
     Box(

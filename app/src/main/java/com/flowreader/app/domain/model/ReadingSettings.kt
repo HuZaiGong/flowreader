@@ -2,15 +2,7 @@ package com.flowreader.app.domain.model
 
 enum class ReaderTheme {
     LIGHT,
-    DARK,
-    SEPIA,
-    PAPER,
-    AMOLED,
-    SYSTEM,
-    MORNING,
-    NOON,
-    EVENING,
-    NIGHT
+    DARK
 }
 
 enum class PageMode {
@@ -111,11 +103,8 @@ data class ReadingSettings(
 )
 
 data class AppSettings(
-    val theme: ReaderTheme = ReaderTheme.SYSTEM,
+    val theme: ReaderTheme = ReaderTheme.LIGHT,
     val defaultReadingSettings: ReadingSettings = ReadingSettings(),
-    val autoTimeTheme: Boolean = false,
-    val timeThemeStartHour: Int = 20,
-    val timeThemeEndHour: Int = 6,
     val readingReminderEnabled: Boolean = false,
     val readingReminderHour: Int = 20,
     val readingReminderMinute: Int = 0

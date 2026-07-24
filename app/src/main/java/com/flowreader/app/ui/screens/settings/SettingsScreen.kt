@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,12 +17,9 @@ import com.flowreader.app.domain.model.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBackClick: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showReaderThemeDialog by remember { mutableStateOf(false) }
     var showPageModeDialog by remember { mutableStateOf(false) }
     var showFontSizeDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
@@ -33,12 +29,7 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("设置") },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                }
+                title = { Text("设置") }
             )
         }
     ) { paddingValues ->
@@ -49,26 +40,14 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             SettingsSection(title = "显示设置") {
-                SettingsItem(
-                    icon = Icons.Default.Palette,
-                    title = "应用主题",
-                    subtitle = getThemeName(uiState.appTheme),
-                    onClick = { showThemeDialog = true }
-                )
-
                 SettingsSwitch(
-                    icon = Icons.Default.BrightnessAuto,
-                    title = "自动夜间模式",
-                    subtitle = "根据时间自动切换深色/浅色",
-                    checked = uiState.autoTimeTheme,
-                    onCheckedChange = { viewModel.updateAutoTimeTheme(it) }
-                )
-
-                SettingsItem(
-                    icon = Icons.Default.Brightness6,
-                    title = "阅读主题",
-                    subtitle = getReaderThemeName(uiState.readingSettings.theme),
-                    onClick = { showReaderThemeDialog = true }
+                    icon = Icons.Default.DarkMode,
+                    title = "深色模式",
+                    subtitle = if (uiState.appTheme == ReaderTheme.DARK) "已开启" else "已关闭",
+                    checked = uiState.appTheme == ReaderTheme.DARK,
+                    onCheckedChange = { dark ->
+                        viewModel.updateAppTheme(if (dark) ReaderTheme.DARK else ReaderTheme.LIGHT)
+                    }
                 )
             }
 
@@ -154,7 +133,7 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "关于心流阅读",
-                    subtitle = "版本 12.0.0",
+                    subtitle = "版本 44.0.2",
                     onClick = { showAboutDialog = true }
                 )
             }
@@ -172,29 +151,6 @@ fun SettingsScreen(
             currentGoal = uiState.dailyReadingGoal,
             onGoalChange = { viewModel.updateDailyReadingGoal(it) },
             onDismiss = { showReadingGoalDialog = false }
-        )
-    }
-
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
-            currentTheme = uiState.appTheme,
-            onThemeSelect = {
-                viewModel.updateAppTheme(it)
-                showThemeDialog = false
-            },
-            onDismiss = { showThemeDialog = false }
-        )
-    }
-
-    if (showReaderThemeDialog) {
-        ThemeSelectionDialog(
-            currentTheme = uiState.readingSettings.theme,
-            onThemeSelect = {
-                viewModel.updateReaderTheme(it)
-                showReaderThemeDialog = false
-            },
-            onDismiss = { showReaderThemeDialog = false },
-            showSystemTheme = false
         )
     }
 
@@ -286,50 +242,6 @@ private fun SettingsSwitch(
 }
 
 @Composable
-private fun ThemeSelectionDialog(
-    currentTheme: ReaderTheme,
-    onThemeSelect: (ReaderTheme) -> Unit,
-    onDismiss: () -> Unit,
-    showSystemTheme: Boolean = true
-) {
-    val themes = if (showSystemTheme) {
-        ReaderTheme.values().toList()
-    } else {
-        ReaderTheme.values().filter { it != ReaderTheme.SYSTEM }
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("选择主题") },
-        text = {
-            Column {
-                themes.forEach { theme ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onThemeSelect(theme) }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = theme == currentTheme,
-                            onClick = { onThemeSelect(theme) }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(getThemeName(theme))
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        }
-    )
-}
-
-@Composable
 private fun PageModeDialog(
     currentMode: PageMode,
     onModeSelect: (PageMode) -> Unit,
@@ -410,32 +322,6 @@ private fun FontSizeDialog(
             }
         }
     )
-}
-
-private fun getThemeName(theme: ReaderTheme): String = when (theme) {
-    ReaderTheme.SYSTEM -> "跟随系统"
-    ReaderTheme.LIGHT -> "浅色"
-    ReaderTheme.DARK -> "深色"
-    ReaderTheme.SEPIA -> "护眼"
-    ReaderTheme.PAPER -> "羊皮纸"
-    ReaderTheme.AMOLED -> "夜间"
-    ReaderTheme.MORNING -> "晨读"
-    ReaderTheme.NOON -> "午读"
-    ReaderTheme.EVENING -> "暮读"
-    ReaderTheme.NIGHT -> "夜读"
-}
-
-private fun getReaderThemeName(theme: ReaderTheme): String = when (theme) {
-    ReaderTheme.SYSTEM -> "浅色"
-    ReaderTheme.LIGHT -> "浅色"
-    ReaderTheme.DARK -> "深色"
-    ReaderTheme.SEPIA -> "护眼"
-    ReaderTheme.PAPER -> "羊皮纸"
-    ReaderTheme.AMOLED -> "夜间"
-    ReaderTheme.MORNING -> "晨读"
-    ReaderTheme.NOON -> "午读"
-    ReaderTheme.EVENING -> "暮读"
-    ReaderTheme.NIGHT -> "夜读"
 }
 
 private fun getPageModeName(mode: PageMode): String = when (mode) {

@@ -14,12 +14,16 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+internal val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
 class SettingsRepository @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    companion object {
+        val THEME_KEY = stringPreferencesKey("theme")
+    }
+
     private object PreferencesKeys {
         val THEME = stringPreferencesKey("theme")
         val FONT_SIZE = intPreferencesKey("font_size")
@@ -30,9 +34,6 @@ class SettingsRepository @Inject constructor(
         val PAGE_MODE = stringPreferencesKey("page_mode")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SCREEN_TIMEOUT_MINUTES = intPreferencesKey("screen_timeout_minutes")
-        val AUTO_TIME_THEME = booleanPreferencesKey("auto_time_theme")
-        val TIME_THEME_START_HOUR = intPreferencesKey("time_theme_start_hour")
-        val TIME_THEME_END_HOUR = intPreferencesKey("time_theme_end_hour")
         val READING_REMINDER_ENABLED = booleanPreferencesKey("reading_reminder_enabled")
         val READING_REMINDER_HOUR = intPreferencesKey("reading_reminder_hour")
         val READING_REMINDER_MINUTE = intPreferencesKey("reading_reminder_minute")
@@ -86,9 +87,9 @@ class SettingsRepository @Inject constructor(
         .map { preferences ->
             AppSettings(
                 theme = try {
-                    ReaderTheme.valueOf(preferences[PreferencesKeys.THEME] ?: ReaderTheme.SYSTEM.name)
+                    ReaderTheme.valueOf(preferences[PreferencesKeys.THEME] ?: ReaderTheme.LIGHT.name)
                 } catch (e: Exception) {
-                    ReaderTheme.SYSTEM
+                    ReaderTheme.LIGHT
                 },
                 defaultReadingSettings = ReadingSettings(
                     fontSize = preferences[PreferencesKeys.FONT_SIZE] ?: 18,
@@ -113,9 +114,6 @@ class SettingsRepository @Inject constructor(
                     screenTimeoutMinutes = preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] ?: 0,
                     gestureSettings = getGestureSettings(preferences)
                 ),
-                autoTimeTheme = preferences[PreferencesKeys.AUTO_TIME_THEME] ?: false,
-                timeThemeStartHour = preferences[PreferencesKeys.TIME_THEME_START_HOUR] ?: 20,
-                timeThemeEndHour = preferences[PreferencesKeys.TIME_THEME_END_HOUR] ?: 6,
                 readingReminderEnabled = preferences[PreferencesKeys.READING_REMINDER_ENABLED] ?: false,
                 readingReminderHour = preferences[PreferencesKeys.READING_REMINDER_HOUR] ?: 20,
                 readingReminderMinute = preferences[PreferencesKeys.READING_REMINDER_MINUTE] ?: 0
@@ -174,19 +172,6 @@ class SettingsRepository @Inject constructor(
     suspend fun updateScreenTimeout(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = minutes
-        }
-    }
-
-    suspend fun updateAutoTimeTheme(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.AUTO_TIME_THEME] = enabled
-        }
-    }
-
-    suspend fun updateTimeThemeHours(startHour: Int, endHour: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.TIME_THEME_START_HOUR] = startHour
-            preferences[PreferencesKeys.TIME_THEME_END_HOUR] = endHour
         }
     }
 

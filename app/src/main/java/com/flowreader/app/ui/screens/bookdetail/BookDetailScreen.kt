@@ -21,7 +21,6 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
-import com.flowreader.app.ui.theme.FlowReaderTheme
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -47,9 +46,8 @@ fun BookDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
 
-    FlowReaderTheme(theme = uiState.appTheme) {
-        Scaffold(
-            topBar = {
+    Scaffold(
+        topBar = {
                 TopAppBar(
                     title = { Text(uiState.book?.title ?: "书籍详情") },
                     navigationIcon = {
@@ -161,11 +159,12 @@ fun BookDetailScreen(
                 }
             }
         }
-    }
 }
 
 @Composable
 private fun BookInfoHeader(
+
+
     book: com.flowreader.app.domain.model.Book,
     onReadClick: () -> Unit
 ) {

@@ -30,8 +30,6 @@ import coil.compose.AsyncImagePainter
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import com.flowreader.app.domain.model.Book
-import com.flowreader.app.domain.model.ReaderTheme
-import com.flowreader.app.ui.theme.FlowReaderTheme
 import java.io.File
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -79,8 +77,7 @@ fun LibraryScreen(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
 
-    FlowReaderTheme(theme = uiState.appTheme) {
-        Scaffold(
+    Scaffold(
             topBar = {
                 if (showSearchBar) {
                     SearchBar(
@@ -281,7 +278,6 @@ fun LibraryScreen(
                 }
             }
         }
-    }
 }
 
 @Composable

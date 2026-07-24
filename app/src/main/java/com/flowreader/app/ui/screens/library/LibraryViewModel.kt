@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.flowreader.app.data.repository.SettingsRepository
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Category
-import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.CategoryRepository
 import com.flowreader.app.domain.repository.ChapterRepository
@@ -33,7 +32,6 @@ data class LibraryUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val appTheme: ReaderTheme = ReaderTheme.SYSTEM,
     val sortOrder: SortOrder = SortOrder.ADDED_TIME
 )
 
@@ -58,17 +56,8 @@ class LibraryViewModel @Inject constructor(
     private var booksCollectionJob: Job? = null
 
     init {
-        loadSettings()
         loadCategories()
         loadBooks()
-    }
-
-    private fun loadSettings() {
-        viewModelScope.launch {
-            settingsRepository.appSettings.collect { settings ->
-                _uiState.update { it.copy(appTheme = settings.theme) }
-            }
-        }
     }
 
     private fun loadCategories() {

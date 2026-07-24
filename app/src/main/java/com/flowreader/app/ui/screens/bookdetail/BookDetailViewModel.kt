@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
-import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.ChapterRepository
@@ -21,8 +20,7 @@ data class BookDetailUiState(
     val chapters: List<Chapter> = emptyList(),
     val bookmarks: List<Bookmark> = emptyList(),
     val isLoading: Boolean = true,
-    val error: String? = null,
-    val appTheme: ReaderTheme = ReaderTheme.SYSTEM
+    val error: String? = null
 )
 
 @HiltViewModel
@@ -41,15 +39,6 @@ class BookDetailViewModel @Inject constructor(
 
     init {
         loadBookDetails()
-        loadSettings()
-    }
-
-    private fun loadSettings() {
-        viewModelScope.launch {
-            settingsRepository.appSettings.collect { settings ->
-                _uiState.update { it.copy(appTheme = settings.theme) }
-            }
-        }
     }
 
     private fun loadBookDetails() {

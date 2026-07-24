@@ -54,32 +54,10 @@ val md_theme_dark_onSurfaceVariant = Color(0xFFCAC4D0)
 val md_theme_dark_outline = Color(0xFF938F99)
 val md_theme_dark_outlineVariant = Color(0xFF49454F)
 
-// Reader Theme Colors
 object ReaderColors {
     val LightBackground = Color(0xFFFFFFFF)
     val LightText = Color(0xFF1C1B1F)
 
     val DarkBackground = Color(0xFF1C1B1F)
     val DarkText = Color(0xFFE6E1E5)
-
-    val SepiaBackground = Color(0xFFF4ECD8)
-    val SepiaText = Color(0xFF5B4636)
-
-    val PaperBackground = Color(0xFFFAF8F5)
-    val PaperText = Color(0xFF3C3C3C)
-
-    val AmoledBackground = Color(0xFF000000)
-    val AmoledText = Color(0xFFE0E0E0)
-
-    val MorningBackground = Color(0xFFFFF8E7)
-    val MorningText = Color(0xFF4A3F35)
-
-    val NoonBackground = Color(0xFFFFFFFF)
-    val NoonText = Color(0xFF1C1B1F)
-
-    val EveningBackground = Color(0xFFFFF0E0)
-    val EveningText = Color(0xFF4A3525)
-
-    val NightBackground = Color(0xFF0D1117)
-    val NightText = Color(0xFF8B949E)
 }
