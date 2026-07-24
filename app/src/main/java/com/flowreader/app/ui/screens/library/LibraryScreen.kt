@@ -58,12 +58,6 @@ fun LibraryScreen(
     val context = LocalContext.current
     val listState = rememberLazyListState()
 
-    val singleBookPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.importBook(it) }
-    }
-
     val multipleBookPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments()
     ) { uris: List<Uri> ->

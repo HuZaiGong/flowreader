@@ -23,7 +23,7 @@ class FullTextSearch @Inject constructor(
     private var database: SQLiteDatabase? = null
 
     suspend fun initialize() = withContext(Dispatchers.IO) {
-        if (database != null && database!!.isOpen) return@withContext
+        if (database?.isOpen == true) return@withContext
 
         try {
             database = context.openOrCreateDatabase(DB_NAME, Context.MODE_PRIVATE, null)
@@ -82,7 +82,8 @@ class FullTextSearch @Inject constructor(
     }
 
     private fun ensureInitialized() {
-        if (database == null || !database!!.isOpen) {
+        val db = database
+        if (db == null || !db.isOpen) {
             throw FtsNotInitializedException("FullTextSearch has not been initialized")
         }
     }

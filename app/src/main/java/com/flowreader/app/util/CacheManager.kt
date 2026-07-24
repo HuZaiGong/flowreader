@@ -158,9 +158,15 @@ class CacheManager @Inject constructor(
     }
 
     fun getCacheStats(): CacheStats {
+        val bookCount: Int
+        val chapterCount: Int
+        synchronized(chapterCache) {
+            bookCount = chapterCache.size
+            chapterCount = chapterCache.values.sumOf { it.size }
+        }
         return CacheStats(
-            booksInMemory = chapterCache.size,
-            chaptersInMemory = chapterCache.values.sumOf { it.size },
+            booksInMemory = bookCount,
+            chaptersInMemory = chapterCount,
             coversCached = coverCache.size,
             estimatedMemory = memoryUsage.get()
         )
@@ -190,8 +196,16 @@ class CacheManager @Inject constructor(
         }
     }
     
+    private var cacheHits = AtomicInteger(1)
+    private var cacheMisses = AtomicInteger(1)
+
+    fun recordCacheHit() = cacheHits.incrementAndGet()
+    fun recordCacheMiss() = cacheMisses.incrementAndGet()
+
     fun getCacheHitRate(): Float {
-        return if (memoryUsage.get() > 0) 0.75f else 0f
+        val hits = cacheHits.get()
+        val total = hits + cacheMisses.get()
+        return if (total > 0) hits.toFloat() / total else 0f
     }
 
     data class CacheStats(
@@ -202,9 +216,9 @@ class CacheManager @Inject constructor(
     )
 }
 
-fun CacheManager.ChapterMeta.toDomain() = com.flowreader.app.domain.model.Chapter(
+fun CacheManager.ChapterMeta.toDomain(bookId: Long) = com.flowreader.app.domain.model.Chapter(
     id = id,
-    bookId = 0,
+    bookId = bookId,
     index = index,
     title = title,
     content = "",

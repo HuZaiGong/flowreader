@@ -94,8 +94,7 @@ UI 层（Compose 页面 + ViewModel）
 - 阅读进度保存采用 **3 秒防抖** 以减少数据库写入。
 
 ### 错误处理
-- `AppException` 是用于领域错误的密封类（`DatabaseError`、`FileError`、`ParseError` 等）。
-- 使用 `Result<T>` 包装可能失败的操作。
+- 使用 `kotlin.Result` 包装可能失败的操作（`AppException` 密封类及自定义 `Result` 已被移除）。
 
 ### 异步模式
 - 使用 Kotlin **Coroutines + Flow** 处理异步任务。

@@ -43,6 +43,4 @@ interface ChapterDao {
     @Query("SELECT COUNT(*) FROM chapters WHERE bookId = :bookId")
     suspend fun getChapterCount(bookId: Long): Int
 
-    @Query("SELECT COUNT(*) FROM books")
-    suspend fun getBookCount(): Int
 }

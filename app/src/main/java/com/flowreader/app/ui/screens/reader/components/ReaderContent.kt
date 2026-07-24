@@ -98,7 +98,7 @@ fun ReaderContent(
                         ),
                         color = textColor,
                         modifier = Modifier
-                            .padding(bottom = settings.paragraphSpacing.toInt().dp)
+                            .padding(bottom = settings.paragraphSpacing.dp)
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onLongPress = {

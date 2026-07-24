@@ -143,9 +143,9 @@ fun WheelScreen(
         }
 
         // 结果对话框
-        val showDialogResult = uiState.showResultDialog && uiState.result != null
-        if (showDialogResult) {
-            val result = uiState.result!!
+        val resultForDialog = uiState.result
+        if (uiState.showResultDialog && resultForDialog != null) {
+            val result = resultForDialog
             AlertDialog(
                 onDismissRequest = { viewModel.dismissResult() },
                 title = { Text("🎯 转盘结果") },

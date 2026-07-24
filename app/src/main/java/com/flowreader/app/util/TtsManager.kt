@@ -92,9 +92,10 @@ class TtsManager @Inject constructor(
                         }
                     }
 
-                    @Deprecated("Deprecated in Java")
+                    @Suppress("OVERRIDE_DEPRECATION")
                     override fun onError(utteranceId: String?) {
-                        onError(utteranceId, -1)
+                        Log.e(TAG, "TTS error (legacy): utterance=$utteranceId")
+                        scope.launch { _ttsState.update { TtsState.ERROR } }
                     }
                 })
                 onInit()

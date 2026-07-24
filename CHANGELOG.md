@@ -7,8 +7,28 @@
 ## [v43.0.0] - 2026-07
 *   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，连续旋转更流畅；转盘文字始终正向可读，不再倒置。
 *   **Gradle 升级**：Gradle Wrapper 从 `8.7` 升级到 `9.6.1`；重构 `gradle.properties`，添加 `UseParallelGC`、`vfs.watch`、`kotlin.daemon.jvmargs` 等优化项，提升构建性能。
+*   **漏洞修复**：
+    *   `StatsViewModel`：阅读统计数据不再只快取一次，每次收集时实时刷新
+    *   `FullTextSearch`：消除不安全的 `!!` 操作符，使用局部变量确保空安全
+    *   `WheelViewModel`：动画协程取消后 `isSpinning` 自动恢复为 false，防止永久卡死
+    *   `WheelScreen`：消除转盘结果对话框的 NPE 隐患（`!!` → 局部变量判空）
+    *   `PdfViewer`：`printStackTrace()` 替换为 `Log.e()`，符合 Android 规范
+    *   `ReaderContent`：`paragraphSpacing.toInt().dp` 改用直接浮点数转换，消除精度丢失
+    *   `CacheManager.ChapterMeta.toDomain()`：新增 `bookId` 参数，不再始终返回 0
+*   **架构优化**：
+    *   移除完全未使用的 `domain/model/AppException.kt`（含自定义 `Result<T>`）
+    *   移除完全未使用的 `data/repository/DataManager.kt` 和 `DataCleaner`
+    *   `BookLoader.kt`：移除与 `domain/usecase/` 重复的 `TextPaginator` 类
+    *   `FlowReaderApp.kt`：移除未使用的导航导入和未使用的 `SettingsViewModel` 注入
+    *   `ChapterDao`：移除与 `BookDao` 重复的 `getBookCount()`
+    *   `LibraryScreen`：移除未使用的 `singleBookPickerLauncher`
+    *   移除各 Repository 实现中的无用实体导入（`BookEntity` 后恢复，`MemoryManager` 中的 `Build`）
+*   **性能提升**：
+    *   `ReadingStatsEntity`：新增 `date` 列独立索引，优化按日期筛选查询
+    *   `CacheManager.getCacheStats()`：使用 `synchronized` 保护并发访问
+    *   `CacheManager`：真实缓存命中/未命中统计替换原有的硬编码 `0.75f`
 *   **构建修复**：修复 `LibraryViewModel` 中缺失的 `Job` 导入，消除 Kotlin 2.0 编译错误。
-*   **APK 构建完成**：通过 `./gradlew assembleDebug` 验证。
+*   **APK 构建完成**：通过 `./gradlew assembleDebug` 验证，单元测试通过。
 
 ## [v42] - 2025-06
 *   **交互体验**：全面优化页面交互动画，列表项添加 `AnimatedVisibility` 淡入效果，使交互更平滑自然。

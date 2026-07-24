@@ -5,7 +5,10 @@ import androidx.room.PrimaryKey
 
 @Entity(
     tableName = "reading_stats",
-    indices = [androidx.room.Index(value = ["bookId", "date"], unique = true)]
+    indices = [
+        androidx.room.Index(value = ["bookId", "date"], unique = true),
+        androidx.room.Index(value = ["date"])
+    ]
 )
 data class ReadingStatsEntity(
     @PrimaryKey(autoGenerate = true)

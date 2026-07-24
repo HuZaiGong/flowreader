@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -60,7 +61,7 @@ fun PdfViewer(
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                Log.e("PdfViewer", "Failed to render PDF page", e)
             }
         }
     }

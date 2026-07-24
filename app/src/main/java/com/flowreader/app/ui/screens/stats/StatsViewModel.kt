@@ -40,13 +40,12 @@ class StatsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val todayReadTime = readingStatsRepository.getTodayReadTime()
-            val todayReadPages = readingStatsRepository.getTodayReadPages()
-            val totalReadTime = readingStatsRepository.getTotalReadTime()
-            val totalReadPages = readingStatsRepository.getTotalReadPages()
-            val summary = readingStatsRepository.getReadingSummary()
-
             readingStatsRepository.getRecentDailyStats(7).collect { dailyStats ->
+                val todayReadTime = readingStatsRepository.getTodayReadTime()
+                val todayReadPages = readingStatsRepository.getTodayReadPages()
+                val totalReadTime = readingStatsRepository.getTotalReadTime()
+                val totalReadPages = readingStatsRepository.getTotalReadPages()
+                val summary = readingStatsRepository.getReadingSummary()
                 _uiState.update {
                     it.copy(
                         isLoading = false,

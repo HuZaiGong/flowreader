@@ -244,6 +244,9 @@ cd flowreader
 ### v43.0.0 (最新发布)
 *   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，连续旋转更流畅；转盘文字始终正向可读，不再倒置。
 *   **Gradle 升级**：Gradle Wrapper 从 `8.7` 升级到 `9.6.1`；重构 `gradle.properties`，添加 `UseParallelGC`、`vfs.watch`、`kotlin.daemon.jvmargs` 等优化项，提升构建性能。
+*   **漏洞修复**：修复 `StatsViewModel` 中阅读统计数据快照只获取一次、永不刷新的问题；修复 `FullTextSearch` 中不安全 `!!` 操作符；修复 `WheelViewModel` 中 scope 取消后 `isSpinning` 永久卡死；修复转盘结果对话框的 NPE 隐患；修复 `PdfViewer` 中 `printStackTrace` 错误日志输出；修复 `ParagraphSpacing` 浮点数精度丢失。
+*   **架构优化**：移除 `AppException.kt`（未使用的死代码）、`DataManager.kt` 和 `DataCleaner`；删除 `BookLoader.kt` 中重复的 `TextPaginator` 类；移除 `FlowReaderApp.kt` 中未使用的 `SettingsViewModel` 注入和导航导入；移除 `ChapterDao` 中重复的 `getBookCount()` 查询；移除 `LibraryScreen` 中未使用的 `singleBookPickerLauncher`。
+*   **性能提升**：`ReadingStatsEntity` 新增 `date` 列索引，优化日期筛选查询速度；`CacheManager.getCacheStats()` 修复线程安全访问；`CacheManager.ChapterMeta.toDomain()` 新增 `bookId` 参数，修复始终返回 `0` 的 bug；替换虚假的缓存命中率为真实统计。
 
 ### v41
 *   **决策转盘**：新增可定制的决策转盘功能，支持自定义选项和颜色。

@@ -50,7 +50,7 @@ class WheelViewModel @Inject constructor() : ViewModel() {
         val additionalAngle = ((targetAngle - currentAngle) % 360 + 360) % 360
         val totalRotation = 360f * 5 + additionalAngle
 
-        viewModelScope.launch {
+        val spinJob = viewModelScope.launch {
             // 动画旋转
             val steps = 60
             val stepDuration = 4000L / steps
@@ -70,6 +70,11 @@ class WheelViewModel @Inject constructor() : ViewModel() {
                     showResultDialog = true,
                     rotationAngle = targetAngle
                 )
+            }
+        }
+        spinJob.invokeOnCompletion { cause ->
+            if (cause != null) {
+                _uiState.update { it.copy(isSpinning = false) }
             }
         }
     }

@@ -13,13 +13,15 @@ ui/screens    domain/usecase  data/repository  data/local/dao
 - **DI**: Hilt (`di/AppModule.kt`) — DatabaseModule (`@Provides`) provides 6 DAOs; RepositoryModule (`@Binds`) binds 7 repos (Book, Chapter, Bookmark, Annotation, Category, ReadingStats, Backup).
 - **Navigation**: `sealed class Screen` in `ui/Navigation.kt`. Routes: `library`, `wheel`, `stats`, `settings`, `book_detail/{bookId}`, `reader/{bookId}`. 4 bottom tabs (Library, Wheel, Stats, Settings).
 - **State**: Each ViewModel exposes a `StateFlow<XxxUiState>`. Private `_uiState` pattern. Progress save uses 3-second debounce (`debouncedSaveProgress()` in `ReaderViewModel.kt:156`).
-- **Error handling**: Uses `kotlin.Result` (built-in); custom `com.flowreader.app.domain.model.Result<T>` in `AppException.kt` is unused dead code.
+- **Error handling**: Uses `kotlin.Result` (built-in). Custom `AppException.kt` and `DataManager.kt` have been removed (dead code).
 - **Settings**: DataStore Preferences via `SettingsRepository`.
 - **Concurrency**: `ChapterRepositoryImpl.contentCache` uses `ConcurrentHashMap`; `BookLoader` uses single `CoroutineScope` instead of per-call scopes.
+- **Cache**: `CacheManager` tracks real cache hit/miss rates (previously hardcoded `0.75f`).
 
 ## Room DB
 
-- 6 entities: Book, Chapter, Bookmark, Annotation, Category, ReadingStats. DB version 4, `exportSchema=false`. KSP schemaLocation arg in build.gradle is **unused** because `exportSchema = false`.
+- 6 entities: Book, Chapter, Bookmark, Annotation, Category, ReadingStats. DB version 4, `exportSchema=false`.
+- `ReadingStatsEntity` has indices on `(bookId, date)` (unique) and `date` (for date-only queries).
 - `data/local/entity/` and `data/local/dao/` mirror each other 1:1.
 
 ## Key Classes

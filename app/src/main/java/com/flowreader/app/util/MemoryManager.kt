@@ -2,7 +2,6 @@ package com.flowreader.app.util
 
 import android.app.ActivityManager
 import android.content.Context
-import android.os.Build
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
