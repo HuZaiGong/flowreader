@@ -244,7 +244,10 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v45.0.1 (最新发布)
+### v45.0.2 (最新发布)
+- **章节切换白屏修复**：`goToChapter()` 中 content 异步加载完成后未更新 `currentChapter`，导致首次切换章节正文空白；改为在协程内同步加载完 content 后再统一设置状态
+
+### v45.0.1
 - 按书籍统计：BookDetailScreen 阅读统计卡片（每本书阅读时长/页数）
 - 趋势图表：StatsScreen Canvas 柱状图展示最近 7 天阅读趋势
 - EPUB 图片：自动提取 EPUB 内嵌图片并渲染

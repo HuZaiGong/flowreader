@@ -270,44 +270,42 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun goToChapter(index: Int) {
-        val state = _uiState.value
-        if (index in state.chapters.indices) {
+        if (index !in _uiState.value.chapters.indices) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+
+            val state = _uiState.value
             val existingChapter = state.chapters[index]
-            val chapterToUse = if (existingChapter.content.isNotEmpty()) {
-                existingChapter
+            val content = if (existingChapter.content.isNotEmpty()) {
+                existingChapter.content
             } else {
-                viewModelScope.launch {
-                    val content = chapterRepository.getChapterContent(bookId, index) ?: ""
-                    val updated = existingChapter.copy(content = content)
-                    val updatedChapters = state.chapters.toMutableList().apply {
-                        if (index < size) set(index, updated)
-                    }
-                    _uiState.update {
-                        it.copy(chapters = updatedChapters)
-                    }
-                }
-                existingChapter
+                chapterRepository.getChapterContent(bookId, index) ?: ""
+            }
+            val chapter = existingChapter.copy(content = content)
+            val updatedChapters = state.chapters.toMutableList().apply {
+                if (index < size) set(index, chapter)
             }
 
             val progress = if (state.chapters.isNotEmpty()) {
                 (index.toFloat() + 1) / state.chapters.size
             } else 0f
 
-            viewModelScope.launch {
-                bookRepository.updateReadingProgress(bookId, index, 0, progress)
-            }
+            bookRepository.updateReadingProgress(bookId, index, 0, progress)
 
             _uiState.update {
                 it.copy(
-                    currentChapter = chapterToUse,
+                    chapters = updatedChapters,
+                    currentChapter = chapter,
                     currentChapterIndex = index,
                     currentPosition = 0,
+                    isLoading = false,
                     showChapterList = false
                 )
             }
-            
+
             calculateReadingPrediction()
-            preloadAdjacentChapters(index, state.chapters.size)
+            preloadAdjacentChapters(index, _uiState.value.chapters.size)
         }
     }
     

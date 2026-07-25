@@ -2,6 +2,9 @@
 
 **Current version: 45.0.2**
 
+> ⚠️ `goToChapter()` bug: content loaded async but `currentChapter` set to empty version first → blank screen.
+> Fixed: now always loads content synchronously in coroutine before updating `currentChapter`.
+
 Offline-first Android e-book reader (EPUB/TXT/PDF/Markdown). Single-module, Clean Architecture + MVVM.
 
 All Phase 1-3 roadmap items are complete. Key features include: per-book reading stats, 7-day trend chart, EPUB image/CSS rendering, custom font import, font family selector, full-text search (FTS5), annotation highlighting, annotation/bookmark management, dynamic LRU cache with MemoryManager awareness.
