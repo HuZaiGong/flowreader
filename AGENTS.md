@@ -132,6 +132,10 @@ The unrotated center circle and outer border are drawn outside the `rotate` bloc
 Never put a `LazyColumn` inside another `LazyColumn`'s `item` block. Compose throws `IllegalStateException` because the inner scrollable component has no height constraint. Use a plain `Column` instead. This was fixed in `BookDetailScreen.kt`. ->
 LazyColumn 内部 item 里不能再放 LazyColumn，否则 Compose 会因测量高度为 0 而抛出 `IllegalStateException` 崩溃。应使用 `Column` 替代。
 
+### Settings About dialog uses `BuildConfig.VERSION_NAME`
+
+`SettingsScreen.kt:452` displays the version via `${BuildConfig.VERSION_NAME}` which reads from `build.gradle.kts:versionName`. **Do NOT hardcode the version string** — when bumping version, only change `build.gradle.kts`, the About dialog updates automatically. -> 设置页「关于」对话框的版本号通过 `BuildConfig.VERSION_NAME` 自动读取，升级版本号只需改 `build.gradle.kts`，不要硬编码字符串。
+
 ### WheelScreen uses `derivedStateOf` for UI state fields
 
 `WheelScreen` wraps `uiState.error` and `uiState.result` with `remember { derivedStateOf { ... } }` to scope recomposition: the error card and result card only recompose when those specific fields change, not on every `rotationAngle` update during spin animation. Key insight: `rotationAngle` changes ~60 times/second during spin, so isolating error/result from the animation loop avoids unnecessary composition of those UI subtrees. -> 转盘页面用 derivedStateOf 分离 error/result 与 rotationAngle，避免动画过程中 error/result 相关 UI 树不必要的重组。

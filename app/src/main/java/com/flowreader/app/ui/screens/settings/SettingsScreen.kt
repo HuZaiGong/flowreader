@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.flowreader.app.BuildConfig
 import com.flowreader.app.domain.model.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -449,7 +450,7 @@ private fun AboutDialog(onDismiss: () -> Unit) {
         },
         text = {
             Column {
-                Text("版本: 45.0.2")
+                Text("版本: ${BuildConfig.VERSION_NAME}")
                 Spacer(modifier = Modifier.height(8.dp))
                 Text("一款简洁优雅的电子书阅读应用")
                 Spacer(modifier = Modifier.height(8.dp))
