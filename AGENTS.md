@@ -1,6 +1,6 @@
 # FlowReader
 
-**Current version: 45.0.2**
+**Current version: 45.0.3**
 
 > ⚠️ `goToChapter()` bug: content loaded async but `currentChapter` set to empty version first → blank screen.
 > Fixed: now always loads content synchronously in coroutine before updating `currentChapter`.
@@ -62,6 +62,8 @@ Only **DARK** and **LIGHT** themes. Applied globally at the `FlowReaderNavHost` 
 - **Cache**: `CacheManager` uses `LinkedHashMap` (LRU) for chapter content, `ConcurrentHashMap` for book metadata. Tracks real hit/miss rates (previously hardcoded `0.75f`).
 - **ReadingStats `date` index**: `ReadingStatsEntity` has `(bookId, date)` unique + `date` index for date-only queries. 统计数据表有 date 独立索引.
 - **`BookLoader`**: uses single `CoroutineScope` (not per-call), call `cancelAll()` carefully — it permanently cancels the scope.
+- **WheelSpinner Canvas**: uses `drawArc` + `DrawScope.rotate()` instead of manual Path + trig per frame. During spin animation, the Canvas `rotate(rotationAngle, pivot)` transform handles all slice positioning via GPU (no per-item trig). Pre-creates `Paint` once via `remember`, avoiding per-frame allocation. -> 转盘 Canvas 使用 drawArc 和 Canvas rotate 变换替代手动 Path+三角函数，动画过程中仅改变旋转角度，无逐帧分配开销.
+- **WheelViewModel animation**: uses `System.nanoTime()` for drift-free elapsed time + `delay(16L)` for ~60 FPS frame pacing. Eliminates the old stepped 60-frame delay-based loop (~15 FPS). -> 转盘动画使用 System.nanoTime() + delay(16ms) 实现 60 FPS 帧同步，替代旧的 15 FPS 阶梯循环.
 
 ---
 
@@ -112,10 +114,27 @@ The codebase uses the built-in `kotlin.Result` (not a custom `Result<T>`). Some 
 
 `WheelViewModel.spin()` is a regular function that launches its own coroutine via `viewModelScope.launch`. It is **not** a `suspend` function. No `LaunchedEffect` needed from the Composable.
 
+### Wheel animation uses `System.nanoTime()` for timing
+
+`WheelViewModel.spin()` uses `System.nanoTime()` to measure elapsed time and `delay(16L)` for ~60 FPS frame pacing. This replaces the old stepped loop (`for i in 1..steps { delay(66) }`) which had cumulative timer drift and only ran at ~15 FPS. The new approach uses a `while(true)` loop that calculates the exact eased progress from elapsed time each frame. When elapsed ≥ duration (4 seconds), the loop exits cleanly. `Kotlin.Result` is not used; `_uiState.update` handles completion directly.
+
+### WheelSpinner uses `drawArc` + `Canvas.rotate()` for GPU-accelerated spin
+
+`WheelSpinner.kt` draws slices with `drawArc(useCenter=true)` and applies the rotation animation via `DrawScope.rotate(rotationAngle, center) { ... }`. This eliminates:
+1. Per-frame `Path()` allocation (was creating N Paths and 20-point polygon per frame)
+2. Per-frame `Paint()` allocation (now created once via `remember`)
+3. Per-frame `cos/sin` calls for every point on every slice (GPU handles the rotation transform)
+
+The unrotated center circle and outer border are drawn outside the `rotate` block to stay fixed.
+
 ### Nested LazyColumn crashes / 嵌套 LazyColumn 会闪退
 
 Never put a `LazyColumn` inside another `LazyColumn`'s `item` block. Compose throws `IllegalStateException` because the inner scrollable component has no height constraint. Use a plain `Column` instead. This was fixed in `BookDetailScreen.kt`. ->
 LazyColumn 内部 item 里不能再放 LazyColumn，否则 Compose 会因测量高度为 0 而抛出 `IllegalStateException` 崩溃。应使用 `Column` 替代。
+
+### WheelScreen uses `derivedStateOf` for UI state fields
+
+`WheelScreen` wraps `uiState.error` and `uiState.result` with `remember { derivedStateOf { ... } }` to scope recomposition: the error card and result card only recompose when those specific fields change, not on every `rotationAngle` update during spin animation. Key insight: `rotationAngle` changes ~60 times/second during spin, so isolating error/result from the animation loop avoids unnecessary composition of those UI subtrees. -> 转盘页面用 derivedStateOf 分离 error/result 与 rotationAngle，避免动画过程中 error/result 相关 UI 树不必要的重组。
 
 ### 3-second debounce on progress
 

@@ -25,6 +25,9 @@ fun WheelScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    val error by remember { derivedStateOf { uiState.error } }
+    val result by remember { derivedStateOf { uiState.result } }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -47,7 +50,6 @@ fun WheelScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // 转盘区域
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -57,12 +59,10 @@ fun WheelScreen(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 指针
                     WheelPointer(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
 
-                    // 转盘
                     WheelSpinner(
                         items = uiState.items,
                         rotationAngle = uiState.rotationAngle,
@@ -71,7 +71,6 @@ fun WheelScreen(
                 }
             }
 
-            // 旋转按钮
             Spacer(modifier = Modifier.height(16.dp))
             Button(
                 onClick = { viewModel.spin() },
@@ -92,9 +91,8 @@ fun WheelScreen(
                 )
             }
 
-            // 错误提示
-            val error = uiState.error
-            if (error != null) {
+            val currentError = error
+            if (currentError != null) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -107,7 +105,7 @@ fun WheelScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = error,
+                            text = currentError,
                             modifier = Modifier.weight(1f),
                             color = MaterialTheme.colorScheme.onErrorContainer,
                             style = MaterialTheme.typography.bodyMedium
@@ -120,9 +118,8 @@ fun WheelScreen(
                 }
             }
 
-            // 结果展示
-            val result = uiState.result
-            if (result != null && !uiState.isSpinning) {
+            val currentResult = result
+            if (currentResult != null && !uiState.isSpinning) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -141,15 +138,14 @@ fun WheelScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = result.item.label,
+                            text = currentResult.item.label,
                             style = MaterialTheme.typography.headlineMedium,
-                            color = result.item.color
+                            color = currentResult.item.color
                         )
                     }
                 }
             }
 
-            // 编辑模式
             if (uiState.editingMode) {
                 Spacer(modifier = Modifier.height(16.dp))
                 EditPanel(
@@ -163,18 +159,16 @@ fun WheelScreen(
             }
         }
 
-        // 结果对话框
-        val resultForDialog = uiState.result
-        if (uiState.showResultDialog && resultForDialog != null) {
-            val result = resultForDialog
+        val dialogResult = result
+        if (uiState.showResultDialog && dialogResult != null) {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissResult() },
                 title = { Text("🎯 转盘结果") },
                 text = {
                     Text(
-                        text = result.item.label,
+                        text = dialogResult.item.label,
                         style = MaterialTheme.typography.headlineMedium,
-                        color = result.item.color
+                        color = dialogResult.item.color
                     )
                 },
                 confirmButton = {

@@ -31,9 +31,6 @@ class WheelViewModel @Inject constructor() : ViewModel() {
     private val _uiState = MutableStateFlow(WheelUiState())
     val uiState: StateFlow<WheelUiState> = _uiState.asStateFlow()
 
-    /**
-     * 旋转转盘
-     */
     fun spin() {
         val state = _uiState.value
         if (state.isSpinning) return
@@ -43,29 +40,29 @@ class WheelViewModel @Inject constructor() : ViewModel() {
         }
 
         val currentAngle = state.rotationAngle
-        _uiState.update { it.copy(isSpinning = true, result = null, showResultDialog = false, error = null) }
-
-        // 随机选择结果
         val selectedIndex = selectWeightedRandom(state.items)
         val selectedItem = state.items[selectedIndex]
 
-        // 计算旋转角度：从当前角度平滑旋转到选中项
         val sliceAngle = 360f / state.items.size
         val targetAngle = 360f - (selectedIndex * sliceAngle + sliceAngle / 2)
         val additionalAngle = ((targetAngle - currentAngle) % 360 + 360) % 360
         val totalRotation = 360f * 5 + additionalAngle
 
-        val spinJob = viewModelScope.launch {
-            // 动画旋转
-            val steps = 60
-            val stepDuration = 4000L / steps
-            for (i in 1..steps) {
-                val progress = i.toFloat() / steps
-                val easedProgress = easeOutCubic(progress)
-                _uiState.update {
-                    it.copy(rotationAngle = (currentAngle + totalRotation * easedProgress) % 360f)
-                }
-                delay(stepDuration)
+        _uiState.update { it.copy(isSpinning = true, result = null, showResultDialog = false, error = null) }
+
+        viewModelScope.launch {
+            val startTime = System.nanoTime()
+            val duration = 4_000_000_000L
+            val target = currentAngle + totalRotation
+
+            while (true) {
+                val elapsed = System.nanoTime() - startTime
+                if (elapsed >= duration) break
+
+                val progress = elapsed.toFloat() / duration
+                val eased = easeOutCubic(progress)
+                _uiState.update { it.copy(rotationAngle = (currentAngle + totalRotation * eased) % 360f) }
+                delay(16L)
             }
 
             _uiState.update {
@@ -75,11 +72,6 @@ class WheelViewModel @Inject constructor() : ViewModel() {
                     showResultDialog = true,
                     rotationAngle = targetAngle
                 )
-            }
-        }
-        spinJob.invokeOnCompletion { cause ->
-            if (cause != null) {
-                _uiState.update { it.copy(isSpinning = false) }
             }
         }
     }
