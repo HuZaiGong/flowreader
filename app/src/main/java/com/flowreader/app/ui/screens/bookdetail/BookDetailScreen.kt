@@ -1,6 +1,7 @@
 package com.flowreader.app.ui.screens.bookdetail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -45,7 +46,7 @@ import androidx.compose.runtime.key
 fun BookDetailScreen(
     bookId: Long,
     onBackClick: () -> Unit,
-    onReadClick: (Long) -> Unit,
+    onReadClick: (Long, Int) -> Unit,
     viewModel: BookDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -102,7 +103,7 @@ fun BookDetailScreen(
                         item {
                             BookInfoHeader(
                                 book = book,
-                                onReadClick = { onReadClick(bookId) }
+                                onReadClick = { onReadClick(bookId, -1) }
                             )
                         }
 
@@ -123,11 +124,6 @@ fun BookDetailScreen(
                                 Tab(
                                     selected = selectedTab == 1,
                                     onClick = { selectedTab = 1 },
-                                    text = { Text("书签 (${uiState.bookmarks.size})") }
-                                )
-                                Tab(
-                                    selected = selectedTab == 2,
-                                    onClick = { selectedTab = 2 },
                                     text = { Text("标注 (${uiState.annotations.size})") }
                                 )
                             }
@@ -160,16 +156,11 @@ fun BookDetailScreen(
                                 when (targetTab) {
                                     0 -> {
                                         ChapterListContent(
-                                            chapters = uiState.chapters
+                                            chapters = uiState.chapters,
+                                            onChapterClick = { index -> onReadClick(bookId, index) }
                                         )
                                     }
                                     1 -> {
-                                        BookmarkListContent(
-                                            bookmarks = uiState.bookmarks,
-                                            onDelete = { bookmarkId -> viewModel.deleteBookmark(bookmarkId) }
-                                        )
-                                    }
-                                    2 -> {
                                         AnnotationListContent(
                                             annotations = uiState.annotations,
                                             onDelete = { annotationId -> viewModel.deleteAnnotation(annotationId) }
@@ -470,9 +461,11 @@ private fun AnnotationItem(
 }
 
 @Composable
-private fun ChapterItem(chapter: Chapter) {
+private fun ChapterItem(chapter: Chapter, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(8.dp)
     ) {
         Row(
@@ -562,7 +555,8 @@ private fun BookmarkItem(
 
 @Composable
 private fun ChapterListContent(
-    chapters: List<Chapter>
+    chapters: List<Chapter>,
+    onChapterClick: (Int) -> Unit
 ) {
     if (chapters.isEmpty()) {
         Box(
@@ -582,7 +576,7 @@ private fun ChapterListContent(
         ) {
             chapters.forEach { chapter ->
                 key(chapter.id) {
-                    ChapterItem(chapter = chapter)
+                    ChapterItem(chapter = chapter, onClick = { onChapterClick(chapter.index) })
                 }
             }
         }

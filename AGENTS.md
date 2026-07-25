@@ -1,6 +1,6 @@
 # FlowReader
 
-**Current version: 46.0.0**
+**Current version: 47.0.0**
 
 > ⚠️ `goToChapter()` bug: content loaded async but `currentChapter` set to empty version first → blank screen.
 > Fixed: now always loads content synchronously in coroutine before updating `currentChapter`.
@@ -27,7 +27,7 @@ ui/screens    domain/usecase  data/repository  data/local/dao
 
 ### Navigation
 
-`sealed class Screen` in `ui/Navigation.kt`. Routes: `library`, `wheel`, `stats`, `settings`, `book_detail/{bookId}`, `reader/{bookId}`. 4 bottom tabs: Library → Wheel → Stats → Settings.
+`sealed class Screen` in `ui/Navigation.kt`. Routes: `library`, `wheel`, `stats`, `settings`, `book_detail/{bookId}`, `reader/{bookId}?chapterIndex={chapterIndex}`. `chapterIndex` is optional (default -1 = resume from saved position). 4 bottom tabs: Library → Wheel → Stats → Settings.
 
 ### State
 
@@ -96,10 +96,9 @@ Chapter、Bookmark、Annotation、Category 的接口都定义在 `domain/reposit
 
 `domain/repository/SettingsRepository.kt` interface exists with `data/repository/SettingsRepositoryImpl` (renamed from `SettingsRepository`, implements the interface). Injected via Hilt `@Binds` in `AppModule.kt`.
 
-### `sessionReadPages` must be incremented manually
+### `sessionReadPages` auto-saved every 30s + on chapter change
 
-`ReaderViewModel` declares `sessionReadPages` but **does not auto-increment it**. Reading stats will silently fail to save unless `sessionReadPages += pages` is called in `updatePosition()`. ->
-阅读统计的 `sessionReadPages` 值需要在 `updatePosition()` 中手动累加，否则统计永远不保存。
+`ReaderViewModel` saves reading stats every 30 seconds via `periodicStatsSaveJob`, and also on chapter change via `goToChapter()`. The stats are always saved in `onCleared()` as a fallback. Each save resets `sessionReadPages` and `sessionStartTime` to avoid double-counting. -> 阅读统计每 30 秒自动保存 + 章节切换时保存，`onCleared()` 兜底。保存后重置计数器防重复统计。
 
 ### Release build uses debug signing / Release 用 debug 签名
 
@@ -132,9 +131,17 @@ The unrotated center circle and outer border are drawn outside the `rotate` bloc
 Never put a `LazyColumn` inside another `LazyColumn`'s `item` block. Compose throws `IllegalStateException` because the inner scrollable component has no height constraint. Use a plain `Column` instead. This was fixed in `BookDetailScreen.kt`. ->
 LazyColumn 内部 item 里不能再放 LazyColumn，否则 Compose 会因测量高度为 0 而抛出 `IllegalStateException` 崩溃。应使用 `Column` 替代。
 
+### Reader route supports optional chapterIndex
+
+`Screen.Reader.createRoute(bookId, chapterIndex = -1)` supports an optional `chapterIndex`. When `>= 0`, `ReaderViewModel.loadBook()` jumps to that chapter after loading. The `BookDetailScreen` chapter list uses this to navigate directly to a specific chapter.
+
 ### Settings About dialog uses `BuildConfig.VERSION_NAME`
 
-`SettingsScreen.kt:452` displays the version via `${BuildConfig.VERSION_NAME}` which reads from `build.gradle.kts:versionName`. **Do NOT hardcode the version string** — when bumping version, only change `build.gradle.kts`, the About dialog updates automatically. -> 设置页「关于」对话框的版本号通过 `BuildConfig.VERSION_NAME` 自动读取，升级版本号只需改 `build.gradle.kts`，不要硬编码字符串。
+`SettingsScreen.kt` About dialog displays the version via `${BuildConfig.VERSION_NAME}` which reads from `build.gradle.kts:versionName`. The entry row's hardcoded `subtitle` has been removed — only the About dialog shows the version. -> 关于对话框的版本号通过 `BuildConfig.VERSION_NAME` 自动读取。关于入口行的硬编码副标题已移除。
+
+### Bookmark UI hidden
+
+Bookmark buttons in `ReaderControls` and `BookDetailScreen`'s bookmark tab have been removed (bookmark datasource/ViewModel code is still intact for future re-enablement). -> 书签 UI 入口已隐藏，数据层和 ViewModel 代码保留。
 
 ### WheelScreen uses `derivedStateOf` for UI state fields
 

@@ -43,8 +43,8 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object BookDetail : Screen("book_detail/{bookId}", "书籍详情") {
         fun createRoute(bookId: Long) = "book_detail/$bookId"
     }
-    object Reader : Screen("reader/{bookId}", "阅读") {
-        fun createRoute(bookId: Long) = "reader/$bookId"
+    object Reader : Screen("reader/{bookId}?chapterIndex={chapterIndex}", "阅读") {
+        fun createRoute(bookId: Long, chapterIndex: Int = -1) = if (chapterIndex >= 0) "reader/$bookId?chapterIndex=$chapterIndex" else "reader/$bookId"
     }
     object Settings : Screen("settings", "设置", Icons.Default.Settings)
 }
@@ -131,8 +131,8 @@ fun FlowReaderNavHost() {
                     BookDetailScreen(
                         bookId = bookId,
                         onBackClick = { navController.popBackStack() },
-                        onReadClick = { id ->
-                            navController.navigate(Screen.Reader.createRoute(id))
+                        onReadClick = { id, chapterIndex ->
+                            navController.navigate(Screen.Reader.createRoute(id, chapterIndex))
                         }
                     )
                 }
@@ -140,7 +140,8 @@ fun FlowReaderNavHost() {
                 composable(
                     route = Screen.Reader.route,
                     arguments = listOf(
-                        navArgument("bookId") { type = NavType.LongType }
+                        navArgument("bookId") { type = NavType.LongType },
+                        navArgument("chapterIndex") { type = NavType.IntType; defaultValue = -1 }
                     )
                 ) { backStackEntry ->
                     ReaderScreen(

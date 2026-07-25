@@ -23,8 +23,6 @@ fun ReaderControls(
     onChapterClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onSearchClick: () -> Unit,
-    onBookmarkClick: () -> Unit,
-    onAddBookmark: () -> Unit,
     onAnnotationClick: () -> Unit,
     onShareClick: () -> Unit,
     onProgressChange: (Float) -> Unit,
@@ -68,20 +66,6 @@ fun ReaderControls(
                     Icon(
                         Icons.AutoMirrored.Filled.List,
                         contentDescription = "目录",
-                        tint = textColor
-                    )
-                }
-                IconButton(onClick = onBookmarkClick) {
-                    Icon(
-                        Icons.Default.Bookmark,
-                        contentDescription = "书签",
-                        tint = textColor
-                    )
-                }
-                IconButton(onClick = onAddBookmark) {
-                    Icon(
-                        Icons.Default.BookmarkAdd,
-                        contentDescription = "添加书签",
                         tint = textColor
                     )
                 }

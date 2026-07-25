@@ -76,6 +76,7 @@ class ReaderViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
+    private val initialChapterIndex: Int = savedStateHandle.get<Int>("chapterIndex") ?: -1
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
@@ -144,12 +145,16 @@ class ReaderViewModel @Inject constructor(
         val sessionTime = (System.currentTimeMillis() - sessionStartTime) / 1000
         if (sessionTime > 0 && sessionReadPages > 0) {
             viewModelScope.launch {
-                readingStatsRepository.updateTodayStats(
-                    bookId = bookId,
-                    readPages = sessionReadPages,
-                    readTimeSeconds = sessionTime
-                )
-                loadTodayStats()
+                try {
+                    readingStatsRepository.updateTodayStats(
+                        bookId = bookId,
+                        readPages = sessionReadPages,
+                        readTimeSeconds = sessionTime
+                    )
+                    loadTodayStats()
+                } catch (e: Exception) {
+                    android.util.Log.e("ReaderViewModel", "Failed to save reading stats", e)
+                }
             }
         }
         sessionStartTime = System.currentTimeMillis()
@@ -231,6 +236,10 @@ class ReaderViewModel @Inject constructor(
 
                     calculateReadingPrediction()
                     indexBookForSearch(book, chapterMetadata)
+
+                    if (initialChapterIndex >= 0 && initialChapterIndex < chapterMetadata.size) {
+                        goToChapter(initialChapterIndex)
+                    }
                 } else {
                     val errorMsg = if (book == null) "未找到书籍" else "书籍暂无章节内容"
                     _uiState.update { it.copy(isLoading = false, error = errorMsg) }

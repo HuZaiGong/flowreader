@@ -148,11 +148,6 @@ fun ReaderScreen(
                     onChapterClick = { viewModel.showChapterList(true) },
                     onSettingsClick = { viewModel.showSettings(true) },
                     onSearchClick = { viewModel.showSearch(true) },
-                    onBookmarkClick = { viewModel.showBookmarks(true) },
-                    onAddBookmark = {
-                        val text = uiState.currentChapter?.content?.take(50) ?: ""
-                        viewModel.addBookmark(text)
-                    },
                     onAnnotationClick = { viewModel.showAnnotations(true) },
                     onShareClick = { viewModel.shareProgress() },
                     onProgressChange = { progress ->
@@ -197,17 +192,6 @@ fun ReaderScreen(
                     onThemeChange = { viewModel.updateReaderTheme(it) },
                     onPageModeChange = { viewModel.updatePageMode(it) },
                     onDismiss = { viewModel.showSettings(false) },
-                    textColor = textColor,
-                    backgroundColor = backgroundColor
-                )
-            }
-
-            if (uiState.showBookmarks) {
-                BookmarksDialog(
-                    bookmarks = uiState.bookmarks,
-                    onBookmarkSelect = { chapterIndex -> viewModel.goToChapter(chapterIndex) },
-                    onBookmarkDelete = { bookmark -> viewModel.deleteBookmark(bookmark) },
-                    onDismiss = { viewModel.showBookmarks(false) },
                     textColor = textColor,
                     backgroundColor = backgroundColor
                 )

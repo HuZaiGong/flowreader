@@ -191,7 +191,6 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Info,
                     title = "关于心流阅读",
-                    subtitle = "版本 44.0.2",
                     onClick = { showAboutDialog = true }
                 )
             }
@@ -266,12 +265,12 @@ private fun SettingsSection(
 private fun SettingsItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
-    subtitle: String,
+    subtitle: String = "",
     onClick: () -> Unit
 ) {
     ListItem(
         headlineContent = { Text(title) },
-        supportingContent = { Text(subtitle) },
+        supportingContent = if (subtitle.isNotEmpty()) {{ Text(subtitle) }} else null,
         leadingContent = {
             Icon(imageVector = icon, contentDescription = null)
         },
