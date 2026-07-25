@@ -19,7 +19,7 @@ import java.util.Date
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("bookId")]
+    indices = [Index("bookId"), Index("bookId", "chapterIndex")]
 )
 data class AnnotationEntity(
     @PrimaryKey(autoGenerate = true)

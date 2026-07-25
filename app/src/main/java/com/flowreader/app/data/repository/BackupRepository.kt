@@ -3,11 +3,13 @@ package com.flowreader.app.data.repository
 import android.content.Context
 import android.net.Uri
 import com.flowreader.app.data.local.AppDatabase
+import com.flowreader.app.data.local.dao.AnnotationDao
 import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.dao.BookmarkDao
 import com.flowreader.app.data.local.dao.CategoryDao
 import com.flowreader.app.data.local.dao.ChapterDao
 import com.flowreader.app.data.local.dao.ReadingStatsDao
+import com.flowreader.app.data.local.entity.AnnotationEntity
 import com.flowreader.app.data.local.entity.BookEntity
 import com.flowreader.app.data.local.entity.BookmarkEntity
 import com.flowreader.app.data.local.entity.CategoryEntity
@@ -34,6 +36,7 @@ class BackupRepositoryImpl @Inject constructor(
     private val bookDao: BookDao,
     private val chapterDao: ChapterDao,
     private val bookmarkDao: BookmarkDao,
+    private val annotationDao: AnnotationDao,
     private val categoryDao: CategoryDao,
     private val readingStatsDao: ReadingStatsDao
 ) : BackupRepository {
@@ -62,6 +65,13 @@ class BackupRepositoryImpl @Inject constructor(
             }
             json.put("bookmarks", bookmarksArray)
 
+            val allAnnotations = annotationDao.getAllAnnotations().first()
+            val annotationsArray = JSONArray()
+            allAnnotations.forEach { annotation ->
+                annotationsArray.put(annotation.toJson())
+            }
+            json.put("annotations", annotationsArray)
+
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 OutputStreamWriter(outputStream).use { writer ->
                     writer.write(json.toString(2))
@@ -82,6 +92,7 @@ class BackupRepositoryImpl @Inject constructor(
 
                     var booksImported = 0
                     var bookmarksImported = 0
+                    var annotationsImported = 0
 
                     database.withTransaction {
                         val booksArray = json.optJSONArray("books") ?: JSONArray()
@@ -99,9 +110,17 @@ class BackupRepositoryImpl @Inject constructor(
                             bookmarkDao.insertBookmark(bookmark)
                             bookmarksImported++
                         }
+
+                        val annotationsArray = json.optJSONArray("annotations") ?: JSONArray()
+                        for (i in 0 until annotationsArray.length()) {
+                            val annotationJson = annotationsArray.getJSONObject(i)
+                            val annotation = AnnotationEntity.fromJson(annotationJson)
+                            annotationDao.insertAnnotation(annotation)
+                            annotationsImported++
+                        }
                     }
 
-                    Result.success(ImportResult(booksImported, bookmarksImported))
+                    Result.success(ImportResult(booksImported, bookmarksImported, annotationsImported))
                 }
             } ?: Result.failure(Exception("无法打开文件"))
         } catch (e: Exception) {
@@ -132,7 +151,8 @@ class BackupRepositoryImpl @Inject constructor(
 
 data class ImportResult(
     val booksImported: Int,
-    val bookmarksImported: Int
+    val bookmarksImported: Int,
+    val annotationsImported: Int = 0
 )
 
 private fun BookEntity.toJson(): JSONObject = JSONObject().apply {
@@ -212,4 +232,32 @@ private fun ChapterEntity.Companion.fromJson(json: JSONObject): ChapterEntity = 
     content = json.optString("content", ""),
     startPosition = json.optInt("startPosition", 0),
     endPosition = json.optInt("endPosition", 0)
+)
+
+private fun AnnotationEntity.toJson(): JSONObject = JSONObject().apply {
+    put("id", id)
+    put("bookId", bookId)
+    put("chapterIndex", chapterIndex)
+    put("startPosition", startPosition)
+    put("endPosition", endPosition)
+    put("selectedText", selectedText)
+    put("note", note)
+    put("color", color)
+    put("type", type)
+    put("createdTime", createdTime)
+    put("modifiedTime", modifiedTime)
+}
+
+private fun AnnotationEntity.Companion.fromJson(json: JSONObject): AnnotationEntity = AnnotationEntity(
+    id = json.getLong("id"),
+    bookId = json.getLong("bookId"),
+    chapterIndex = json.getInt("chapterIndex"),
+    startPosition = json.getInt("startPosition"),
+    endPosition = json.getInt("endPosition"),
+    selectedText = json.getString("selectedText"),
+    note = json.optString("note", ""),
+    color = json.optString("color", "YELLOW"),
+    type = json.optString("type", "HIGHLIGHT"),
+    createdTime = json.optLong("createdTime", System.currentTimeMillis()),
+    modifiedTime = json.optLong("modifiedTime", System.currentTimeMillis())
 )

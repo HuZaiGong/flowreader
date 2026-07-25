@@ -38,4 +38,7 @@ interface AnnotationDao {
 
     @Query("SELECT * FROM annotations WHERE bookId = :bookId AND selectedText LIKE '%' || :query || '%'")
     suspend fun searchAnnotations(bookId: Long, query: String): List<AnnotationEntity>
+
+    @Query("SELECT * FROM annotations ORDER BY createdTime DESC")
+    fun getAllAnnotations(): Flow<List<AnnotationEntity>>
 }

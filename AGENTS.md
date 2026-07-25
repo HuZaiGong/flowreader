@@ -1,6 +1,6 @@
 # FlowReader
 
-**Current version: 45.0.3**
+**Current version: 46.0.0**
 
 > ⚠️ `goToChapter()` bug: content loaded async but `currentChapter` set to empty version first → blank screen.
 > Fixed: now always loads content synchronously in coroutine before updating `currentChapter`.
@@ -175,7 +175,7 @@ LazyColumn 内部 item 里不能再放 LazyColumn，否则 Compose 会因测量�
 | `data/repository/` | Interface implementations |
 | `data/local/dao/` | Room DAOs |
 | `data/local/entity/` | Room entities |
-| `util/` | Tooling: `BookParser`, `BookLoader`, `CacheManager`, `TtsManager`, `FullTextSearch`, `MemoryManager` |
+| `util/` | Tooling: `BookParser`, `BookLoader`, `CacheManager`, `FullTextSearch`, `MemoryManager` |
 | `app/src/test/` | Unit tests |
 
 All Kotlin source under `app/src/main/java/com/flowreader/app/`.

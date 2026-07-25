@@ -25,9 +25,6 @@ fun ReaderSettingsDialog(
     onFontFamilyChange: (FontFamily) -> Unit,
     onThemeChange: (ReaderTheme) -> Unit,
     onPageModeChange: (PageMode) -> Unit,
-    onTtsPlay: () -> Unit,
-    onTtsStop: () -> Unit,
-    isTtsPlaying: Boolean,
     onDismiss: () -> Unit,
     textColor: androidx.compose.ui.graphics.Color,
     backgroundColor: androidx.compose.ui.graphics.Color
@@ -40,21 +37,6 @@ fun ReaderSettingsDialog(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("语音朗读", style = MaterialTheme.typography.bodyMedium)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Button(
-                        onClick = if (isTtsPlaying) onTtsStop else onTtsPlay,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(if (isTtsPlaying) "停止" else "朗读")
-                    }
-                }
-
-                HorizontalDivider()
-
                 Text("字体", style = MaterialTheme.typography.bodyMedium)
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

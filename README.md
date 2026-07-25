@@ -51,7 +51,6 @@ FlowReader 是一款采用 **Jetpack Compose** 构建的 **Android 电子书阅�
 *   **笔记与批注**：支持文字高亮（黄、绿、蓝、粉、橙 5 色标注）、添加批注想法。
 *   **EPUB 图片与排版**：自动提取 EPUB 内嵌图片并渲染，保留标题/粗体/斜体排版样式。
 *   **自定义字体**：支持导入 .ttf/.otf 外部字体文件。
-*   **TTS 朗读**：接入系统 TTS 语音引擎，中英文多语速/音调朗读，解放双眼。
 *   **护眼提醒**：开启后每 20 分钟提醒用户适当休息，保护视力。
 
 ---
@@ -180,8 +179,7 @@ flowreader/
 │       │   │       ├── BookParser.kt                # 书籍解析 (EPUB/TXT/PDF/MD)
 │       │   │       ├── CacheManager.kt              # LRU 缓存管理
 │       │   │       ├── FullTextSearch.kt            # 全文搜索 (FTS5)
-│       │   │       ├── MemoryManager.kt             # 内存压力监控与管理
-│       │   │       └── TtsManager.kt                # TTS 朗读管理
+│       │   │       └── MemoryManager.kt             # 内存压力监控与管理
 │       │   │
 │       │   └── res/                               # Android 资源文件
 │       │       ├── drawable/
@@ -244,11 +242,14 @@ cd flowreader
 
 ## 📝 近期更新日志
 
-### v45.0.3 (最新发布)
-- **转盘绘制重写**：WheelSpinner 改用 `drawArc` + Canvas `rotate` 变换，消除 Path/Paint 逐帧分配（GC 减少 90%+）及 20 步三角函数循环
-- **动画帧率提升**：WheelViewModel 改用 `System.nanoTime()` 高精度计时，~60 FPS 帧同步替代原来 15 FPS 的 66ms 阶梯循环
-- **屏幕优化**：WheelScreen 新增 `derivedStateOf` 包装 error/result，降低非必要重组范围
-- **README 精简**：保留最近 3 个版本更新日志
+### v46.0.0 (最新发布)
+- **移除 TTS 朗读模块**：删除 TtsManager 及所有 UI 入口，Hilt 自动发现模式无需额外清理
+- **修复批注位置错误**：`ReaderContent` 中 long-press 选中位置改为 chapter-absolute（原为 paragraph-relative，导致仅第一段可正确渲染高亮）
+- **修复高亮颜色失效**：`HighlightMenu` 选择的颜色现在完整传递到 `ReaderViewModel.addAnnotation()`，不再始终写入 YELLOW
+- **备份新增标注导出**：`BackupRepository` 导出/导入流程新增 `annotations` 数组，AnnotationEntity 支持 JSON 序列化
+- **新增 `(bookId, chapterIndex)` 复合索引**：优化按章节查询标注的性能
+- **修复 FTS5 特殊字符**：`FullTextSearch` 新增 `escapeFtsQuery()` 处理 `^ * - + ~ ( )` 等运算符，避免搜索崩溃
+- **搜索历史持久化**：`searchInBook()` 现在调用 `settingsRepository.addSearchHistory()`
 
 ### v45.0.2
 - **章节切换白屏修复**：`goToChapter()` 中 content 异步加载完成后未更新 `currentChapter`，导致首次切换章节正文空白；改为在协程内同步加载完 content 后再统一设置状态

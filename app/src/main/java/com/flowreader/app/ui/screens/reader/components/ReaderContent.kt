@@ -42,7 +42,7 @@ fun ReaderContent(
     annotations: List<Annotation> = emptyList(),
     onTap: (Offset, Size) -> Unit,
     onPositionChanged: (Int) -> Unit,
-    onTextSelected: (String, Int, Int) -> Unit = { _, _, _ -> },
+    onTextSelected: (String, Int, Int, AnnotationColor) -> Unit = { _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var showHighlightMenu by remember { mutableStateOf(false) }
@@ -188,8 +188,8 @@ fun ReaderContent(
                                         detectTapGestures(
                                             onLongPress = {
                                                 selectedText = paraTrimmed
-                                                selectionStart = 0
-                                                selectionEnd = paraTrimmed.length
+                                                selectionStart = paraStart
+                                                selectionEnd = paraEnd
                                                 showHighlightMenu = true
                                             }
                                         )
@@ -212,7 +212,7 @@ fun ReaderContent(
                 },
                 onHighlight = { color ->
                     if (selectedText.isNotEmpty()) {
-                        onTextSelected(selectedText, selectionStart, selectionEnd)
+                        onTextSelected(selectedText, selectionStart, selectionEnd, color)
                     }
                     showHighlightMenu = false
                     selectedText = ""

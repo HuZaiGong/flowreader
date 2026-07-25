@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "bb325eb0c191310132e5bdf2a89daff2",
+    "identityHash": "e1286786003b12655e6e3f8251321b61",
     "entities": [
       {
         "tableName": "books",
@@ -392,6 +392,16 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_annotations_bookId` ON `${TABLE_NAME}` (`bookId`)"
+          },
+          {
+            "name": "index_annotations_bookId_chapterIndex",
+            "unique": false,
+            "columnNames": [
+              "bookId",
+              "chapterIndex"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_annotations_bookId_chapterIndex` ON `${TABLE_NAME}` (`bookId`, `chapterIndex`)"
           }
         ],
         "foreignKeys": [
@@ -514,7 +524,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bb325eb0c191310132e5bdf2a89daff2')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e1286786003b12655e6e3f8251321b61')"
     ]
   }
 }

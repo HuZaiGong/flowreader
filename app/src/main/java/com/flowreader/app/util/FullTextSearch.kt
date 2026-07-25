@@ -12,11 +12,11 @@ import javax.inject.Singleton
 @Singleton
 class FullTextSearch @Inject constructor(
     @ApplicationContext private val context: Context
-) : AutoCloseable {
-
+) {
     companion object {
         private const val TAG = "FullTextSearch"
         private const val DB_NAME = "flowreader_fts.db"
+        private val FTS_SPECIAL = setOf('^', '*', '-', '+', '~', '(', ')', '{', '}', '[', ']', ':', '"')
     }
 
     @Volatile
@@ -106,6 +106,23 @@ class FullTextSearch @Inject constructor(
         }
     }
 
+    private fun escapeFtsQuery(query: String): String {
+        val sb = StringBuilder()
+        var i = 0
+        while (i < query.length) {
+            val c = query[i]
+            if (c == '"') {
+                sb.append("\"\"")
+            } else if (c in FTS_SPECIAL) {
+                sb.append(' ').append(c).append(' ')
+            } else {
+                sb.append(c)
+            }
+            i++
+        }
+        return sb.toString()
+    }
+
     suspend fun search(
         bookId: Long,
         query: String,
@@ -115,14 +132,11 @@ class FullTextSearch @Inject constructor(
 
         if (query.isBlank()) return@withContext emptyList()
 
-        // Escape double quotes for FTS5 phrase query; other special chars are literal inside "..."
-        val escapedQuery = query.replace("\"", "\"\"")
-
+        val escapedQuery = escapeFtsQuery(query)
         val safeMatch = "\"$escapedQuery\"*"
 
         try {
             val results = mutableListOf<FtsSearchResult>()
-            val queryArgs = arrayOf(bookId.toString(), safeMatch, maxResults.toString())
             val cursor = database?.rawQuery(
                 """
                 SELECT chapter_index, chapter_title, snippet(book_content_fts, 3, '<<', '>>', '...', 30) as matched_text
@@ -131,7 +145,7 @@ class FullTextSearch @Inject constructor(
                 ORDER BY rank
                 LIMIT ?
                 """.trimIndent(),
-                queryArgs
+                arrayOf(bookId.toString(), safeMatch, maxResults.toString())
             )
 
             cursor?.use {
@@ -148,7 +162,7 @@ class FullTextSearch @Inject constructor(
             results
         } catch (e: Exception) {
             Log.e(TAG, "FTS search failed", e)
-            emptyList()
+            throw FtsException("FTS search failed for query: $query", e)
         }
     }
 
@@ -166,7 +180,7 @@ class FullTextSearch @Inject constructor(
      * Close the database when the singleton is being destroyed.
      * Hilt will call this when the application is terminated.
      */
-    override fun close() {
+    fun close() {
         try {
             database?.close()
         } catch (e: Exception) {

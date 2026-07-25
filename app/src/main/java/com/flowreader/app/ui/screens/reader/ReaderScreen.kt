@@ -127,8 +127,8 @@ fun ReaderScreen(
                             }
                         },
                         onPositionChanged = { viewModel.updatePosition(it) },
-                        onTextSelected = { text, start, end ->
-                            viewModel.addAnnotation(text, start, end)
+                        onTextSelected = { text, start, end, color ->
+                            viewModel.addAnnotation(text, start, end, color)
                         }
                     )
                 }
@@ -195,9 +195,6 @@ fun ReaderScreen(
                     onFontFamilyChange = { viewModel.updateFontFamily(it) },
                     onThemeChange = { viewModel.updateReaderTheme(it) },
                     onPageModeChange = { viewModel.updatePageMode(it) },
-                    onTtsPlay = { viewModel.playTts() },
-                    onTtsStop = { viewModel.stopTts() },
-                    isTtsPlaying = viewModel.ttsState.value == com.flowreader.app.util.TtsState.PLAYING,
                     onDismiss = { viewModel.showSettings(false) },
                     textColor = textColor,
                     backgroundColor = backgroundColor

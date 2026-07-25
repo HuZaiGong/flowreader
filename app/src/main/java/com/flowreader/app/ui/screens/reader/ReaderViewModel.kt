@@ -71,7 +71,6 @@ class ReaderViewModel @Inject constructor(
     private val readingStatsRepository: ReadingStatsRepository,
     private val cacheManager: CacheManager,
     private val bookLoader: com.flowreader.app.util.BookLoader,
-    private val ttsManager: com.flowreader.app.util.TtsManager,
     private val fullTextSearch: FullTextSearch
 ) : ViewModel() {
 
@@ -79,8 +78,6 @@ class ReaderViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
-
-    val ttsState: StateFlow<com.flowreader.app.util.TtsState> = ttsManager.ttsState
 
     private var progressSaveJob: Job? = null
     private var statsUpdateJob: Job? = null
@@ -127,7 +124,6 @@ class ReaderViewModel @Inject constructor(
         predictionJob?.cancel()
         saveProgressImmediately()
         saveReadingStats()
-        ttsManager.shutdown()
     }
 
     private fun saveReadingStats() {
@@ -433,9 +429,11 @@ class ReaderViewModel @Inject constructor(
             _uiState.update { it.copy(isSearching = true) }
             try {
                 val results = fullTextSearch.search(bookId, query)
+                settingsRepository.addSearchHistory(query)
                 _uiState.update { it.copy(searchResults = results, isSearching = false) }
             } catch (e: Exception) {
-                _uiState.update { it.copy(isSearching = false) }
+                android.util.Log.e("ReaderViewModel", "FTS search failed", e)
+                _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }
             }
         }
     }
@@ -475,7 +473,7 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun addAnnotation(text: String, start: Int, end: Int) {
+    fun addAnnotation(text: String, start: Int, end: Int, color: AnnotationColor = AnnotationColor.YELLOW) {
         viewModelScope.launch {
             val state = _uiState.value
             val annotation = Annotation(
@@ -484,7 +482,7 @@ class ReaderViewModel @Inject constructor(
                 selectedText = text,
                 startPosition = start,
                 endPosition = end,
-                color = AnnotationColor.YELLOW,
+                color = color,
                 note = ""
             )
             val newId = annotationRepository.insertAnnotation(annotation)
@@ -601,12 +599,4 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(shareText = null) }
     }
 
-    fun playTts() {
-        val currentChapter = _uiState.value.currentChapter ?: return
-        ttsManager.speak(currentChapter.content)
-    }
-
-    fun stopTts() {
-        ttsManager.stop()
-    }
 }
