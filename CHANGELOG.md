@@ -4,6 +4,24 @@
 
 ---
 
+## [v46.0.0] - 2026-07
+- **移除 TTS 朗读模块**：删除 TtsManager 及所有 UI 入口、DI 注入、文档引用
+- **修复批注位置错误**：ReaderContent 长按选中位置改为 chapter-absolute（原为 paragraph-relative，仅第一段可渲染高亮）
+- **修复高亮颜色失效**：HighlightMenu 选择的颜色完整传递到 addAnnotation()，不再始终写入 YELLOW
+- **备份新增标注**：BackupRepository 导出/导入新增 annotations 数组
+- **新增 (bookId, chapterIndex) 复合索引**：优化按章节查询标注性能
+- **修复 FTS5 特殊字符崩溃**：新增 escapeFtsQuery() 处理 ^ * - + ~ ( ) 等运算符
+- **搜索历史持久化**：searchInBook() 调用 settingsRepository.addSearchHistory()
+- **Release body 自动填充**：CI 从 CHANGELOG.md 提取当前版本条目作为 GitHub Release 正文
+
+## [v45.0.3] - 2026-07
+- **转盘性能优化**：WheelSpinner 改用 drawArc + Canvas rotate 变换替代手动 Path+20 步三角循环，Paint 移至 remember，GC 减少 90%+
+- **动画帧率提升**：WheelViewModel 改用 System.nanoTime() + delay(16ms) 实现 ~60 FPS 帧同步（原 66ms 阶梯循环仅 ~15 FPS）
+- **重组范围优化**：WheelScreen 使用 derivedStateOf 隔离 error/result 与 60 FPS 的 rotationAngle
+
+## [v45.0.2] - 2026-07
+- **章节切换白屏修复**：goToChapter() 异步加载 content 后未更新 currentChapter，改为协程内同步加载完 content 再更新状态
+
 ## [v45.0.1] - 2026-07
 - **按书籍阅读统计**：BookDetailScreen 添加统计卡片，显示每本书累计阅读时长和页数。
 - **阅读趋势图表**：StatsScreen 以 Canvas 柱状图展示最近 7 天阅读时长趋势，替换原有纯文本列表。

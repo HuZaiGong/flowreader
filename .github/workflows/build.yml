@@ -108,15 +108,27 @@ jobs:
           name: flowreader-release-apk
           path: app/build/outputs/apk/release/app-release.apk
 
+      - name: Extract changelog
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[v" ver "\\]" { found=1; next }
+            found && /^## \[v/ { exit }
+            found { print }
+          ' CHANGELOG.md > /tmp/release_body.md
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "FlowReader v${VERSION} - 离线电子书阅读应用" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          cat /tmp/release_body.md >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Upload APK to Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
           files: app/build/outputs/apk/release/app-release.apk
           name: FlowReader v${{ steps.version.outputs.version }}
-          body: |
-            FlowReader v${{ steps.version.outputs.version }} - 离线电子书阅读应用
-            
-            Download the APK and install on your Android device.
+          body: ${{ steps.changelog.outputs.body }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
