@@ -176,6 +176,7 @@ fun SearchDialog(
     query: String,
     results: List<FtsSearchResult>,
     isSearching: Boolean,
+    hasSearched: Boolean,
     onQueryChange: (String) -> Unit,
     onSearch: () -> Unit,
     onResultClick: (Int) -> Unit,
@@ -240,7 +241,7 @@ fun SearchDialog(
                             }
                         }
                     }
-                } else if (!isSearching && query.isNotEmpty()) {
+                } else if (!isSearching && hasSearched && query.isNotEmpty()) {
                     Text(
                         "未找到匹配结果",
                         style = MaterialTheme.typography.bodyMedium,

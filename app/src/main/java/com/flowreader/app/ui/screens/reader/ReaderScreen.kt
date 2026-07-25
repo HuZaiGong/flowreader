@@ -180,6 +180,7 @@ fun ReaderScreen(
                     query = uiState.searchQuery,
                     results = uiState.searchResults,
                     isSearching = uiState.isSearching,
+                    hasSearched = uiState.hasSearched,
                     onQueryChange = { viewModel.updateSearchQuery(it) },
                     onSearch = { viewModel.searchInBook() },
                     onResultClick = { viewModel.goToSearchResult(it) },

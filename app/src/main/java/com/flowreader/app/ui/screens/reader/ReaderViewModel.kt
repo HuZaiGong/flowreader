@@ -47,6 +47,7 @@ data class ReaderUiState(
     val searchQuery: String = "",
     val searchResults: List<FtsSearchResult> = emptyList(),
     val isSearching: Boolean = false,
+    val hasSearched: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
     val todayReadTime: Long = 0,
@@ -81,6 +82,7 @@ class ReaderViewModel @Inject constructor(
 
     private var progressSaveJob: Job? = null
     private var statsUpdateJob: Job? = null
+    private var periodicStatsSaveJob: Job? = null
     private var eyeProtectionJob: Job? = null
     private var predictionJob: Job? = null
     private val progressDebounceMs = 3000L
@@ -98,6 +100,17 @@ class ReaderViewModel @Inject constructor(
         loadSettings()
         loadTodayStats()
         startEyeProtectionTimer()
+        startPeriodicStatsSave()
+    }
+
+    private fun startPeriodicStatsSave() {
+        periodicStatsSaveJob?.cancel()
+        periodicStatsSaveJob = viewModelScope.launch {
+            while (true) {
+                delay(30_000L)
+                saveReadingStats()
+            }
+        }
     }
 
     private fun loadTodayStats() {
@@ -122,6 +135,7 @@ class ReaderViewModel @Inject constructor(
         progressSaveJob?.cancel()
         eyeProtectionJob?.cancel()
         predictionJob?.cancel()
+        periodicStatsSaveJob?.cancel()
         saveProgressImmediately()
         saveReadingStats()
     }
@@ -135,8 +149,11 @@ class ReaderViewModel @Inject constructor(
                     readPages = sessionReadPages,
                     readTimeSeconds = sessionTime
                 )
+                loadTodayStats()
             }
         }
+        sessionStartTime = System.currentTimeMillis()
+        sessionReadPages = 0
     }
 
     private fun saveProgressImmediately() {
@@ -267,6 +284,8 @@ class ReaderViewModel @Inject constructor(
 
     fun goToChapter(index: Int) {
         if (index !in _uiState.value.chapters.indices) return
+
+        saveReadingStats()
 
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -415,7 +434,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun showSearch(show: Boolean) {
-        _uiState.update { it.copy(showSearch = show, searchQuery = "", searchResults = emptyList()) }
+        _uiState.update { it.copy(showSearch = show, searchQuery = "", searchResults = emptyList(), hasSearched = false) }
     }
 
     fun updateSearchQuery(query: String) {
@@ -426,7 +445,7 @@ class ReaderViewModel @Inject constructor(
         val query = _uiState.value.searchQuery
         if (query.isBlank()) return
         viewModelScope.launch {
-            _uiState.update { it.copy(isSearching = true) }
+            _uiState.update { it.copy(isSearching = true, hasSearched = true) }
             try {
                 val results = fullTextSearch.search(bookId, query)
                 settingsRepository.addSearchHistory(query)

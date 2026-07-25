@@ -4,6 +4,10 @@
 
 ---
 
+## [v47.0.0] - 2026-07
+- **修复搜索"未找到匹配结果"提前显示**：SearchDialog 新增 `hasSearched` 标记，用户点击搜索后才显示"未找到匹配结果"，消除输入即触发的误报
+- **修复阅读统计不保存**：`saveReadingStats()` 原仅 `onCleared()` 调用，导航保存状态下 ViewModel 不销毁导致统计不落库；新增每 30 秒定期保存 + 章节切换时保存，保存后重置会话计数器防止重复统计
+
 ## [v46.0.0] - 2026-07
 - **移除 TTS 朗读模块**：删除 TtsManager 及所有 UI 入口、DI 注入、文档引用
 - **修复批注位置错误**：ReaderContent 长按选中位置改为 chapter-absolute（原为 paragraph-relative，仅第一段可渲染高亮）
