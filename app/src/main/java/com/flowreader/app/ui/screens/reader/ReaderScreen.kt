@@ -18,9 +18,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.BookFormat
@@ -31,6 +35,7 @@ import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.model.ReadingSettings
 import com.flowreader.app.ui.screens.reader.components.*
 import com.flowreader.app.ui.theme.ReaderColors
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +46,7 @@ fun ReaderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val activity = context as? ComponentActivity
+    val view = LocalView.current
 
     val contentScrollState = rememberScrollState()
     val chapterScrollPositions = remember { mutableStateMapOf<Int, Int>() }
@@ -56,12 +62,35 @@ fun ReaderScreen(
         }
     }
 
-    val backgroundColor = when (uiState.readingSettings.theme) {
+    val effectiveTheme = if (uiState.readingSettings.autoNightMode) {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        if (hour >= 19 || hour < 7) ReaderTheme.DARK else ReaderTheme.LIGHT
+    } else {
+        uiState.readingSettings.theme
+    }
+
+    DisposableEffect(activity, view, uiState.isImmersiveMode) {
+        val window = activity?.window
+        if (window != null) {
+            val controller = WindowCompat.getInsetsController(window, view)
+            if (uiState.isImmersiveMode) {
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+        onDispose {
+            activity?.window?.let { WindowCompat.getInsetsController(it, view).show(WindowInsetsCompat.Type.systemBars()) }
+        }
+    }
+
+    val backgroundColor = when (effectiveTheme) {
         ReaderTheme.LIGHT -> ReaderColors.LightBackground
         ReaderTheme.DARK -> ReaderColors.DarkBackground
     }
 
-    val textColor = when (uiState.readingSettings.theme) {
+    val textColor = when (effectiveTheme) {
         ReaderTheme.LIGHT -> ReaderColors.LightText
         ReaderTheme.DARK -> ReaderColors.DarkText
     }
@@ -129,6 +158,9 @@ fun ReaderScreen(
                         onPositionChanged = { viewModel.updatePosition(it) },
                         onTextSelected = { text, start, end, color ->
                             viewModel.addAnnotation(text, start, end, color)
+                        },
+                        onBookmarkRequested = { note ->
+                            viewModel.addBookmark(note)
                         }
                     )
                 }
@@ -150,6 +182,10 @@ fun ReaderScreen(
                     onSearchClick = { viewModel.showSearch(true) },
                     onAnnotationClick = { viewModel.showAnnotations(true) },
                     onShareClick = { viewModel.shareProgress() },
+                    onBookmarkClick = { viewModel.showBookmarks(true) },
+                    onTtsClick = { viewModel.toggleTts() },
+                    onImmersiveClick = { viewModel.toggleImmersiveMode() },
+                    isTtsPlaying = uiState.isTtsPlaying,
                     onProgressChange = { progress ->
                         val chapterIndex = (progress * uiState.chapters.size).toInt().coerceIn(0, uiState.chapters.size - 1)
                         viewModel.goToChapter(chapterIndex)
@@ -192,6 +228,7 @@ fun ReaderScreen(
                     onThemeChange = { viewModel.updateReaderTheme(it) },
                     onPageModeChange = { viewModel.updatePageMode(it) },
                     onEyeProtectionIntervalChange = { viewModel.updateEyeProtectionInterval(it) },
+                    onAutoNightModeChange = { viewModel.updateAutoNightMode(it) },
                     onDismiss = { viewModel.showSettings(false) },
                     textColor = textColor,
                     backgroundColor = backgroundColor
@@ -205,6 +242,17 @@ fun ReaderScreen(
                     onAnnotationDelete = { annotation -> viewModel.deleteAnnotation(annotation) },
                     onAnnotationNoteUpdate = { id, note -> viewModel.updateAnnotationNote(id, note) },
                     onDismiss = { viewModel.showAnnotations(false) },
+                    textColor = textColor,
+                    backgroundColor = backgroundColor
+                )
+            }
+
+            if (uiState.showBookmarks) {
+                BookmarksDialog(
+                    bookmarks = uiState.bookmarks.filter { it.chapterIndex == uiState.currentChapterIndex },
+                    onBookmarkSelect = { viewModel.goToChapter(it) },
+                    onBookmarkDelete = { viewModel.deleteBookmark(it) },
+                    onDismiss = { viewModel.showBookmarks(false) },
                     textColor = textColor,
                     backgroundColor = backgroundColor
                 )

@@ -32,9 +32,12 @@ class SettingsRepositoryImpl @Inject constructor(
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SCREEN_TIMEOUT_MINUTES = intPreferencesKey("screen_timeout_minutes")
         val EYE_PROTECTION_INTERVAL_MINUTES = intPreferencesKey("eye_protection_interval_minutes")
+        val AUTO_NIGHT_MODE = booleanPreferencesKey("auto_night_mode")
         val READING_REMINDER_ENABLED = booleanPreferencesKey("reading_reminder_enabled")
         val READING_REMINDER_HOUR = intPreferencesKey("reading_reminder_hour")
         val READING_REMINDER_MINUTE = intPreferencesKey("reading_reminder_minute")
+        val WIDGET_BOOK_TITLE = stringPreferencesKey("widget_book_title")
+        val WIDGET_PROGRESS_PERCENT = intPreferencesKey("widget_progress_percent")
         val SEARCH_HISTORY = stringPreferencesKey("search_history")
         val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")
         val GESTURE_LEFT_TAP = stringPreferencesKey("gesture_left_tap")
@@ -113,6 +116,7 @@ class SettingsRepositoryImpl @Inject constructor(
                     keepScreenOn = preferences[PreferencesKeys.KEEP_SCREEN_ON] ?: true,
                     screenTimeoutMinutes = preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] ?: 0,
                     eyeProtectionIntervalMinutes = preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] ?: 20,
+                    autoNightMode = preferences[PreferencesKeys.AUTO_NIGHT_MODE] ?: false,
                     gestureSettings = getGestureSettings(preferences)
                 ),
                 readingReminderEnabled = preferences[PreferencesKeys.READING_REMINDER_ENABLED] ?: false,
@@ -138,6 +142,7 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.KEEP_SCREEN_ON] = settings.keepScreenOn
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = settings.screenTimeoutMinutes
             preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] = settings.eyeProtectionIntervalMinutes
+            preferences[PreferencesKeys.AUTO_NIGHT_MODE] = settings.autoNightMode
             if (settings.customFontPath != null) {
                 preferences[PreferencesKeys.CUSTOM_FONT_PATH] = settings.customFontPath
             } else {
@@ -188,6 +193,12 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun updateAutoNightMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUTO_NIGHT_MODE] = enabled
+        }
+    }
+
     override suspend fun updateReadingReminder(enabled: Boolean, hour: Int, minute: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.READING_REMINDER_ENABLED] = enabled
@@ -232,6 +243,13 @@ class SettingsRepositoryImpl @Inject constructor(
         .map { preferences ->
             preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] ?: 30
         }
+
+    override suspend fun updateReadingWidgetSnapshot(bookTitle: String, progressPercent: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.WIDGET_BOOK_TITLE] = bookTitle
+            preferences[PreferencesKeys.WIDGET_PROGRESS_PERCENT] = progressPercent.coerceIn(0, 100)
+        }
+    }
 
     override suspend fun updateGestureSettings(settings: GestureSettings) {
         context.dataStore.edit { preferences ->

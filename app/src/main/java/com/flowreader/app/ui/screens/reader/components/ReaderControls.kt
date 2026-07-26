@@ -25,6 +25,10 @@ fun ReaderControls(
     onSearchClick: () -> Unit,
     onAnnotationClick: () -> Unit,
     onShareClick: () -> Unit,
+    onBookmarkClick: () -> Unit,
+    onTtsClick: () -> Unit,
+    onImmersiveClick: () -> Unit,
+    isTtsPlaying: Boolean,
     onProgressChange: (Float) -> Unit,
     textColor: androidx.compose.ui.graphics.Color,
     backgroundColor: androidx.compose.ui.graphics.Color,
@@ -73,6 +77,27 @@ fun ReaderControls(
                     Icon(
                         Icons.Default.Highlight,
                         contentDescription = "高亮/笔记",
+                        tint = textColor
+                    )
+                }
+                IconButton(onClick = onBookmarkClick) {
+                    Icon(
+                        Icons.Default.Bookmark,
+                        contentDescription = "书签",
+                        tint = textColor
+                    )
+                }
+                IconButton(onClick = onTtsClick) {
+                    Icon(
+                        if (isTtsPlaying) Icons.Default.PauseCircle else Icons.Default.RecordVoiceOver,
+                        contentDescription = "朗读",
+                        tint = textColor
+                    )
+                }
+                IconButton(onClick = onImmersiveClick) {
+                    Icon(
+                        Icons.Default.Fullscreen,
+                        contentDescription = "专注模式",
                         tint = textColor
                     )
                 }

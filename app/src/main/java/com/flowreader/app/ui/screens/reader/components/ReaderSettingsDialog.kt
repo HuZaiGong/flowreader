@@ -26,6 +26,7 @@ fun ReaderSettingsDialog(
     onThemeChange: (ReaderTheme) -> Unit,
     onPageModeChange: (PageMode) -> Unit,
     onEyeProtectionIntervalChange: (Int) -> Unit = {},
+    onAutoNightModeChange: (Boolean) -> Unit = {},
     onDismiss: () -> Unit,
     textColor: androidx.compose.ui.graphics.Color,
     backgroundColor: androidx.compose.ui.graphics.Color
@@ -122,6 +123,18 @@ fun ReaderSettingsDialog(
                             label = { Text("${minutes}分钟") }
                         )
                     }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("自动夜间模式", style = MaterialTheme.typography.bodyMedium)
+                    Switch(
+                        checked = settings.autoNightMode,
+                        onCheckedChange = onAutoNightModeChange
+                    )
                 }
             }
         },

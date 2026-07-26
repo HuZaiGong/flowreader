@@ -24,12 +24,14 @@ interface SettingsRepository {
     suspend fun updateKeepScreenOn(keepOn: Boolean)
     suspend fun updateScreenTimeout(minutes: Int)
     suspend fun updateEyeProtectionInterval(minutes: Int)
+    suspend fun updateAutoNightMode(enabled: Boolean)
     suspend fun updateReadingReminder(enabled: Boolean, hour: Int = 20, minute: Int = 0)
     suspend fun addSearchHistory(query: String)
     fun getSearchHistory(): Flow<List<String>>
     suspend fun clearSearchHistory()
     suspend fun updateDailyReadingGoal(minutes: Int)
     fun getDailyReadingGoal(): Flow<Int>
+    suspend fun updateReadingWidgetSnapshot(bookTitle: String, progressPercent: Int)
     suspend fun updateGestureSettings(settings: GestureSettings)
     fun isOnboardingCompleted(): Flow<Boolean>
     suspend fun setOnboardingCompleted()

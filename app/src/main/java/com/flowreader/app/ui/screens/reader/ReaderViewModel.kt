@@ -21,6 +21,7 @@ import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.util.CacheManager
 import com.flowreader.app.util.FullTextSearch
 import com.flowreader.app.util.FtsSearchResult
+import com.flowreader.app.util.TtsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -58,7 +59,9 @@ data class ReaderUiState(
     val sessionReadTime: Long = 0,
     val showEyeProtectionReminder: Boolean = false,
     val dailyGoalProgress: Float = 0f,
-    val suggestedBreakTime: Long = 0
+    val suggestedBreakTime: Long = 0,
+    val isTtsPlaying: Boolean = false,
+    val isImmersiveMode: Boolean = false
 )
 
 @HiltViewModel
@@ -72,7 +75,8 @@ class ReaderViewModel @Inject constructor(
     private val readingStatsRepository: ReadingStatsRepository,
     private val cacheManager: CacheManager,
     private val bookLoader: com.flowreader.app.util.BookLoader,
-    private val fullTextSearch: FullTextSearch
+    private val fullTextSearch: FullTextSearch,
+    private val ttsManager: TtsManager
 ) : ViewModel() {
 
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
@@ -140,6 +144,7 @@ class ReaderViewModel @Inject constructor(
         eyeProtectionJob?.cancel()
         predictionJob?.cancel()
         periodicStatsSaveJob?.cancel()
+        ttsManager.shutdown()
         saveProgressImmediately()
         saveReadingStats()
     }
@@ -413,8 +418,17 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(currentPosition = position) }
         chapterPositions[state.currentChapterIndex] = position
         debouncedSaveProgress(state.currentChapterIndex, position, progress)
+        updateWidgetSnapshot(progress)
         
         calculateReadingPrediction()
+    }
+
+    private fun updateWidgetSnapshot(progress: Float) {
+        val title = _uiState.value.book?.title ?: return
+        val percent = (progress * 100).roundToInt().coerceIn(0, 100)
+        viewModelScope.launch {
+            settingsRepository.updateReadingWidgetSnapshot(title, percent)
+        }
     }
 
     private fun estimateCharsPerPage(settings: ReadingSettings): Int {
@@ -539,6 +553,38 @@ class ReaderViewModel @Inject constructor(
             _uiState.update { it.copy(readingSettings = newSettings) }
             startEyeProtectionTimer()
         }
+    }
+
+    fun updateAutoNightMode(enabled: Boolean) {
+        viewModelScope.launch {
+            val newSettings = _uiState.value.readingSettings.copy(autoNightMode = enabled)
+            settingsRepository.updateReadingSettings(newSettings)
+            _uiState.update { it.copy(readingSettings = newSettings) }
+        }
+    }
+
+    fun toggleTts() {
+        val state = _uiState.value
+        if (state.isTtsPlaying) {
+            ttsManager.pause()
+            _uiState.update { it.copy(isTtsPlaying = false) }
+            return
+        }
+
+        val chapter = state.currentChapter ?: return
+        val start = state.currentPosition.coerceIn(0, chapter.content.length)
+        val text = chapter.content.substring(start).ifBlank { chapter.content }
+        ttsManager.speak(text)
+        _uiState.update { it.copy(isTtsPlaying = true) }
+    }
+
+    fun stopTts() {
+        ttsManager.stop()
+        _uiState.update { it.copy(isTtsPlaying = false) }
+    }
+
+    fun toggleImmersiveMode() {
+        _uiState.update { it.copy(isImmersiveMode = !it.isImmersiveMode) }
     }
 
     fun deleteBookmark(bookmark: Bookmark) {

@@ -53,4 +53,5 @@
     <string name="unknown_title">未知标题</string>
     <string name="chapters">章节</string>
     <string name="no_description">暂无简介</string>
+    <string name="widget_reading_progress_description">当前阅读进度</string>
 </resources>

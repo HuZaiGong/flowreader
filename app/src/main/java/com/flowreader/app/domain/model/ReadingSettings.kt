@@ -59,6 +59,7 @@ data class ReadingSettings(
     val keepScreenOn: Boolean = true,
     val screenTimeoutMinutes: Int = 0,
     val eyeProtectionIntervalMinutes: Int = 20,
+    val autoNightMode: Boolean = false,
     val tapZoneRatio: Float = 0.3f,
     val gestureSettings: GestureSettings = GestureSettings()
 )

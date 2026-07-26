@@ -43,6 +43,7 @@ fun ReaderContent(
     onTap: (Offset, Size) -> Unit,
     onPositionChanged: (Int) -> Unit,
     onTextSelected: (String, Int, Int, AnnotationColor) -> Unit = { _, _, _, _ -> },
+    onBookmarkRequested: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showHighlightMenu by remember { mutableStateOf(false) }
@@ -217,6 +218,11 @@ fun ReaderContent(
                     showHighlightMenu = false
                     selectedText = ""
                 },
+                onBookmark = { note ->
+                    onBookmarkRequested(note)
+                    showHighlightMenu = false
+                    selectedText = ""
+                },
                 textColor = textColor,
                 backgroundColor = backgroundColor,
                 selectedText = selectedText
@@ -281,6 +287,7 @@ private fun buildFormattedText(text: String): androidx.compose.ui.text.Annotated
 fun HighlightMenu(
     onDismiss: () -> Unit,
     onHighlight: (AnnotationColor) -> Unit,
+    onBookmark: (String) -> Unit = {},
     textColor: androidx.compose.ui.graphics.Color,
     backgroundColor: androidx.compose.ui.graphics.Color,
     selectedText: String = ""
@@ -353,6 +360,12 @@ fun HighlightMenu(
                             )
                         }
                     }
+                }
+                OutlinedButton(
+                    onClick = { onBookmark(inputText.ifBlank { selectedText.ifBlank { "书签" } }) },
+                    modifier = Modifier.padding(top = 12.dp)
+                ) {
+                    Text("添加书签备注", color = textColor)
                 }
                 TextButton(
                     onClick = onDismiss,

@@ -45,8 +45,11 @@ Offline-first Android e-book reader. Single Gradle module: `:app`; all Kotlin ap
 - Eye protection reminder interval is persisted in `ReadingSettings.eyeProtectionIntervalMinutes` and exposed as 15/20/30/45/60 minute chips in `ReaderSettingsDialog`.
 - Reader scroll position is remembered per chapter in `ReaderViewModel.chapterPositions`; keep `ReaderScreen` scroll restoration aligned with `uiState.currentPosition`.
 - `FullTextSearch` is injected into `ReaderViewModel`; chapters are indexed after book load and `SearchDialog` navigates to matching chapters.
+- `TtsManager` wraps Android `TextToSpeech`; `ReaderViewModel.toggleTts()` speaks from `currentPosition`, and `onCleared()` must call `shutdown()`.
+- Reading progress Widget uses DataStore keys `widget_book_title` and `widget_progress_percent`, updated from `ReaderViewModel.updateWidgetSnapshot()`.
+- `ReadingSettings.autoNightMode` is time-based in `ReaderScreen` (19:00-07:00 dark); it does not change the global app theme.
 - Reader font selection uses `FontFamily` with 8 variants in `domain/model/ReadingSettings.kt` and persists through settings/DataStore.
-- Bookmark entry points are hidden from current screens, but bookmark data/repository/ViewModel plumbing and some unused UI components still exist.
+- Bookmark entry points are active in `ReaderControls`; long-press paragraph opens `HighlightMenu`, which can add either a highlight or a bookmark note.
 
 ## Compose/UI Gotchas
 - Never put a `LazyColumn` inside another `LazyColumn` item; use a plain `Column` for nested lists to avoid unbounded-height crashes.
