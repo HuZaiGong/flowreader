@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.domain.model.DailyStats
+import com.flowreader.app.domain.model.ReadingReport
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,6 +29,8 @@ fun StatsScreen(
     viewModel: StatsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showWeeklyGoalDialog by remember { mutableStateOf(false) }
+    var showMonthlyGoalDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -174,9 +177,107 @@ fun StatsScreen(
                         )
                     }
                 }
+
+                item {
+                    Text(
+                        text = "阅读报告与目标",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                uiState.weeklyReport?.let { report ->
+                    item {
+                        ReadingReportCard(
+                            report = report,
+                            goalMinutes = uiState.weeklyGoalMinutes,
+                            onGoalClick = { showWeeklyGoalDialog = true }
+                        )
+                    }
+                }
+
+                uiState.monthlyReport?.let { report ->
+                    item {
+                        ReadingReportCard(
+                            report = report,
+                            goalMinutes = uiState.monthlyGoalMinutes,
+                            onGoalClick = { showMonthlyGoalDialog = true }
+                        )
+                    }
+                }
             }
         }
     }
+
+    if (showWeeklyGoalDialog) {
+        GoalDialog(
+            title = "周目标",
+            currentGoal = uiState.weeklyGoalMinutes,
+            onGoalChange = { viewModel.updateWeeklyGoal(it) },
+            onDismiss = { showWeeklyGoalDialog = false }
+        )
+    }
+
+    if (showMonthlyGoalDialog) {
+        GoalDialog(
+            title = "月目标",
+            currentGoal = uiState.monthlyGoalMinutes,
+            onGoalChange = { viewModel.updateMonthlyGoal(it) },
+            onDismiss = { showMonthlyGoalDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun ReadingReportCard(
+    report: ReadingReport,
+    goalMinutes: Int,
+    onGoalClick: () -> Unit
+) {
+    val goalSeconds = goalMinutes * 60L
+    val progress = if (goalSeconds > 0) (report.totalReadTime.toFloat() / goalSeconds).coerceIn(0f, 1f) else 0f
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(report.rangeLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                TextButton(onClick = onGoalClick) { Text("目标 ${goalMinutes}分钟") }
+            }
+            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+            Text("时长 ${formatReadTime(report.totalReadTime)} · 页数 ${report.totalReadPages}")
+            Text("最快阅读日：${report.fastestReadingDay?.date ?: "暂无"}")
+            Text("最常读书籍：${report.mostReadBookTitle ?: "暂无"}")
+            if (progress < 1f) {
+                Text(
+                    text = "还差 ${((goalSeconds - report.totalReadTime).coerceAtLeast(0) / 60)} 分钟达成目标",
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoalDialog(
+    title: String,
+    currentGoal: Int,
+    onGoalChange: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var goal by remember(currentGoal) { mutableStateOf(currentGoal.toFloat()) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text("${goal.toInt()} 分钟")
+                Slider(value = goal, onValueChange = { goal = it }, valueRange = 30f..3000f)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onGoalChange(goal.toInt()); onDismiss() }) { Text("保存") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    )
 }
 
 @Composable

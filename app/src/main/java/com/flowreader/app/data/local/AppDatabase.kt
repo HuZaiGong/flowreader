@@ -24,7 +24,7 @@ import com.flowreader.app.data.local.entity.ReadingStatsEntity
         CategoryEntity::class,
         ReadingStatsEntity::class
     ],
-    version = 4,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

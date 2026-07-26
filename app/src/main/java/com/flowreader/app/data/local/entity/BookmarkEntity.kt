@@ -17,7 +17,10 @@ import java.util.Date
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("bookId")]
+    indices = [
+        Index("bookId"),
+        Index(value = ["bookId", "chapterIndex", "position"])
+    ]
 )
 data class BookmarkEntity(
     @PrimaryKey(autoGenerate = true)

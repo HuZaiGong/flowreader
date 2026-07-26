@@ -43,7 +43,7 @@ fun ReaderContent(
     onTap: (Offset, Size) -> Unit,
     onPositionChanged: (Int) -> Unit,
     onTextSelected: (String, Int, Int, AnnotationColor) -> Unit = { _, _, _, _ -> },
-    onBookmarkRequested: (String) -> Unit = {},
+    onBookmarkRequested: (String, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var showHighlightMenu by remember { mutableStateOf(false) }
@@ -219,7 +219,7 @@ fun ReaderContent(
                     selectedText = ""
                 },
                 onBookmark = { note ->
-                    onBookmarkRequested(note)
+                    onBookmarkRequested(note, scrollState.value)
                     showHighlightMenu = false
                     selectedText = ""
                 },

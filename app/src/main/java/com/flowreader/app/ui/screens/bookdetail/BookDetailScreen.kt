@@ -25,6 +25,7 @@ import coil.request.ImageRequest
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
+import com.flowreader.app.domain.repository.AnnotationExportFormat
 import java.io.File
 import androidx.compose.ui.text.font.FontWeight
 import java.text.SimpleDateFormat
@@ -51,6 +52,8 @@ fun BookDetailScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
+    var showTagsDialog by remember { mutableStateOf(false) }
+    var showExportMenu by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -115,6 +118,13 @@ fun BookDetailScreen(
                         }
 
                         item {
+                            TagEditorCard(
+                                tags = book.tags,
+                                onEdit = { showTagsDialog = true }
+                            )
+                        }
+
+                        item {
                             TabRow(selectedTabIndex = selectedTab) {
                                 Tab(
                                     selected = selectedTab == 0,
@@ -161,10 +171,33 @@ fun BookDetailScreen(
                                         )
                                     }
                                     1 -> {
-                                        AnnotationListContent(
-                                            annotations = uiState.annotations,
-                                            onDelete = { annotationId -> viewModel.deleteAnnotation(annotationId) }
-                                        )
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Box {
+                                                OutlinedButton(onClick = { showExportMenu = true }) {
+                                                    Icon(Icons.Default.Download, contentDescription = null)
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text("导出标注")
+                                                }
+                                                DropdownMenu(
+                                                    expanded = showExportMenu,
+                                                    onDismissRequest = { showExportMenu = false }
+                                                ) {
+                                                    AnnotationExportFormat.entries.forEach { format ->
+                                                        DropdownMenuItem(
+                                                            text = { Text(format.name.lowercase()) },
+                                                            onClick = {
+                                                                viewModel.exportAnnotations(format)
+                                                                showExportMenu = false
+                                                            }
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            AnnotationListContent(
+                                                annotations = uiState.annotations,
+                                                onDelete = { annotationId -> viewModel.deleteAnnotation(annotationId) }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -173,6 +206,68 @@ fun BookDetailScreen(
                 }
             }
         }
+
+    if (showTagsDialog) {
+        TagsDialog(
+            tags = uiState.book?.tags.orEmpty(),
+            onSave = { viewModel.updateTags(it) },
+            onDismiss = { showTagsDialog = false }
+        )
+    }
+
+    uiState.annotationExportText?.let { exportText ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearAnnotationExport() },
+            title = { Text("标注导出") },
+            text = { Text(exportText, maxLines = 12, overflow = TextOverflow.Ellipsis) },
+            confirmButton = { TextButton(onClick = { viewModel.clearAnnotationExport() }) { Text("关闭") } }
+        )
+    }
+}
+
+@Composable
+private fun TagEditorCard(
+    tags: List<String>,
+    onEdit: () -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("阅读标签", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                TextButton(onClick = onEdit) { Text("编辑") }
+            }
+            if (tags.isEmpty()) {
+                Text("暂无标签", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tags.forEach { tag -> AssistChip(onClick = {}, label = { Text(tag) }) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TagsDialog(
+    tags: List<String>,
+    onSave: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember(tags) { mutableStateOf(tags.joinToString(", ")) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑标签") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text("用逗号或空格分隔") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = { TextButton(onClick = { onSave(text); onDismiss() }) { Text("保存") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+    )
 }
 
 @Composable

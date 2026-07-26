@@ -27,6 +27,9 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%'")
     fun searchBooks(query: String): Flow<List<BookEntity>>
 
+    @Query("SELECT * FROM books WHERE tags LIKE '%' || :tag || '%' ORDER BY addedTime DESC")
+    fun getBooksByTag(tag: String): Flow<List<BookEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBook(book: BookEntity): Long
 

@@ -46,6 +46,12 @@ class BookRepositoryImpl @Inject constructor(
         }
     }
 
+    override fun getBooksByTag(tag: String): Flow<List<Book>> {
+        return bookDao.getBooksByTag(tag).map { entities ->
+            entities.map { it.toDomain() }
+        }
+    }
+
     override suspend fun getBookById(id: Long): Book? {
         return bookDao.getBookById(id)?.toDomain()
     }

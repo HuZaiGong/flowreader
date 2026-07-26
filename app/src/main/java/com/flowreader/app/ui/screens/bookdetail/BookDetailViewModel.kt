@@ -8,6 +8,7 @@ import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.repository.AnnotationRepository
+import com.flowreader.app.domain.repository.AnnotationExportFormat
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.ChapterRepository
@@ -27,6 +28,7 @@ data class BookDetailUiState(
     val totalReadPages: Int = 0,
     val isLoading: Boolean = true,
     val isAnnotating: Boolean = false,
+    val annotationExportText: String? = null,
     val error: String? = null
 )
 
@@ -99,8 +101,13 @@ class BookDetailViewModel @Inject constructor(
 
     fun deleteBookmark(bookmarkId: Long) {
         viewModelScope.launch {
-            bookmarkRepository.deleteBookmarkById(bookmarkId)
-            _uiState.update { it.copy(bookmarks = it.bookmarks.filter { b -> b.id != bookmarkId }) }
+            if (bookmarkId <= 0L) return@launch
+            try {
+                bookmarkRepository.deleteBookmarkById(bookmarkId)
+                _uiState.update { it.copy(bookmarks = it.bookmarks.filter { b -> b.id != bookmarkId }) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "删除书签失败: ${e.localizedMessage ?: "未知错误"}") }
+            }
         }
     }
 
@@ -109,5 +116,26 @@ class BookDetailViewModel @Inject constructor(
             annotationRepository.deleteAnnotationById(annotationId)
             _uiState.update { it.copy(annotations = it.annotations.filter { a -> a.id != annotationId }) }
         }
+    }
+
+    fun updateTags(tagsText: String) {
+        viewModelScope.launch {
+            val book = _uiState.value.book ?: return@launch
+            val tags = tagsText.split(",", "，", " ").map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+            val updated = book.copy(tags = tags)
+            bookRepository.updateBook(updated)
+            _uiState.update { it.copy(book = updated) }
+        }
+    }
+
+    fun exportAnnotations(format: AnnotationExportFormat) {
+        viewModelScope.launch {
+            val exported = annotationRepository.exportAnnotations(bookId, format)
+            _uiState.update { it.copy(annotationExportText = exported.ifBlank { "暂无可导出的标注" }) }
+        }
+    }
+
+    fun clearAnnotationExport() {
+        _uiState.update { it.copy(annotationExportText = null) }
     }
 }

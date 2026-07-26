@@ -3,9 +3,11 @@ package com.flowreader.app.ui.screens.stats
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowreader.app.domain.model.DailyStats
+import com.flowreader.app.domain.model.ReadingReport
 import com.flowreader.app.domain.model.ReadingSummary
 import com.flowreader.app.domain.repository.ReadingStatsRepository
 import com.flowreader.app.domain.repository.BookRepository
+import com.flowreader.app.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -21,13 +23,18 @@ data class StatsUiState(
     val totalBooks: Int = 0,
     val currentStreak: Int = 0,
     val longestStreak: Int = 0,
-    val recentDailyStats: List<DailyStats> = emptyList()
+    val recentDailyStats: List<DailyStats> = emptyList(),
+    val weeklyGoalMinutes: Int = 210,
+    val monthlyGoalMinutes: Int = 900,
+    val weeklyReport: ReadingReport? = null,
+    val monthlyReport: ReadingReport? = null
 )
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
     private val readingStatsRepository: ReadingStatsRepository,
-    private val bookRepository: BookRepository
+    private val bookRepository: BookRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(StatsUiState())
@@ -47,6 +54,10 @@ class StatsViewModel @Inject constructor(
                     val totalReadTime = readingStatsRepository.getTotalReadTime()
                     val totalReadPages = readingStatsRepository.getTotalReadPages()
                     val summary = readingStatsRepository.getReadingSummary()
+                    val weeklyGoal = settingsRepository.getWeeklyReadingGoal().first()
+                    val monthlyGoal = settingsRepository.getMonthlyReadingGoal().first()
+                    val weeklyReport = readingStatsRepository.getReadingReport(7)
+                    val monthlyReport = readingStatsRepository.getReadingReport(30)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -57,7 +68,11 @@ class StatsViewModel @Inject constructor(
                             totalBooks = summary.totalBooks,
                             currentStreak = summary.currentStreak,
                             longestStreak = summary.longestStreak,
-                            recentDailyStats = dailyStats
+                            recentDailyStats = dailyStats,
+                            weeklyGoalMinutes = weeklyGoal,
+                            monthlyGoalMinutes = monthlyGoal,
+                            weeklyReport = weeklyReport,
+                            monthlyReport = monthlyReport
                         )
                     }
                 }
@@ -75,5 +90,19 @@ class StatsViewModel @Inject constructor(
 
     fun refresh() {
         loadStats()
+    }
+
+    fun updateWeeklyGoal(minutes: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateWeeklyReadingGoal(minutes)
+            refresh()
+        }
+    }
+
+    fun updateMonthlyGoal(minutes: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateMonthlyReadingGoal(minutes)
+            refresh()
+        }
     }
 }

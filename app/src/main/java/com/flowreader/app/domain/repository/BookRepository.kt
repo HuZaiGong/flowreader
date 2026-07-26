@@ -8,6 +8,7 @@ interface BookRepository {
     fun getBooksByCategory(categoryId: Long): Flow<List<Book>>
     fun getRecentlyReadBooks(limit: Int = 10): Flow<List<Book>>
     fun searchBooks(query: String): Flow<List<Book>>
+    fun getBooksByTag(tag: String): Flow<List<Book>>
     suspend fun getBooksPaged(offset: Int, limit: Int): List<Book>
     suspend fun getBookCount(): Int
     suspend fun getBookById(id: Long): Book?

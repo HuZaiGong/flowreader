@@ -49,17 +49,9 @@ fun ReaderScreen(
     val view = LocalView.current
 
     val contentScrollState = rememberScrollState()
-    val chapterScrollPositions = remember { mutableStateMapOf<Int, Int>() }
 
     LaunchedEffect(uiState.currentChapterIndex, uiState.currentPosition) {
-        val savedPosition = chapterScrollPositions[uiState.currentChapterIndex] ?: uiState.currentPosition
-        contentScrollState.scrollTo(savedPosition.coerceAtLeast(0))
-    }
-
-    LaunchedEffect(contentScrollState.value, uiState.currentChapterIndex) {
-        if (uiState.currentChapterIndex >= 0) {
-            chapterScrollPositions[uiState.currentChapterIndex] = contentScrollState.value
-        }
+        contentScrollState.scrollTo(uiState.currentPosition.coerceAtLeast(0))
     }
 
     val effectiveTheme = if (uiState.readingSettings.autoNightMode) {
@@ -159,8 +151,8 @@ fun ReaderScreen(
                         onTextSelected = { text, start, end, color ->
                             viewModel.addAnnotation(text, start, end, color)
                         },
-                        onBookmarkRequested = { note ->
-                            viewModel.addBookmark(note)
+                        onBookmarkRequested = { note, position ->
+                            viewModel.addBookmark(note, position)
                         }
                     )
                 }
@@ -249,8 +241,9 @@ fun ReaderScreen(
 
             if (uiState.showBookmarks) {
                 BookmarksDialog(
-                    bookmarks = uiState.bookmarks.filter { it.chapterIndex == uiState.currentChapterIndex },
-                    onBookmarkSelect = { viewModel.goToChapter(it) },
+                    bookmarks = uiState.bookmarks,
+                    currentChapterIndex = uiState.currentChapterIndex,
+                    onBookmarkSelect = { viewModel.goToBookmark(it) },
                     onBookmarkDelete = { viewModel.deleteBookmark(it) },
                     onDismiss = { viewModel.showBookmarks(false) },
                     textColor = textColor,

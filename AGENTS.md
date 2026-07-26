@@ -31,8 +31,8 @@ Offline-first Android e-book reader. Single Gradle module: `:app`; all Kotlin ap
 - `SettingsScreen` displays the app version from `BuildConfig.VERSION_NAME`.
 
 ## Room And Data
-- `AppDatabase` is version `4`, has 6 entities/DAOs, and `exportSchema = true`.
-- `Room.databaseBuilder(...).build()` currently has no `fallbackToDestructiveMigration()` and no explicit migrations. If bumping DB version, add real migrations and schema updates.
+- `AppDatabase` is version `6`, has 6 entities/DAOs, and `exportSchema = true`.
+- Room has explicit `MIGRATION_4_5` adding `books.tags` and `MIGRATION_5_6` adding the bookmark `(bookId, chapterIndex, position)` index; do not use `fallbackToDestructiveMigration()`.
 - `BackupRepositoryImpl.importData()` uses `database.withTransaction`; keep backup import atomic.
 - `ChapterRepositoryImpl` routes chapter metadata/content through `CacheManager`; avoid adding a second chapter-content cache.
 - Code uses built-in `kotlin.Result` where needed; the old custom `AppException`/`Result` wrapper is gone.
@@ -42,14 +42,16 @@ Offline-first Android e-book reader. Single Gradle module: `:app`; all Kotlin ap
 - `goToChapter()` must load chapter content before setting `currentChapter`; setting metadata-only chapters causes blank reader content.
 - Reading progress saves are debounced by 3 seconds in `debouncedSaveProgress()`.
 - Reading stats are auto-saved every 30 seconds, on chapter change, and in `onCleared()`; page counts come from real chapter-character deltas, unfinished page characters carry across scroll updates, and pauses over 5 minutes split a new session.
+- `ReadingStatsRepository.getRecentDailyStats()` must aggregate rows by date before charting; `getReadingReport(days)` powers weekly/monthly reports and goals.
 - Eye protection reminder interval is persisted in `ReadingSettings.eyeProtectionIntervalMinutes` and exposed as 15/20/30/45/60 minute chips in `ReaderSettingsDialog`.
 - Reader scroll position is remembered per chapter in `ReaderViewModel.chapterPositions`; keep `ReaderScreen` scroll restoration aligned with `uiState.currentPosition`.
 - `FullTextSearch` is injected into `ReaderViewModel`; chapters are indexed after book load and `SearchDialog` navigates to matching chapters.
-- `TtsManager` wraps Android `TextToSpeech`; `ReaderViewModel.toggleTts()` speaks from `currentPosition`, and `onCleared()` must call `shutdown()`.
+- `TtsManager` wraps Android `TextToSpeech` and exposes `StateFlow<TtsState>`; `ReaderViewModel` observes it for button state, speaks from `currentPosition`, and calls `shutdown()` in `onCleared()`.
 - Reading progress Widget uses DataStore keys `widget_book_title` and `widget_progress_percent`, updated from `ReaderViewModel.updateWidgetSnapshot()`.
 - `ReadingSettings.autoNightMode` is time-based in `ReaderScreen` (19:00-07:00 dark); it does not change the global app theme.
 - Reader font selection uses `FontFamily` with 8 variants in `domain/model/ReadingSettings.kt` and persists through settings/DataStore.
 - Bookmark entry points are active in `ReaderControls`; long-press paragraph opens `HighlightMenu`, which can add either a highlight or a bookmark note.
+- Bookmark repository normalizes text, validates positive IDs, stores via `addBookmark()`, and bookmarks are sorted by chapter/position for stable navigation.
 
 ## Compose/UI Gotchas
 - Never put a `LazyColumn` inside another `LazyColumn` item; use a plain `Column` for nested lists to avoid unbounded-height crashes.
@@ -57,3 +59,4 @@ Offline-first Android e-book reader. Single Gradle module: `:app`; all Kotlin ap
 - Wheel animation timing uses `System.nanoTime()` plus `delay(16L)`; preserve elapsed-time-based animation rather than reintroducing fixed-step loops.
 - `WheelScreen` isolates `error` and `result` with `derivedStateOf` so 60 FPS `rotationAngle` updates do not recompose unrelated UI.
 - Library filtering combines category chips, search query, and sort order in `LibraryViewModel`; keep `selectedCategoryId` reflected in `LibraryUiState` for UI chips.
+- Global search uses `SearchRepository.rebuildIndex()` + `FullTextSearch.searchAll()` from the library search bar; results must include source book title.

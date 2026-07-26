@@ -6,6 +6,7 @@ import com.flowreader.app.data.local.entity.ReadingStatsEntity
 import com.flowreader.app.domain.model.DailyStats
 import com.flowreader.app.domain.model.ReadingStats
 import com.flowreader.app.domain.model.ReadingSummary
+import com.flowreader.app.domain.model.ReadingReport
 import com.flowreader.app.domain.repository.ReadingStatsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -160,15 +161,43 @@ class ReadingStatsRepositoryImpl @Inject constructor(
 
     override fun getRecentDailyStats(limit: Int): Flow<List<DailyStats>> {
         return readingStatsDao.getRecentStats(limit).map { entities ->
-            entities.map { entity ->
+            entities.groupBy { it.date }.map { (date, rows) ->
                 DailyStats(
-                    date = entity.date,
-                    totalReadTime = entity.readTimeSeconds,
-                    totalReadPages = entity.readPages,
-                    booksRead = 1
+                    date = date,
+                    totalReadTime = rows.sumOf { it.readTimeSeconds },
+                    totalReadPages = rows.sumOf { it.readPages },
+                    booksRead = rows.map { it.bookId }.distinct().size
                 )
-            }
+            }.sortedBy { it.date }.takeLast(limit)
         }
+    }
+
+    override suspend fun getReadingReport(days: Int): ReadingReport {
+        val startDate = LocalDate.now().minusDays((days - 1).toLong())
+        val allStats = readingStatsDao.getAllStats().filter {
+            LocalDate.parse(it.date, dateFormat) >= startDate
+        }
+        val dailyStats = allStats.groupBy { it.date }.map { (date, rows) ->
+            DailyStats(
+                date = date,
+                totalReadTime = rows.sumOf { it.readTimeSeconds },
+                totalReadPages = rows.sumOf { it.readPages },
+                booksRead = rows.map { it.bookId }.distinct().size
+            )
+        }.sortedBy { it.date }
+        val mostReadBookId = allStats.groupBy { it.bookId }
+            .maxByOrNull { entry -> entry.value.sumOf { it.readTimeSeconds } }
+            ?.key
+        val mostReadBookTitle = mostReadBookId?.let { bookDao.getBookById(it)?.title }
+
+        return ReadingReport(
+            rangeLabel = if (days <= 7) "本周" else "本月",
+            totalReadTime = allStats.sumOf { it.readTimeSeconds },
+            totalReadPages = allStats.sumOf { it.readPages },
+            fastestReadingDay = dailyStats.maxByOrNull { it.totalReadPages },
+            mostReadBookTitle = mostReadBookTitle,
+            dailyStats = dailyStats
+        )
     }
 
     private fun ReadingStatsEntity.toDomain(): ReadingStats {

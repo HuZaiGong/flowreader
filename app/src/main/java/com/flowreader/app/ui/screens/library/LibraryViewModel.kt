@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Category
+import com.flowreader.app.domain.model.GlobalSearchResult
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.CategoryRepository
 import com.flowreader.app.domain.repository.ChapterRepository
+import com.flowreader.app.domain.repository.SearchRepository
 import com.flowreader.app.util.BookParser
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -32,7 +34,9 @@ data class LibraryUiState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
-    val sortOrder: SortOrder = SortOrder.ADDED_TIME
+    val sortOrder: SortOrder = SortOrder.ADDED_TIME,
+    val globalSearchResults: List<GlobalSearchResult> = emptyList(),
+    val isGlobalSearching: Boolean = false
 )
 
 @HiltViewModel
@@ -41,7 +45,8 @@ class LibraryViewModel @Inject constructor(
     private val chapterRepository: ChapterRepository,
     private val categoryRepository: CategoryRepository,
     private val bookParser: BookParser,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val searchRepository: SearchRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -54,6 +59,7 @@ class LibraryViewModel @Inject constructor(
     private val _sortOrder = MutableStateFlow(SortOrder.ADDED_TIME)
     private val _selectedCategoryId = MutableStateFlow<Long?>(null)
     private var booksCollectionJob: Job? = null
+    private var globalSearchJob: Job? = null
 
     init {
         loadCategories()
@@ -164,6 +170,20 @@ class LibraryViewModel @Inject constructor(
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
+        globalSearchJob?.cancel()
+        if (query.isBlank()) {
+            _uiState.update { it.copy(globalSearchResults = emptyList(), isGlobalSearching = false) }
+            return
+        }
+        globalSearchJob = viewModelScope.launch {
+            _uiState.update { it.copy(isGlobalSearching = true) }
+            try {
+                val results = searchRepository.searchAll(query)
+                _uiState.update { it.copy(globalSearchResults = results, isGlobalSearching = false) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(globalSearchResults = emptyList(), isGlobalSearching = false, error = "全局搜索失败: ${e.localizedMessage ?: "未知错误"}") }
+            }
+        }
     }
 
     fun importBook(uri: Uri) {

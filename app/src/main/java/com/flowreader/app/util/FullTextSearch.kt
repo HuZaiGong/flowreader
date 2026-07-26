@@ -154,7 +154,8 @@ class FullTextSearch @Inject constructor(
                         FtsSearchResult(
                             chapterIndex = it.getInt(0),
                             chapterTitle = it.getString(1),
-                            matchedText = it.getString(2)
+                            matchedText = it.getString(2),
+                            bookId = bookId
                         )
                     )
                 }
@@ -163,6 +164,46 @@ class FullTextSearch @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "FTS search failed", e)
             throw FtsException("FTS search failed for query: $query", e)
+        }
+    }
+
+    suspend fun searchAll(
+        query: String,
+        maxResults: Int = 100
+    ): List<FtsSearchResult> = withContext(Dispatchers.IO) {
+        ensureInitialized()
+        if (query.isBlank()) return@withContext emptyList()
+
+        val safeMatch = "\"${escapeFtsQuery(query)}\"*"
+        try {
+            val results = mutableListOf<FtsSearchResult>()
+            val cursor = database?.rawQuery(
+                """
+                SELECT book_id, chapter_index, chapter_title, snippet(book_content_fts, 3, '<<', '>>', '...', 30) as matched_text
+                FROM book_content_fts
+                WHERE book_content_fts MATCH ?
+                ORDER BY rank
+                LIMIT ?
+                """.trimIndent(),
+                arrayOf(safeMatch, maxResults.toString())
+            )
+
+            cursor?.use {
+                while (it.moveToNext()) {
+                    results.add(
+                        FtsSearchResult(
+                            bookId = it.getLong(0),
+                            chapterIndex = it.getInt(1),
+                            chapterTitle = it.getString(2),
+                            matchedText = it.getString(3)
+                        )
+                    )
+                }
+            }
+            results
+        } catch (e: Exception) {
+            Log.e(TAG, "Global FTS search failed", e)
+            throw FtsException("Global FTS search failed for query: $query", e)
         }
     }
 
@@ -197,5 +238,7 @@ class FtsNotInitializedException(message: String) : Exception(message)
 data class FtsSearchResult(
     val chapterIndex: Int,
     val chapterTitle: String,
-    val matchedText: String
+    val matchedText: String,
+    val bookId: Long = 0,
+    val bookTitle: String = ""
 )

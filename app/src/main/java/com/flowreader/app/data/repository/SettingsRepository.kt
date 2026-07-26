@@ -40,6 +40,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val WIDGET_PROGRESS_PERCENT = intPreferencesKey("widget_progress_percent")
         val SEARCH_HISTORY = stringPreferencesKey("search_history")
         val DAILY_READING_GOAL_MINUTES = intPreferencesKey("daily_reading_goal_minutes")
+        val WEEKLY_READING_GOAL_MINUTES = intPreferencesKey("weekly_reading_goal_minutes")
+        val MONTHLY_READING_GOAL_MINUTES = intPreferencesKey("monthly_reading_goal_minutes")
         val GESTURE_LEFT_TAP = stringPreferencesKey("gesture_left_tap")
         val GESTURE_MIDDLE_TAP = stringPreferencesKey("gesture_middle_tap")
         val GESTURE_RIGHT_TAP = stringPreferencesKey("gesture_right_tap")
@@ -242,6 +244,30 @@ class SettingsRepositoryImpl @Inject constructor(
         .retry(3) { it is IOException }
         .map { preferences ->
             preferences[PreferencesKeys.DAILY_READING_GOAL_MINUTES] ?: 30
+        }
+
+    override suspend fun updateWeeklyReadingGoal(minutes: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.WEEKLY_READING_GOAL_MINUTES] = minutes
+        }
+    }
+
+    override fun getWeeklyReadingGoal(): Flow<Int> = context.dataStore.data
+        .retry(3) { it is IOException }
+        .map { preferences ->
+            preferences[PreferencesKeys.WEEKLY_READING_GOAL_MINUTES] ?: 210
+        }
+
+    override suspend fun updateMonthlyReadingGoal(minutes: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.MONTHLY_READING_GOAL_MINUTES] = minutes
+        }
+    }
+
+    override fun getMonthlyReadingGoal(): Flow<Int> = context.dataStore.data
+        .retry(3) { it is IOException }
+        .map { preferences ->
+            preferences[PreferencesKeys.MONTHLY_READING_GOAL_MINUTES] ?: 900
         }
 
     override suspend fun updateReadingWidgetSnapshot(bookTitle: String, progressPercent: Int) {

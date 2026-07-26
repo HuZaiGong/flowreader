@@ -29,7 +29,8 @@ data class BookEntity(
     val readingProgress: Float = 0f,
     val lastReadTime: Long? = null,
     val addedTime: Long = System.currentTimeMillis(),
-    val categoryId: Long? = null
+    val categoryId: Long? = null,
+    val tags: String = ""
 ) {
     fun toDomain(): Book = Book(
         id = id,
@@ -46,7 +47,8 @@ data class BookEntity(
         readingProgress = readingProgress,
         lastReadTime = lastReadTime?.let { Date(it) },
         addedTime = Date(addedTime),
-        categoryId = categoryId
+        categoryId = categoryId,
+        tags = tags.split(",").map { it.trim() }.filter { it.isNotEmpty() }
     )
 
     companion object {
@@ -65,7 +67,8 @@ data class BookEntity(
             readingProgress = book.readingProgress,
             lastReadTime = book.lastReadTime?.time,
             addedTime = book.addedTime.time,
-            categoryId = book.categoryId
+            categoryId = book.categoryId,
+            tags = book.tags.joinToString(",")
         )
     }
 }

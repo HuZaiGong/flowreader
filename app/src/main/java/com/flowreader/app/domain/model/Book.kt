@@ -17,7 +17,8 @@ data class Book(
     val readingProgress: Float = 0f,
     val lastReadTime: Date? = null,
     val addedTime: Date = Date(),
-    val categoryId: Long? = null
+    val categoryId: Long? = null,
+    val tags: List<String> = emptyList()
 )
 
 enum class BookFormat {

@@ -3,6 +3,7 @@ package com.flowreader.app.ui.screens.reader.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
@@ -14,7 +15,8 @@ import com.flowreader.app.domain.model.Bookmark
 @Composable
 fun BookmarksDialog(
     bookmarks: List<Bookmark>,
-    onBookmarkSelect: (Int) -> Unit,
+    currentChapterIndex: Int,
+    onBookmarkSelect: (Bookmark) -> Unit,
     onBookmarkDelete: (Bookmark) -> Unit,
     onDismiss: () -> Unit,
     textColor: androidx.compose.ui.graphics.Color,
@@ -30,21 +32,22 @@ fun BookmarksDialog(
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 400.dp)
                 ) {
-                    items(bookmarks.size) { index ->
+                    items(bookmarks, key = { it.id }) { bookmark ->
                         ListItem(
-                            headlineContent = { Text(bookmarks[index].text) },
+                            headlineContent = { Text(bookmark.text) },
                             supportingContent = {
-                                Text("第 ${bookmarks[index].chapterIndex + 1} 章")
+                                val currentMarker = if (bookmark.chapterIndex == currentChapterIndex) " · 当前章节" else ""
+                                Text("第 ${bookmark.chapterIndex + 1} 章 · 位置 ${bookmark.position}$currentMarker")
                             },
                             trailingContent = {
-                                IconButton(onClick = { onBookmarkDelete(bookmarks[index]) }) {
+                                IconButton(onClick = { onBookmarkDelete(bookmark) }) {
                                     Icon(
                                         Icons.Filled.Delete,
                                         contentDescription = "删除"
                                     )
                                 }
                             },
-                            modifier = Modifier.clickable { onBookmarkSelect(bookmarks[index].chapterIndex) }
+                            modifier = Modifier.clickable { onBookmarkSelect(bookmark) }
                         )
                     }
                 }

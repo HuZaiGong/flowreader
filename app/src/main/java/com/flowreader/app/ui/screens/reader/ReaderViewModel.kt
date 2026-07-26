@@ -107,8 +107,17 @@ class ReaderViewModel @Inject constructor(
         loadBook()
         loadSettings()
         loadTodayStats()
+        observeTtsState()
         startEyeProtectionTimer()
         startPeriodicStatsSave()
+    }
+
+    private fun observeTtsState() {
+        viewModelScope.launch {
+            ttsManager.state.collect { ttsState ->
+                _uiState.update { it.copy(isTtsPlaying = ttsState.isSpeaking) }
+            }
+        }
     }
 
     private fun startPeriodicStatsSave() {
@@ -306,10 +315,15 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun goToChapter(index: Int) {
+        goToChapter(index, null)
+    }
+
+    private fun goToChapter(index: Int, positionOverride: Int?) {
         if (index !in _uiState.value.chapters.indices) return
 
         val previousState = _uiState.value
         chapterPositions[previousState.currentChapterIndex] = previousState.currentPosition
+        ttsManager.stop()
         saveReadingStats()
 
         viewModelScope.launch {
@@ -327,7 +341,8 @@ class ReaderViewModel @Inject constructor(
                 if (index < size) set(index, chapter)
             }
 
-            val restoredPosition = chapterPositions[index] ?: if (index == state.book?.currentChapter) state.book.currentPosition else 0
+            val restoredPosition = (positionOverride ?: chapterPositions[index] ?: if (index == state.book?.currentChapter) state.book.currentPosition else 0)
+                .coerceAtLeast(0)
             val progress = if (state.chapters.isNotEmpty()) {
                 val contentLength = content.length.coerceAtLeast(1)
                 (index.toFloat() + restoredPosition.toFloat() / contentLength) / state.chapters.size
@@ -529,20 +544,27 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun goToBookmark(bookmark: Bookmark) {
-        goToChapter(bookmark.chapterIndex)
+        if (bookmark.bookId != bookId) return
+        goToChapter(bookmark.chapterIndex, bookmark.position)
+        _uiState.update { it.copy(showBookmarks = false) }
     }
 
-    fun addBookmark(text: String) {
+    fun addBookmark(text: String, position: Int? = null) {
         viewModelScope.launch {
             val state = _uiState.value
+            if (bookId <= 0L || state.currentChapterIndex !in state.chapters.indices) return@launch
             val bookmark = Bookmark(
                 bookId = bookId,
                 chapterIndex = state.currentChapterIndex,
                 text = text,
-                position = state.currentPosition
+                position = (position ?: state.currentPosition).coerceAtLeast(0)
             )
-            val newId = bookmarkRepository.insertBookmark(bookmark)
-            _uiState.update { it.copy(bookmarks = it.bookmarks + bookmark.copy(id = newId)) }
+            try {
+                val savedBookmark = bookmarkRepository.addBookmark(bookmark)
+                _uiState.update { it.copy(bookmarks = (it.bookmarks + savedBookmark).sortedWith(bookmarkComparator)) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "添加书签失败: ${e.localizedMessage ?: "未知错误"}") }
+            }
         }
     }
 
@@ -575,7 +597,6 @@ class ReaderViewModel @Inject constructor(
         val start = state.currentPosition.coerceIn(0, chapter.content.length)
         val text = chapter.content.substring(start).ifBlank { chapter.content }
         ttsManager.speak(text)
-        _uiState.update { it.copy(isTtsPlaying = true) }
     }
 
     fun stopTts() {
@@ -589,8 +610,13 @@ class ReaderViewModel @Inject constructor(
 
     fun deleteBookmark(bookmark: Bookmark) {
         viewModelScope.launch {
-            bookmarkRepository.deleteBookmark(bookmark)
-            _uiState.update { it.copy(bookmarks = it.bookmarks.filter { it.id != bookmark.id }) }
+            if (bookmark.id <= 0L || bookmark.bookId != bookId) return@launch
+            try {
+                bookmarkRepository.deleteBookmarkById(bookmark.id)
+                _uiState.update { it.copy(bookmarks = it.bookmarks.filter { it.id != bookmark.id }) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = "删除书签失败: ${e.localizedMessage ?: "未知错误"}") }
+            }
         }
     }
 
@@ -718,6 +744,12 @@ class ReaderViewModel @Inject constructor(
 
     fun clearShareText() {
         _uiState.update { it.copy(shareText = null) }
+    }
+
+    private companion object {
+        val bookmarkComparator = compareBy<Bookmark> { it.chapterIndex }
+            .thenBy { it.position }
+            .thenByDescending { it.createdTime.time }
     }
 
 }

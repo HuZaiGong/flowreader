@@ -3,6 +3,7 @@ package com.flowreader.app.domain.repository
 import com.flowreader.app.domain.model.DailyStats
 import com.flowreader.app.domain.model.ReadingStats
 import com.flowreader.app.domain.model.ReadingSummary
+import com.flowreader.app.domain.model.ReadingReport
 import kotlinx.coroutines.flow.Flow
 
 interface ReadingStatsRepository {
@@ -17,4 +18,5 @@ interface ReadingStatsRepository {
     suspend fun getTotalReadPages(): Int
     suspend fun getReadingSummary(): ReadingSummary
     fun getRecentDailyStats(limit: Int = 7): Flow<List<DailyStats>>
+    suspend fun getReadingReport(days: Int): ReadingReport
 }

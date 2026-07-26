@@ -3,6 +3,7 @@ package com.flowreader.app.data.repository
 import com.flowreader.app.data.local.dao.AnnotationDao
 import com.flowreader.app.data.local.entity.AnnotationEntity
 import com.flowreader.app.domain.model.Annotation
+import com.flowreader.app.domain.repository.AnnotationExportFormat
 import com.flowreader.app.domain.repository.AnnotationRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -61,4 +62,27 @@ class AnnotationRepositoryImpl @Inject constructor(
     override suspend fun searchAnnotations(bookId: Long, query: String): List<Annotation> {
         return annotationDao.searchAnnotations(bookId, query).map { it.toDomain() }
     }
+
+    override suspend fun exportAnnotations(bookId: Long, format: AnnotationExportFormat): String {
+        val annotations = getAnnotationsListByBookId(bookId)
+        return when (format) {
+            AnnotationExportFormat.MARKDOWN -> annotations.joinToString("\n\n") {
+                "- 第 ${it.chapterIndex + 1} 章：${it.selectedText}" + if (it.note.isNotBlank()) "\n  - 笔记：${it.note}" else ""
+            }
+            AnnotationExportFormat.HTML -> buildString {
+                append("<html><body><h1>FlowReader 标注</h1>")
+                annotations.forEach {
+                    append("<section><h2>第 ${it.chapterIndex + 1} 章</h2><blockquote>${it.selectedText.escapeHtml()}</blockquote>")
+                    if (it.note.isNotBlank()) append("<p>${it.note.escapeHtml()}</p>")
+                    append("</section>")
+                }
+                append("</body></html>")
+            }
+            AnnotationExportFormat.TEXT -> annotations.joinToString("\n\n") {
+                "第 ${it.chapterIndex + 1} 章\n${it.selectedText}" + if (it.note.isNotBlank()) "\n笔记：${it.note}" else ""
+            }
+        }
+    }
+
+    private fun String.escapeHtml(): String = replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 }

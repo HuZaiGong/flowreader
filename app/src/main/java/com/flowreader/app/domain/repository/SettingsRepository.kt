@@ -31,6 +31,10 @@ interface SettingsRepository {
     suspend fun clearSearchHistory()
     suspend fun updateDailyReadingGoal(minutes: Int)
     fun getDailyReadingGoal(): Flow<Int>
+    suspend fun updateWeeklyReadingGoal(minutes: Int)
+    fun getWeeklyReadingGoal(): Flow<Int>
+    suspend fun updateMonthlyReadingGoal(minutes: Int)
+    fun getMonthlyReadingGoal(): Flow<Int>
     suspend fun updateReadingWidgetSnapshot(bookTitle: String, progressPercent: Int)
     suspend fun updateGestureSettings(settings: GestureSettings)
     fun isOnboardingCompleted(): Flow<Boolean>

@@ -15,4 +15,7 @@ interface AnnotationRepository {
     suspend fun deleteAnnotationById(id: Long)
     suspend fun deleteAnnotationsByBookId(bookId: Long)
     suspend fun searchAnnotations(bookId: Long, query: String): List<Annotation>
+    suspend fun exportAnnotations(bookId: Long, format: AnnotationExportFormat): String
 }
+
+enum class AnnotationExportFormat { MARKDOWN, HTML, TEXT }

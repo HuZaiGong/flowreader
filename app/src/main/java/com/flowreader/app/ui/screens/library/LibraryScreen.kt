@@ -30,6 +30,7 @@ import coil.compose.AsyncImagePainter
 import coil.request.ImageRequest
 import coil.request.CachePolicy
 import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.GlobalSearchResult
 import java.io.File
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -94,6 +95,25 @@ fun LibraryScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        if (uiState.isGlobalSearching) {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
+                        if (uiState.globalSearchResults.isNotEmpty()) {
+                            Text(
+                                text = "全文命中",
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(16.dp, 8.dp)
+                            )
+                            uiState.globalSearchResults.take(8).forEach { result ->
+                                GlobalSearchResultItem(
+                                    result = result,
+                                    onClick = {
+                                        showSearchBar = false
+                                        onBookClick(result.bookId)
+                                    }
+                                )
+                            }
+                        }
                     }
                 } else {
                     TopAppBar(
@@ -284,6 +304,25 @@ fun LibraryScreen(
                 }
             }
         }
+}
+
+@Composable
+private fun GlobalSearchResultItem(
+    result: GlobalSearchResult,
+    onClick: () -> Unit
+) {
+    ListItem(
+        headlineContent = { Text(result.bookTitle.ifBlank { "未知书籍" }, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = {
+            Text(
+                text = "第 ${result.chapterIndex + 1} 章 · ${result.chapterTitle}\n${result.matchedText}",
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        leadingContent = { Icon(Icons.Default.Search, contentDescription = null) },
+        modifier = Modifier.clickable(onClick = onClick)
+    )
 }
 
 @Composable

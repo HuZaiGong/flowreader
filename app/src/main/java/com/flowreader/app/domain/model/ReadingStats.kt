@@ -26,3 +26,12 @@ data class ReadingSummary(
     val currentStreak: Int,
     val longestStreak: Int
 )
+
+data class ReadingReport(
+    val rangeLabel: String,
+    val totalReadTime: Long,
+    val totalReadPages: Int,
+    val fastestReadingDay: DailyStats?,
+    val mostReadBookTitle: String?,
+    val dailyStats: List<DailyStats>
+)
