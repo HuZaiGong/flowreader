@@ -58,9 +58,11 @@ FlowReader 是一款采用 **Jetpack Compose** 构建的 **Android 电子书阅�
 
 ## 📂 项目架构
 
-我们采用 **Clean Architecture** 分层架构，实现关注点分离与高度解耦：
+我们采用 **Clean Architecture + 多模块** 分层架构，实现关注点分离与高度解耦：
 
 **`UI` → `Domain` → `Data`**
+
+v51 后 Gradle 模块为 `:app`、`:core`、`:data`、`:domain`、`:feature:library`、`:feature:reader`。`:app` 负责 Hilt、导航和遗留 UI 装配，`:domain` 提供模型/仓库契约，`:data` 承载 Room 本地层，`:feature:*` 是书架/阅读器继续迁移的功能边界。
 
 ### 1. UI 层
 *   **职责**：负责页面渲染与用户交互。
@@ -72,7 +74,7 @@ FlowReader 是一款采用 **Jetpack Compose** 构建的 **Android 电子书阅�
 
 ### 3. Data 层
 *   **职责**：负责数据的获取与持久化。
-*   **构成**：`data/local/` 基于 **Room** 实现本地数据库存储（6 DAO + 6 Entity）；`data/repository/` 提供 Repository 接口的具体实现。
+*   **构成**：`:data` 模块的 `data/local/` 基于 **Room** 实现本地数据库存储（6 DAO + 6 Entity）；app 层的 `data/repository/` 继续提供 Repository 接口实现并逐步迁移到 `:data`。
 
 ---
 
@@ -92,9 +94,9 @@ flowreader/
 │       │   │   ├── MainActivity.kt                    # 应用主入口，设置 Compose Content
 │       │   │   ├── FlowReaderApplication.kt           # @HiltAndroidApp 注入点
 │       │   │   │
-│       │   │   ├── data/                            # 数据层
-│       │   │   │   ├── local/
-│       │   │   │   │   ├── AppDatabase.kt           # Room 数据库 (v4)
+│       │   │   ├── data/                            # Repository 实现（Room local 已迁至 :data）
+│       │   │   │   ├── local/                       # 见 :data，本地数据库 version 6
+│       │   │   │   │   ├── AppDatabase.kt           # Room 数据库 (v6)
 │       │   │   │   │   ├── dao/                     # Data Access Objects
 │       │   │   │   │   │   ├── AnnotationDao.kt
 │       │   │   │   │   │   ├── BookDao.kt

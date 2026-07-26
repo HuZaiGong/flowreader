@@ -45,7 +45,7 @@ data class GestureSettings(
     val longPressAction: GestureAction = GestureAction.ADD_BOOKMARK,
     val edgeGestureEnabled: Boolean = true,
     val leftEdgeWidth: Int = 20,
-    val rightEdgeWidth: Int = 20,
+    val rightEdgeWidth: Int = 20
 )
 
 data class ReadingSettings(

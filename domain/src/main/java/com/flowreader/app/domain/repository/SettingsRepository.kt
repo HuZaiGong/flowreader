@@ -3,7 +3,6 @@ package com.flowreader.app.domain.repository
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.GestureSettings
 import com.flowreader.app.domain.model.PageMode
-import android.net.Uri
 import com.flowreader.app.domain.model.ReaderTheme
 import com.flowreader.app.domain.model.ReadingSettings
 import kotlinx.coroutines.flow.Flow

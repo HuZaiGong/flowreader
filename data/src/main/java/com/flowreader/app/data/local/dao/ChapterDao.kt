@@ -1,6 +1,11 @@
 package com.flowreader.app.data.local.dao
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import com.flowreader.app.data.local.entity.ChapterEntity
 import com.flowreader.app.data.local.entity.ChapterMetadata
 import kotlinx.coroutines.flow.Flow
@@ -42,5 +47,4 @@ interface ChapterDao {
 
     @Query("SELECT COUNT(*) FROM chapters WHERE bookId = :bookId")
     suspend fun getChapterCount(bookId: Long): Int
-
 }

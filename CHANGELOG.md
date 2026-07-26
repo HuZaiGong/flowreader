@@ -4,6 +4,13 @@
 
 ---
 
+## [v51.0.0] - 2026-07
+- **多模块架构升级**：新增 `:core`、`:data`、`:domain`、`:feature:library`、`:feature:reader` 模块，应用层保留导航/Hilt 装配，Room 本地层迁入 `:data`。
+- **工具链升级**：Kotlin 与 Compose compiler 升级到 `2.1.0`，KSP 升级到 `2.1.0-1.0.29`，Hilt 升级到 `2.55` 以兼容 Kotlin 2.1 metadata。
+- **测试覆盖门禁**：新增 8 个 domain 模型测试，`coverageSummary` 改为覆盖 Repository、ViewModel 与 domain 核心文件，当前达到 41.9%。
+- **代码规范与 CI**：引入 ktlint、`.editorconfig` 和 GitHub Actions，CI 自动执行 `verifyKotlinStyle`、`testDebugUnitTest`、`coverageSummary`、`assembleDebug`。
+- **Room 计划落地**：Room DB 保持 version 6，schema 迁移到 `data/schemas/`，继续保留 v4→v5 标签字段和 v5→v6 书签索引迁移。
+
 ## [v50.0.0] - 2026-07
 - **开始阅读闪退修复**：TTS 引擎改为点击朗读时懒初始化，避免进入阅读器时因系统 TTS 初始化异常导致崩溃。
 - **架构补强**：抽出真实 `:domain` 模块，领域模型/仓库接口不再依赖 Compose UI 或 data 实现。

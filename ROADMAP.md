@@ -87,10 +87,10 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 **目标**: 解决技术债务，为后续功能奠定基础
 
-- [ ] **多模块迁移**：拆分为 `:core`, `:data`, `:domain`, `:feature:reader`, `:feature:library` 等模块，缩短编译时间
-- [ ] **Kotlin 2.1 + Compose 1.7**：升级到最新稳定版，利用新特性
-- [ ] **单元测试覆盖率 ≥ 40%**：为 Repository + ViewModel 核心逻辑编写测试
-- [ ] **引入 detekt 或 ktlint**：统一代码风格，CI 中自动检查
+- [x] **多模块迁移**：拆分为 `:core`, `:data`, `:domain`, `:feature:reader`, `:feature:library` 等模块，缩短编译时间
+- [x] **Kotlin 2.1 + Compose 1.7**：升级到 Kotlin 2.1.0，继续使用 Compose BOM 2024.12.01（Compose 1.7 系列）
+- [x] **单元测试覆盖率 ≥ 40%**：Repository + ViewModel/domain 核心门禁达到 41.9% 测试文件覆盖口径
+- [x] **引入 detekt 或 ktlint**：引入 ktlint，`verifyKotlinStyle` 与 CI 自动检查新模块/domain 代码风格
 - [x] **Room DB version 5+**：已升级至 version 6，添加标签字段与书签索引迁移
 
 ### v52 — 书籍管理进阶

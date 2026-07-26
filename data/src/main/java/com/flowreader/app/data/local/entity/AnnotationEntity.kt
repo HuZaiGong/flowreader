@@ -43,8 +43,16 @@ data class AnnotationEntity(
         endPosition = endPosition,
         selectedText = selectedText,
         note = note,
-        color = try { AnnotationColor.valueOf(color) } catch (e: Exception) { AnnotationColor.YELLOW },
-        type = try { AnnotationType.valueOf(type) } catch (e: Exception) { AnnotationType.HIGHLIGHT },
+        color = try {
+            AnnotationColor.valueOf(color)
+        } catch (e: Exception) {
+            AnnotationColor.YELLOW
+        },
+        type = try {
+            AnnotationType.valueOf(type)
+        } catch (e: Exception) {
+            AnnotationType.HIGHLIGHT
+        },
         createdTime = Date(createdTime),
         modifiedTime = Date(modifiedTime)
     )

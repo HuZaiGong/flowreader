@@ -7,7 +7,8 @@ data class WheelItem(
     val id: String = java.util.UUID.randomUUID().toString(),
     val label: String,
     val colorValue: Long,
-    val weight: Float = 1f // 权重，用于影响概率
+    // 权重，用于影响概率
+    val weight: Float = 1f
 ) {
     companion object {
         fun defaultItems(): List<WheelItem> = listOf(
@@ -27,7 +28,8 @@ data class WheelItem(
 data class WheelConfig(
     val items: List<WheelItem> = WheelItem.defaultItems(),
     val title: String = "阅读决策转盘",
-    val spinDuration: Long = 4000L // 旋转持续时间（毫秒）
+    // 旋转持续时间（毫秒）
+    val spinDuration: Long = 4000L
 )
 
 /**

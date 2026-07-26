@@ -2,15 +2,23 @@
 plugins {
     id("com.android.application") version "8.6.0" apply false
     id("com.android.library") version "8.6.0" apply false
-    id("org.jetbrains.kotlin.android") version "2.0.21" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.0.21" apply false
-    id("com.google.dagger.hilt.android") version "2.50" apply false
-    id("com.google.devtools.ksp") version "2.0.21-1.0.27" apply false
+    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0" apply false
+    id("com.google.dagger.hilt.android") version "2.55" apply false
+    id("com.google.devtools.ksp") version "2.1.0-1.0.29" apply false
+    id("org.jlleitschuh.gradle.ktlint") version "12.1.2" apply false
+}
+
+subprojects {
+    if (path != ":app") {
+        apply(plugin = "org.jlleitschuh.gradle.ktlint")
+    }
 }
 
 tasks.register("verifyKotlinStyle") {
     group = "verification"
-    description = "Lightweight Kotlin style gate: no tabs or trailing whitespace."
+    description = "Runs ktlint and a lightweight whitespace gate."
+    dependsOn(subprojects.filter { it.path != ":app" }.map { it.tasks.named("ktlintCheck") })
     doLast {
         val violations = fileTree(rootDir) {
             include("**/*.kt", "**/*.kts")
@@ -32,17 +40,17 @@ tasks.register("verifyKotlinStyle") {
 
 tasks.register("coverageSummary") {
     group = "verification"
-    description = "Reports JVM test breadth for the v50 rebuilt core modules and enforces a lightweight 40% file target."
+    description = "Reports JVM test breadth for v51 Repository and ViewModel targets and enforces a 40% file target."
     doLast {
-        val sourceFiles = listOf(
-            file("app/src/main/java/com/flowreader/app/data/repository/AnnotationRepositoryImpl.kt"),
-            file("app/src/main/java/com/flowreader/app/data/repository/BookmarkRepositoryImpl.kt"),
-            file("app/src/main/java/com/flowreader/app/data/repository/ReadingStatsRepositoryImpl.kt"),
-            file("app/src/main/java/com/flowreader/app/data/repository/SearchRepositoryImpl.kt"),
-            file("app/src/main/java/com/flowreader/app/util/FullTextSearch.kt"),
-            file("app/src/main/java/com/flowreader/app/util/TtsManager.kt"),
-            file("domain/src/main/java/com/flowreader/app/domain/model/WheelItem.kt")
-        ).filter { it.exists() }
+        val sourceFiles = fileTree(rootDir) {
+            include(
+                "app/src/main/java/**/data/repository/*Repository*.kt",
+                "app/src/main/java/**/ui/screens/**/*ViewModel.kt",
+                "domain/src/main/java/**/repository/*.kt",
+                "domain/src/main/java/**/model/*.kt"
+            )
+            exclude("**/build/**")
+        }.files
         val testFiles = fileTree(rootDir) {
             include("app/src/test/java/**/*.kt", "domain/src/test/java/**/*.kt")
             exclude("**/build/**")

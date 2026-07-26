@@ -1,24 +1,27 @@
 # FlowReader
 
-Offline-first Android e-book reader. Single Gradle module: `:app`; all Kotlin app code is under `app/src/main/java/com/flowreader/app/`.
+Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`, `:domain`, `:feature:library`, and `:feature:reader`.
 
 ## Commands
 - `./gradlew assembleDebug` builds the development APK.
 - `./gradlew assembleRelease` builds the minified/shrunk release APK; release intentionally uses the debug signing config in `app/build.gradle.kts`.
-- `./gradlew testDebugUnitTest` runs the JVM unit tests. Current focused test file: `app/src/test/java/com/flowreader/app/util/BookParserTest.kt`.
+- `./gradlew testDebugUnitTest` runs the JVM unit tests. Current focused test files include `app/src/test/java/com/flowreader/app/util/BookParserTest.kt` and domain model tests under `domain/src/test/java/`.
 - `./gradlew testDebugUnitTest --tests com.flowreader.app.util.BookParserTest` runs the existing focused test class.
+- `./gradlew verifyKotlinStyle` runs ktlint for non-app modules plus the lightweight whitespace gate.
+- `./gradlew coverageSummary` enforces the v51 40% Repository/ViewModel/domain test breadth target.
 - `./gradlew clean` is available when generated/KSP state looks stale.
-- There is no repo CI workflow, lint, detekt, or ktlint config at the moment; do not claim those checks ran unless you ran a Gradle task.
+- CI is in `.github/workflows/ci.yml`; do not claim checks ran unless you ran a Gradle task or inspected CI results.
 
 ## Toolchain
 - JDK 17 and Android SDK 35 are required by Gradle config.
 - Gradle wrapper downloads Gradle `9.6.1` from `mirrors.cloud.tencent.com`; network issues may be mirror-related.
-- AGP `8.6.0`, Kotlin `2.0.21`, Compose BOM `2024.12.01`, Hilt `2.50`, Room `2.6.1`.
-- Room schemas are exported to `app/schemas/`; KSP generated output is under `app/build/generated/ksp/`.
+- AGP `8.6.0`, Kotlin `2.1.0`, Compose BOM `2024.12.01`, Hilt `2.55`, Room `2.6.1`.
+- Room schemas are exported to `data/schemas/`; KSP generated output is under each module's `build/generated/ksp/`.
 
 ## Architecture
 - Entry points: `MainActivity.kt`, `FlowReaderApplication.kt`, and root navigation/theme in `ui/Navigation.kt`.
 - Flow is `Composable -> ViewModel -> domain repository interface -> data repository impl -> Room DAO`.
+- `:app` is the current composition root; `:domain` owns models/contracts; `:data` owns Room local storage; `:core` and `:feature:*` are v51 module boundaries for ongoing migration.
 - `ui/screens/<screen>/` pairs `*Screen.kt` with `*ViewModel.kt`; each ViewModel exposes immutable `StateFlow<XxxUiState>` backed by private `MutableStateFlow`.
 - Domain repository interfaces are separate files in `domain/repository/`; implementations are in `data/repository/` and bound in `di/AppModule.kt`.
 - `di/AppModule.kt` contains `DatabaseModule` DAO providers and `RepositoryModule` Hilt `@Binds` entries. Add bindings there for new repos.
