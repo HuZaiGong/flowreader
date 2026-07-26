@@ -1,43 +1,55 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
-
 package com.flowreader.app.ui.screens.reader
 
 import androidx.activity.ComponentActivity
-import androidx.compose.animation.*
-import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.flowreader.app.domain.model.Annotation
-import com.flowreader.app.domain.model.Book
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.flowreader.app.core.designsystem.component.FlowStateHost
+import com.flowreader.app.core.designsystem.reader.ReaderPalettes
+import com.flowreader.app.core.designsystem.reader.background
+import com.flowreader.app.core.designsystem.reader.rememberReaderFontFamily
+import com.flowreader.app.core.designsystem.reader.text
+import com.flowreader.app.core.designsystem.token.FlowMotion
+import com.flowreader.app.core.util.ReaderBehavior
+import com.flowreader.app.core.util.ReadingProgress
 import com.flowreader.app.domain.model.BookFormat
-import com.flowreader.app.domain.model.Bookmark
-import com.flowreader.app.domain.model.Chapter
+import com.flowreader.app.domain.model.GestureAction
 import com.flowreader.app.domain.model.PageMode
-import com.flowreader.app.domain.model.ReaderTheme
-import com.flowreader.app.domain.model.ReadingSettings
-import com.flowreader.app.ui.screens.reader.components.*
-import com.flowreader.app.ui.theme.ReaderColors
+import com.flowreader.app.ui.screens.reader.components.AnnotationsDialog
+import com.flowreader.app.ui.screens.reader.components.BookmarksDialog
+import com.flowreader.app.ui.screens.reader.components.ChapterListDialog
+import com.flowreader.app.ui.screens.reader.components.ParagraphActionSheet
+import com.flowreader.app.ui.screens.reader.components.PdfViewer
+import com.flowreader.app.ui.screens.reader.components.ReaderContent
+import com.flowreader.app.ui.screens.reader.components.ReaderControls
+import com.flowreader.app.ui.screens.reader.components.ReaderSettingsSheet
+import com.flowreader.app.ui.screens.reader.components.SearchDialog
+import com.flowreader.app.ui.screens.reader.components.ShareProgressDialog
+import kotlinx.coroutines.delay
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
     viewModel: ReaderViewModel = hiltViewModel(),
@@ -47,18 +59,34 @@ fun ReaderScreen(
     val context = LocalContext.current
     val activity = context as? ComponentActivity
     val view = LocalView.current
+    val settings = uiState.readingSettings
 
     val contentScrollState = rememberScrollState()
 
     LaunchedEffect(uiState.scrollRequestVersion) {
-        contentScrollState.scrollTo(uiState.currentPosition.coerceAtLeast(0))
+        val target = uiState.currentPosition.coerceAtLeast(0)
+        if (settings.pageMode == PageMode.SLIDE) {
+            contentScrollState.animateScrollTo(target)
+        } else {
+            contentScrollState.scrollTo(target)
+        }
     }
 
-    val effectiveTheme = if (uiState.readingSettings.autoNightMode) {
-        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
-        if (hour >= 19 || hour < 7) ReaderTheme.DARK else ReaderTheme.LIGHT
-    } else {
-        uiState.readingSettings.theme
+    // Auto night mode is re-evaluated every minute, so 19:00 actually arrives while reading.
+    // Before v52 the hour was sampled once during composition and never again.
+    val isNightWindow by produceState(
+        initialValue = ReaderBehavior.isNightHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY)),
+        key1 = settings.autoNightMode
+    ) {
+        while (settings.autoNightMode) {
+            value = ReaderBehavior.isNightHour(Calendar.getInstance().get(Calendar.HOUR_OF_DAY))
+            delay(60_000L)
+        }
+    }
+
+    val palette = remember(settings.palette, settings.nightPalette, settings.autoNightMode, isNightWindow) {
+        val id = if (settings.autoNightMode && isNightWindow) settings.nightPalette else settings.palette
+        ReaderPalettes.of(id)
     }
 
     DisposableEffect(activity, view, uiState.isImmersiveMode) {
@@ -77,190 +105,187 @@ fun ReaderScreen(
         }
     }
 
-    val backgroundColor = when (effectiveTheme) {
-        ReaderTheme.LIGHT -> ReaderColors.LightBackground
-        ReaderTheme.DARK -> ReaderColors.DarkBackground
+    fun dispatchGesture(action: GestureAction) {
+        when (action) {
+            GestureAction.PREVIOUS_PAGE -> viewModel.goToPreviousChapter()
+            GestureAction.NEXT_PAGE -> viewModel.goToNextChapter()
+            GestureAction.TOGGLE_CONTROLS -> viewModel.toggleControls()
+            GestureAction.SHOW_SETTINGS -> viewModel.showSettings(true)
+            GestureAction.SHOW_BOOKMARKS -> viewModel.showBookmarks(true)
+            GestureAction.SHOW_TOC -> viewModel.showChapterList(true)
+            GestureAction.ADD_BOOKMARK -> viewModel.addBookmark("第 ${uiState.currentChapterIndex + 1} 章书签")
+            GestureAction.NONE -> Unit
+        }
     }
 
-    val textColor = when (effectiveTheme) {
-        ReaderTheme.LIGHT -> ReaderColors.LightText
-        ReaderTheme.DARK -> ReaderColors.DarkText
+    val fontFamily = rememberReaderFontFamily(settings)
+
+    // Derived so scroll updates repaint only the control layer, never the body.
+    val chapterFraction by remember {
+        derivedStateOf { ReadingProgress.scrollFraction(contentScrollState.value, contentScrollState.maxValue) }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(backgroundColor)
+            .background(palette.background)
     ) {
-        val error = uiState.error
-        if (error != null) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(backgroundColor),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = error,
-                        color = textColor,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Button(onClick = { viewModel.retryLoadBook() }) {
-                            Text("重试")
-                        }
-                        OutlinedButton(onClick = onBackClick) {
-                            Text("返回")
-                        }
-                    }
-                }
-            }
-        } else if (uiState.isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
-        } else {
-            uiState.currentChapter?.let { chapter ->
-                val book = uiState.book
+        FlowStateHost(
+            isLoading = uiState.isLoading,
+            isEmpty = uiState.currentChapter == null && uiState.error == null && !uiState.isLoading,
+            error = uiState.error,
+            emptyTitle = "本章暂无内容",
+            onRetry = { viewModel.retryLoadBook() },
+            onDismissError = onBackClick,
+            contentColor = palette.text
+        ) {
+            val chapter = uiState.currentChapter
+            val book = uiState.book
+            if (chapter != null) {
                 if (book != null && book.format == BookFormat.PDF) {
                     PdfViewer(
                         filePath = book.filePath,
                         currentPage = uiState.currentChapterIndex,
-                        textColor = textColor,
-                        backgroundColor = backgroundColor,
+                        textColor = palette.text,
+                        backgroundColor = palette.background,
                         onPageChange = { viewModel.goToChapter(it) }
                     )
                 } else {
                     ReaderContent(
                         chapter = chapter,
-                        settings = uiState.readingSettings,
-                        textColor = textColor,
-                        backgroundColor = backgroundColor,
+                        settings = settings,
+                        palette = palette,
+                        fontFamily = fontFamily,
                         scrollState = contentScrollState,
                         annotations = uiState.annotations,
                         onTap = { offset, size ->
-                            val tapZoneWidth = size.width * uiState.readingSettings.tapZoneRatio
-                            val middle = size.width / 2
-                            when {
-                                offset.x < (middle - tapZoneWidth) -> viewModel.goToPreviousChapter()
-                                offset.x > (middle + tapZoneWidth) -> viewModel.goToNextChapter()
-                                else -> viewModel.toggleControls()
+                            dispatchGesture(ReaderBehavior.tapAction(offset.x, size.width, settings))
+                        },
+                        onDoubleTap = { dispatchGesture(settings.gestureSettings.doubleTapAction) },
+                        onHorizontalDrag = { drag ->
+                            dispatchGesture(ReaderBehavior.swipeAction(drag, settings))
+                        },
+                        onParagraphLongPress = { text, start, end ->
+                            when (settings.gestureSettings.longPressAction) {
+                                GestureAction.NONE -> Unit
+                                GestureAction.ADD_BOOKMARK -> viewModel.selectParagraph(text, start, end)
+                                else -> dispatchGesture(settings.gestureSettings.longPressAction)
                             }
                         },
-                        onPositionChanged = { viewModel.updatePosition(it) },
-                        onTextSelected = { text, start, end, color ->
-                            viewModel.addAnnotation(text, start, end, color)
-                        },
-                        onBookmarkRequested = { note, position ->
-                            viewModel.addBookmark(note, position)
+                        onPositionChanged = { position ->
+                            viewModel.updatePosition(position, chapterFraction)
                         }
                     )
                 }
             }
+        }
 
-            AnimatedVisibility(
-                visible = uiState.showControls,
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                ReaderControls(
-                    bookTitle = uiState.book?.title ?: "",
-                    chapterTitle = uiState.currentChapter?.title ?: "",
-                    currentChapter = uiState.currentChapterIndex + 1,
-                    totalChapters = uiState.chapters.size,
-                    onBackClick = onBackClick,
-                    onChapterClick = { viewModel.showChapterList(true) },
-                    onSettingsClick = { viewModel.showSettings(true) },
-                    onSearchClick = { viewModel.showSearch(true) },
-                    onAnnotationClick = { viewModel.showAnnotations(true) },
-                    onShareClick = { viewModel.shareProgress() },
-                    onBookmarkClick = { viewModel.showBookmarks(true) },
-                    onTtsClick = { viewModel.toggleTts() },
-                    onImmersiveClick = { viewModel.toggleImmersiveMode() },
-                    isTtsPlaying = uiState.isTtsPlaying,
-                    onProgressChange = { progress ->
-                        val chapterIndex = (progress * uiState.chapters.size).toInt().coerceIn(0, uiState.chapters.size - 1)
-                        viewModel.goToChapter(chapterIndex)
-                    },
-                    textColor = textColor,
-                    backgroundColor = backgroundColor
-                )
-            }
+        AnimatedVisibility(
+            visible = uiState.showControls && uiState.error == null && !uiState.isLoading,
+            enter = fadeIn(tween(FlowMotion.QUICK_MS)) + slideInVertically(tween(FlowMotion.QUICK_MS)) { -it / 4 },
+            exit = fadeOut(tween(FlowMotion.QUICK_MS)) + slideOutVertically(tween(FlowMotion.QUICK_MS)) { -it / 4 }
+        ) {
+            ReaderControls(
+                bookTitle = uiState.book?.title ?: "",
+                chapterTitle = uiState.currentChapter?.title ?: "",
+                currentChapter = uiState.currentChapterIndex + 1,
+                totalChapters = uiState.chapters.size,
+                progressProvider = {
+                    ReadingProgress.fraction(uiState.currentChapterIndex, chapterFraction, uiState.chapters.size)
+                },
+                isTtsPlaying = uiState.isTtsPlaying,
+                palette = palette,
+                chapterTitleAt = { fraction ->
+                    val index = ReadingProgress.chapterAt(fraction, uiState.chapters.size)
+                    uiState.chapters.getOrNull(index)?.title ?: "第 ${index + 1} 章"
+                },
+                onBackClick = onBackClick,
+                onChapterClick = { viewModel.showChapterList(true) },
+                onBookmarkClick = { viewModel.showBookmarks(true) },
+                onTtsClick = { viewModel.toggleTts() },
+                onAnnotationClick = { viewModel.showAnnotations(true) },
+                onSearchClick = { viewModel.showSearch(true) },
+                onImmersiveClick = { viewModel.toggleImmersiveMode() },
+                onShareClick = { viewModel.shareProgress() },
+                onSettingsClick = { viewModel.showSettings(true) },
+                onProgressCommit = { viewModel.goToProgress(it) }
+            )
+        }
 
-            if (uiState.showChapterList) {
-                ChapterListDialog(
-                    chapters = uiState.chapters,
-                    currentChapter = uiState.currentChapterIndex,
-                    onChapterSelect = { viewModel.goToChapter(it) },
-                    onDismiss = { viewModel.showChapterList(false) },
-                    textColor = textColor,
-                    backgroundColor = backgroundColor
-                )
-            }
+        if (uiState.showChapterList) {
+            ChapterListDialog(
+                chapters = uiState.chapters,
+                currentChapter = uiState.currentChapterIndex,
+                onChapterSelect = { viewModel.goToChapter(it) },
+                onDismiss = { viewModel.showChapterList(false) },
+                textColor = palette.text,
+                backgroundColor = palette.background
+            )
+        }
 
-            if (uiState.showSearch) {
-                SearchDialog(
-                    query = uiState.searchQuery,
-                    results = uiState.searchResults,
-                    isSearching = uiState.isSearching,
-                    hasSearched = uiState.hasSearched,
-                    onQueryChange = { viewModel.updateSearchQuery(it) },
-                    onSearch = { viewModel.searchInBook() },
-                    onResultClick = { viewModel.goToSearchResult(it) },
-                    onDismiss = { viewModel.showSearch(false) }
-                )
-            }
+        if (uiState.showSearch) {
+            SearchDialog(
+                query = uiState.searchQuery,
+                results = uiState.searchResults,
+                isSearching = uiState.isSearching,
+                hasSearched = uiState.hasSearched,
+                onQueryChange = { viewModel.updateSearchQuery(it) },
+                onSearch = { viewModel.searchInBook() },
+                onResultClick = { viewModel.goToSearchResult(it) },
+                onDismiss = { viewModel.showSearch(false) }
+            )
+        }
 
-            if (uiState.showSettings) {
-                ReaderSettingsDialog(
-                    settings = uiState.readingSettings,
-                    onFontSizeChange = { viewModel.updateFontSize(it) },
-                    onLineSpacingChange = { viewModel.updateLineSpacing(it) },
-                    onFontFamilyChange = { viewModel.updateFontFamily(it) },
-                    onThemeChange = { viewModel.updateReaderTheme(it) },
-                    onPageModeChange = { viewModel.updatePageMode(it) },
-                    onEyeProtectionIntervalChange = { viewModel.updateEyeProtectionInterval(it) },
-                    onAutoNightModeChange = { viewModel.updateAutoNightMode(it) },
-                    onDismiss = { viewModel.showSettings(false) },
-                    textColor = textColor,
-                    backgroundColor = backgroundColor
-                )
-            }
+        if (uiState.showSettings) {
+            ReaderSettingsSheet(
+                settings = settings,
+                onSettingsChange = { viewModel.updateReadingSettings(it) },
+                onDismiss = { viewModel.showSettings(false) }
+            )
+        }
 
-            if (uiState.showAnnotations) {
-                AnnotationsDialog(
-                    annotations = uiState.annotations.filter { it.chapterIndex == uiState.currentChapterIndex },
-                    onAnnotationSelect = { annotation -> viewModel.goToChapter(annotation.chapterIndex) },
-                    onAnnotationDelete = { annotation -> viewModel.deleteAnnotation(annotation) },
-                    onAnnotationNoteUpdate = { id, note -> viewModel.updateAnnotationNote(id, note) },
-                    onDismiss = { viewModel.showAnnotations(false) },
-                    textColor = textColor,
-                    backgroundColor = backgroundColor
-                )
-            }
+        uiState.paragraphSelection?.let { selection ->
+            ParagraphActionSheet(
+                paragraph = selection.text,
+                onHighlight = { viewModel.highlightSelectedParagraph(it) },
+                onBookmark = { viewModel.bookmarkSelectedParagraph(it) },
+                onDismiss = { viewModel.clearParagraphSelection() }
+            )
+        }
 
-            if (uiState.showBookmarks) {
-                BookmarksDialog(
-                    bookmarks = uiState.bookmarks,
-                    currentChapterIndex = uiState.currentChapterIndex,
-                    onBookmarkSelect = { viewModel.goToBookmark(it) },
-                    onBookmarkDelete = { viewModel.deleteBookmark(it) },
-                    onDismiss = { viewModel.showBookmarks(false) },
-                    textColor = textColor,
-                    backgroundColor = backgroundColor
-                )
-            }
+        if (uiState.showAnnotations) {
+            AnnotationsDialog(
+                annotations = uiState.annotations.filter { it.chapterIndex == uiState.currentChapterIndex },
+                onAnnotationSelect = { annotation -> viewModel.goToChapter(annotation.chapterIndex) },
+                onAnnotationDelete = { annotation -> viewModel.deleteAnnotation(annotation) },
+                onAnnotationNoteUpdate = { id, note -> viewModel.updateAnnotationNote(id, note) },
+                onDismiss = { viewModel.showAnnotations(false) },
+                textColor = palette.text,
+                backgroundColor = palette.background
+            )
+        }
 
-            uiState.shareText?.let { shareText ->
-                ShareProgressDialog(
-                    shareText = shareText,
-                    onDismiss = { viewModel.clearShareText() },
-                    onShare = { intent ->
-                        context.startActivity(intent)
-                        viewModel.clearShareText()
-                    }
-                )
-            }
+        if (uiState.showBookmarks) {
+            BookmarksDialog(
+                bookmarks = uiState.bookmarks,
+                currentChapterIndex = uiState.currentChapterIndex,
+                onBookmarkSelect = { viewModel.goToBookmark(it) },
+                onBookmarkDelete = { viewModel.deleteBookmark(it) },
+                onDismiss = { viewModel.showBookmarks(false) },
+                textColor = palette.text,
+                backgroundColor = palette.background
+            )
+        }
+
+        uiState.shareText?.let { shareText ->
+            ShareProgressDialog(
+                shareText = shareText,
+                onDismiss = { viewModel.clearShareText() },
+                onShare = { intent ->
+                    context.startActivity(intent)
+                    viewModel.clearShareText()
+                }
+            )
         }
     }
 }

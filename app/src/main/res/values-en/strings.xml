@@ -34,7 +34,6 @@
     <string name="amoled_theme">Night</string>
     <string name="page_mode">Page Mode</string>
     <string name="slide_mode">Slide</string>
-    <string name="simulation_mode">Simulation</string>
     <string name="none_mode">None</string>
     <string name="screen_timeout">Screen Timeout</string>
     <string name="reading_settings">Reading Settings</string>

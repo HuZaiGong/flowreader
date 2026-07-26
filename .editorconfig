@@ -11,3 +11,5 @@ indent_style = space
 indent_size = 4
 max_line_length = 140
 ktlint_code_style = android_studio
+# Composable functions are PascalCase by convention; exempt them from function-naming.
+ktlint_function_naming_ignore_when_annotated_with = Composable

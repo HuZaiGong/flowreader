@@ -34,7 +34,6 @@
     <string name="amoled_theme">야간</string>
     <string name="page_mode">페이지 모드</string>
     <string name="slide_mode">슬라이드</string>
-    <string name="simulation_mode">시뮬레이션</string>
     <string name="none_mode">없음</string>
     <string name="screen_timeout">화면 시간 초과</string>
     <string name="reading_settings">읽기 설정</string>

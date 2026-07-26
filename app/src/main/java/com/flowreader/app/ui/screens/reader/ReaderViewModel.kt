@@ -8,9 +8,7 @@ import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
-import com.flowreader.app.domain.model.FontFamily
-import com.flowreader.app.domain.model.PageMode
-import com.flowreader.app.domain.model.ReaderTheme
+import com.flowreader.app.core.util.ReadingProgress
 import com.flowreader.app.domain.model.ReadingSettings
 import com.flowreader.app.domain.repository.AnnotationRepository
 import com.flowreader.app.domain.repository.BookRepository
@@ -63,7 +61,15 @@ data class ReaderUiState(
     val suggestedBreakTime: Long = 0,
     val isTtsPlaying: Boolean = false,
     val isImmersiveMode: Boolean = false,
-    val scrollRequestVersion: Long = 0L
+    val scrollRequestVersion: Long = 0L,
+    val paragraphSelection: ParagraphSelection? = null
+)
+
+/** The paragraph a long press landed on, with the character range the highlight will cover. */
+data class ParagraphSelection(
+    val text: String,
+    val startPosition: Int,
+    val endPosition: Int
 )
 
 @HiltViewModel
@@ -103,6 +109,7 @@ class ReaderViewModel @Inject constructor(
     private var lastWidgetProgressPercent: Int = -1
     private var lastPosition: Int = 0
     private var lastSessionInteractionTime: Long = 0
+    private var chapterFraction: Float = 0f
     private val chapterPositions = mutableMapOf<Int, Int>()
 
     private val sessionPauseThresholdMs = 5 * 60 * 1000L
@@ -190,7 +197,7 @@ class ReaderViewModel @Inject constructor(
         val state = _uiState.value
         if (state.chapters.isNotEmpty()) {
             val position = chapterPositions[state.currentChapterIndex] ?: state.currentPosition
-            val progress = calculateProgress(state, position)
+            val progress = calculateProgress(state, chapterFraction)
             viewModelScope.launch {
                 bookRepository.updateReadingProgress(
                     bookId,
@@ -352,10 +359,8 @@ class ReaderViewModel @Inject constructor(
 
             val restoredPosition = (positionOverride ?: chapterPositions[index] ?: if (index == state.book?.currentChapter) state.book.currentPosition else 0)
                 .coerceAtLeast(0)
-            val progress = if (state.chapters.isNotEmpty()) {
-                val contentLength = content.length.coerceAtLeast(1)
-                (index.toFloat() + restoredPosition.toFloat() / contentLength) / state.chapters.size
-            } else 0f
+            chapterFraction = 0f
+            val progress = ReadingProgress.fraction(index, 0f, state.chapters.size)
 
             bookRepository.updateReadingProgress(bookId, index, restoredPosition, progress)
 
@@ -387,9 +392,10 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun updatePosition(position: Int) {
+    fun updatePosition(position: Int, chapterScrollFraction: Float = chapterFraction) {
         val state = _uiState.value
         if (position < 0) return
+        chapterFraction = if (chapterScrollFraction.isNaN()) 0f else chapterScrollFraction.coerceIn(0f, 1f)
         val now = System.currentTimeMillis()
         chapterPositions[state.currentChapterIndex] = position
 
@@ -441,7 +447,7 @@ class ReaderViewModel @Inject constructor(
         lastPositionUpdateTime = now
         lastPosition = position
 
-        val progress = calculateProgress(state, position)
+        val progress = calculateProgress(state, chapterFraction)
 
         if (now - lastUiPositionUpdateTime >= positionUpdateIntervalMs) {
             lastUiPositionUpdateTime = now
@@ -466,13 +472,8 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun calculateProgress(state: ReaderUiState, position: Int): Float {
-        return if (state.chapters.isNotEmpty()) {
-            val currentChapter = state.chapters.getOrNull(state.currentChapterIndex)
-            val contentLength = currentChapter?.content?.length?.coerceAtLeast(1) ?: 1
-            (state.currentChapterIndex.toFloat() + position.toFloat() / contentLength) / state.chapters.size
-        } else 0f
-    }
+    private fun calculateProgress(state: ReaderUiState, chapterScrollFraction: Float): Float =
+        ReadingProgress.fraction(state.currentChapterIndex, chapterScrollFraction, state.chapters.size)
 
     private fun estimateCharsPerPage(settings: ReadingSettings): Int {
         val fontFactor = 18f / settings.fontSize.coerceAtLeast(12)
@@ -596,23 +597,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    fun updateEyeProtectionInterval(minutes: Int) {
-        viewModelScope.launch {
-            val newSettings = _uiState.value.readingSettings.copy(eyeProtectionIntervalMinutes = minutes)
-            settingsRepository.updateReadingSettings(newSettings)
-            _uiState.update { it.copy(readingSettings = newSettings) }
-            startEyeProtectionTimer()
-        }
-    }
-
-    fun updateAutoNightMode(enabled: Boolean) {
-        viewModelScope.launch {
-            val newSettings = _uiState.value.readingSettings.copy(autoNightMode = enabled)
-            settingsRepository.updateReadingSettings(newSettings)
-            _uiState.update { it.copy(readingSettings = newSettings) }
-        }
-    }
-
     fun toggleTts() {
         val state = _uiState.value
         if (state.isTtsPlaying) {
@@ -708,49 +692,46 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(showControls = !it.showControls) }
     }
 
-    fun updateFontSize(size: Int) {
+    /**
+     * Single entry point for every reader preference. The v51 ViewModel carried six near-identical
+     * mutators; the settings sheet now hands back a whole [ReadingSettings].
+     */
+    fun updateReadingSettings(settings: ReadingSettings) {
+        val previousInterval = _uiState.value.readingSettings.eyeProtectionIntervalMinutes
+        _uiState.update { it.copy(readingSettings = settings) }
         viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            val newSettings = currentSettings.copy(fontSize = size)
-            settingsRepository.updateReadingSettings(newSettings)
-            _uiState.update { it.copy(readingSettings = newSettings) }
+            settingsRepository.updateReadingSettings(settings)
+        }
+        if (settings.eyeProtectionIntervalMinutes != previousInterval) {
+            startEyeProtectionTimer()
         }
     }
 
-    fun updateLineSpacing(spacing: Float) {
-        viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            val newSettings = currentSettings.copy(lineSpacing = spacing)
-            settingsRepository.updateReadingSettings(newSettings)
-            _uiState.update { it.copy(readingSettings = newSettings) }
-        }
+    /** Jumps to whichever chapter the reader progress slider was released over. */
+    fun goToProgress(fraction: Float) {
+        val state = _uiState.value
+        if (state.chapters.isEmpty()) return
+        goToChapter(ReadingProgress.chapterAt(fraction, state.chapters.size))
     }
 
-    fun updateReaderTheme(theme: ReaderTheme) {
-        viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            val newSettings = currentSettings.copy(theme = theme)
-            settingsRepository.updateReadingSettings(newSettings)
-            _uiState.update { it.copy(readingSettings = newSettings) }
-        }
+    fun selectParagraph(text: String, start: Int, end: Int) {
+        _uiState.update { it.copy(paragraphSelection = ParagraphSelection(text, start, end)) }
     }
 
-    fun updateFontFamily(family: FontFamily) {
-        viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            val newSettings = currentSettings.copy(fontFamily = family)
-            settingsRepository.updateReadingSettings(newSettings)
-            _uiState.update { it.copy(readingSettings = newSettings) }
-        }
+    fun clearParagraphSelection() {
+        _uiState.update { it.copy(paragraphSelection = null) }
     }
 
-    fun updatePageMode(mode: PageMode) {
-        viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            val newSettings = currentSettings.copy(pageMode = mode)
-            settingsRepository.updateReadingSettings(newSettings)
-            _uiState.update { it.copy(readingSettings = newSettings) }
-        }
+    fun highlightSelectedParagraph(color: AnnotationColor) {
+        val selection = _uiState.value.paragraphSelection ?: return
+        addAnnotation(selection.text, selection.startPosition, selection.endPosition, color)
+        clearParagraphSelection()
+    }
+
+    fun bookmarkSelectedParagraph(note: String) {
+        val selection = _uiState.value.paragraphSelection ?: return
+        addBookmark(note, selection.startPosition)
+        clearParagraphSelection()
     }
 
     fun shareProgress() {
@@ -758,9 +739,7 @@ class ReaderViewModel @Inject constructor(
         val book = state.book ?: return
         val chapter = state.currentChapter ?: return
 
-        val progress = if (state.chapters.isNotEmpty()) {
-            ((state.currentChapterIndex + 1).toFloat() / state.chapters.size * 100).roundToInt()
-        } else 0
+        val progress = (calculateProgress(state, chapterFraction) * 100).roundToInt()
 
         val shareText = "📚 正在阅读《${book.title}》\n" +
                 "第 ${state.currentChapterIndex + 1} 章：${chapter.title}\n" +

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,6 +26,7 @@ import com.flowreader.app.ui.screens.wheel.components.WheelSpinner
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WheelScreen(
+    onBackClick: () -> Unit,
     viewModel: WheelViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -49,6 +51,11 @@ fun WheelScreen(
         topBar = {
             TopAppBar(
                 title = { Text("决策转盘") },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
                 actions = {
                     IconButton(onClick = { viewModel.toggleEditMode() }) {
                         Icon(

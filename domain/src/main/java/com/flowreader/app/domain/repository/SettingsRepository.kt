@@ -1,9 +1,8 @@
 package com.flowreader.app.domain.repository
 
 import com.flowreader.app.domain.model.AppSettings
-import com.flowreader.app.domain.model.GestureSettings
-import com.flowreader.app.domain.model.PageMode
-import com.flowreader.app.domain.model.ReaderTheme
+import com.flowreader.app.domain.model.AppThemeMode
+import com.flowreader.app.domain.model.ColorSource
 import com.flowreader.app.domain.model.ReadingSettings
 import kotlinx.coroutines.flow.Flow
 
@@ -14,16 +13,9 @@ interface SettingsRepository {
 
     val appSettings: Flow<AppSettings>
 
-    suspend fun updateTheme(theme: ReaderTheme)
+    suspend fun updateThemeMode(mode: AppThemeMode)
+    suspend fun updateColorSource(source: ColorSource)
     suspend fun updateReadingSettings(settings: ReadingSettings)
-    suspend fun updateReaderTheme(theme: ReaderTheme)
-    suspend fun updateFontSize(size: Int)
-    suspend fun updateLineSpacing(spacing: Float)
-    suspend fun updatePageMode(mode: PageMode)
-    suspend fun updateKeepScreenOn(keepOn: Boolean)
-    suspend fun updateScreenTimeout(minutes: Int)
-    suspend fun updateEyeProtectionInterval(minutes: Int)
-    suspend fun updateAutoNightMode(enabled: Boolean)
     suspend fun updateReadingReminder(enabled: Boolean, hour: Int = 20, minute: Int = 0)
     suspend fun addSearchHistory(query: String)
     fun getSearchHistory(): Flow<List<String>>
@@ -35,7 +27,6 @@ interface SettingsRepository {
     suspend fun updateMonthlyReadingGoal(minutes: Int)
     fun getMonthlyReadingGoal(): Flow<Int>
     suspend fun updateReadingWidgetSnapshot(bookTitle: String, progressPercent: Int)
-    suspend fun updateGestureSettings(settings: GestureSettings)
     fun isOnboardingCompleted(): Flow<Boolean>
     suspend fun setOnboardingCompleted()
     suspend fun updateCustomFontPath(path: String?)

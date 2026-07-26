@@ -1,14 +1,26 @@
 package com.flowreader.app.ui.screens.reader.components
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.BrokenImage
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -17,221 +29,221 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.flowreader.app.core.designsystem.reader.ReaderMetrics
+import com.flowreader.app.core.designsystem.reader.ReaderPalette
+import com.flowreader.app.core.designsystem.reader.paragraphSpacing
+import com.flowreader.app.core.designsystem.reader.readerBodyStyle
+import com.flowreader.app.core.designsystem.reader.readerChapterTitleStyle
+import com.flowreader.app.core.designsystem.reader.readerHeadingStyle
+import com.flowreader.app.core.designsystem.reader.text
+import com.flowreader.app.core.designsystem.token.FlowSpacing
 import com.flowreader.app.domain.model.Annotation
-import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.model.ReadingSettings
 import java.io.File
 
+/**
+ * The reader body.
+ *
+ * Every style here comes from `:core`'s `ReaderTypography`, so the font family, the imported
+ * custom font, the line height, the paragraph gap and the first-line indent all take effect —
+ * before v52 the renderer hard-coded `bodyLarge` and dropped all four settings on the floor.
+ */
 @Composable
 fun ReaderContent(
     chapter: Chapter,
     settings: ReadingSettings,
-    textColor: androidx.compose.ui.graphics.Color,
-    backgroundColor: androidx.compose.ui.graphics.Color,
-    scrollState: androidx.compose.foundation.ScrollState,
-    annotations: List<Annotation> = emptyList(),
+    palette: ReaderPalette,
+    fontFamily: FontFamily,
+    scrollState: ScrollState,
     onTap: (Offset, Size) -> Unit,
+    onDoubleTap: () -> Unit,
+    onHorizontalDrag: (Float) -> Unit,
+    onParagraphLongPress: (String, Int, Int) -> Unit,
     onPositionChanged: (Int) -> Unit,
-    onTextSelected: (String, Int, Int, AnnotationColor) -> Unit = { _, _, _, _ -> },
-    onBookmarkRequested: (String, Int) -> Unit = { _, _ -> },
+    annotations: List<Annotation> = emptyList(),
     modifier: Modifier = Modifier
 ) {
-    var showHighlightMenu by remember { mutableStateOf(false) }
-    var selectedText by remember { mutableStateOf("") }
-    var selectionStart by remember { mutableIntStateOf(0) }
-    var selectionEnd by remember { mutableIntStateOf(0) }
+    val paragraphs = remember(chapter.content) { chapter.content.split("\n\n") }
 
-    val paragraphs = remember(chapter.content) {
-        chapter.content.split("\n\n")
-    }
-
-    val fontSizeValue = settings.fontSize
-    val lineSpacingValue = settings.lineSpacing
+    val bodyStyle = readerBodyStyle(settings, fontFamily, palette)
+    val titleStyle = readerChapterTitleStyle(settings, fontFamily, palette)
+    val headingStyle = readerHeadingStyle(settings, fontFamily, palette)
+    val paragraphGap = paragraphSpacing(settings)
+    val indentSp = ReaderMetrics.firstLineIndentSp(settings.fontSize, settings.firstLineIndent)
 
     LaunchedEffect(scrollState.value) {
         onPositionChanged(scrollState.value)
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
+            .pointerInput(settings.gestureSettings, settings.tapZoneRatio) {
                 detectTapGestures(
-                    onTap = { offset ->
-                        onTap(
-                            offset,
-                            Size(
-                                size.width.toFloat(),
-                                size.height.toFloat()
-                            )
-                        )
-                    },
-                    onLongPress = { offset ->
-                        showHighlightMenu = true
-                    }
+                    onTap = { offset -> onTap(offset, Size(size.width.toFloat(), size.height.toFloat())) },
+                    onDoubleTap = { onDoubleTap() }
+                )
+            }
+            .pointerInput(settings.gestureSettings) {
+                var total = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { total = 0f },
+                    onDragEnd = { onHorizontalDrag(total) },
+                    onHorizontalDrag = { _, delta -> total += delta }
                 )
             }
     ) {
+        // Cap the measure so a tablet does not stretch a line to 100+ CJK glyphs.
+        val contentWidth = ReaderMetrics.contentWidthDp(maxWidth.value, settings.fontSize).dp
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
-                .padding(
-                    horizontal = 20.dp,
-                    vertical = 80.dp)
+                .verticalScroll(scrollState),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = chapter.title,
-                style = MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = (fontSizeValue + 4).sp,
-                    lineHeight = (fontSizeValue * lineSpacingValue + 8).sp
-                ),
-                color = textColor,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
+            Column(
+                modifier = Modifier
+                    .width(contentWidth)
+                    .padding(horizontal = FlowSpacing.lg, vertical = 80.dp)
+            ) {
+                Text(
+                    text = chapter.title,
+                    style = titleStyle,
+                    modifier = Modifier.padding(bottom = FlowSpacing.xl)
+                )
 
-            var cumulativeOffset = 0
-            paragraphs.forEachIndexed { index, paragraph ->
-                val paraTrimmed = paragraph.trim()
-                val paraStart = cumulativeOffset + paragraph.indexOf(paraTrimmed)
-                val paraEnd = paraStart + paraTrimmed.length
+                var cumulativeOffset = 0
+                paragraphs.forEach { paragraph ->
+                    val paraTrimmed = paragraph.trim()
+                    val paraStart = cumulativeOffset + paragraph.indexOf(paraTrimmed)
+                    val paraEnd = paraStart + paraTrimmed.length
 
-                if (paraTrimmed.isNotBlank()) {
-                    when {
-                        paraTrimmed.startsWith("[IMG:") && paraTrimmed.endsWith("]") -> {
-                            val imgPath = paraTrimmed.removePrefix("[IMG:").removeSuffix("]")
-                            val imgFile = File(imgPath)
-                            if (imgFile.exists()) {
-                                AsyncImage(
-                                    model = imgFile,
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 8.dp)
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)),
-                                    contentScale = ContentScale.Fit
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Default.BrokenImage,
-                                    contentDescription = null,
-                                    tint = textColor.copy(alpha = 0.3f),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(120.dp)
-                                        .padding(vertical = 8.dp)
+                    if (paraTrimmed.isNotBlank()) {
+                        when {
+                            paraTrimmed.startsWith("[IMG:") && paraTrimmed.endsWith("]") -> {
+                                ReaderImage(
+                                    path = paraTrimmed.removePrefix("[IMG:").removeSuffix("]"),
+                                    tint = palette.text
                                 )
                             }
-                        }
-                        paraTrimmed.startsWith("## ") -> {
-                            val headingText = paraTrimmed.removePrefix("## ")
-                            Text(
-                                text = headingText,
-                                style = MaterialTheme.typography.titleLarge.copy(
-                                    fontSize = (fontSizeValue + 6).sp,
-                                    lineHeight = (fontSizeValue * lineSpacingValue + 12).sp,
-                                    fontWeight = FontWeight.Bold
-                                ),
-                                color = textColor,
-                                modifier = Modifier.padding(bottom = 12.dp, top = 8.dp)
-                            )
-                        }
-                        else -> {
-                            val paraAnnotations = annotations.filter {
-                                it.startPosition >= paraStart && it.endPosition <= paraEnd
+
+                            paraTrimmed.startsWith("## ") -> {
+                                Text(
+                                    text = paraTrimmed.removePrefix("## "),
+                                    style = headingStyle,
+                                    modifier = Modifier.padding(top = FlowSpacing.sm, bottom = FlowSpacing.md)
+                                )
                             }
 
-                            val baseStyle = MaterialTheme.typography.bodyLarge.copy(
-                                fontSize = fontSizeValue.sp,
-                                lineHeight = (fontSizeValue * lineSpacingValue).sp,
-                                textAlign = TextAlign.Justify
-                            )
-
-                            val text = if (paraAnnotations.isNotEmpty()) {
-                                buildAnnotatedString {
-                                    var lastEnd = paraStart
-                                    paraAnnotations.sortedBy { it.startPosition }.forEach { ann ->
-                                        val relStart = ann.startPosition - paraStart
-                                        val relEnd = ann.endPosition - paraStart
-                                        if (relStart > lastEnd - paraStart) {
-                                            append(paraTrimmed.substring(lastEnd - paraStart, relStart))
-                                        }
-                                        withStyle(SpanStyle(background = Color(ann.color.colorValue).copy(alpha = 0.4f))) {
-                                            append(paraTrimmed.substring(relStart, relEnd))
-                                        }
-                                        lastEnd = ann.endPosition
-                                    }
-                                    if (lastEnd - paraStart < paraTrimmed.length) {
-                                        append(paraTrimmed.substring(lastEnd - paraStart))
-                                    }
+                            else -> {
+                                val paraAnnotations = annotations.filter {
+                                    it.startPosition >= paraStart && it.endPosition <= paraEnd
                                 }
-                            } else {
-                                buildFormattedText(paraTrimmed)
-                            }
+                                val text = buildParagraph(paraTrimmed, paraStart, paraAnnotations, indentSp > 0f)
 
-                            Text(
-                                text = text,
-                                style = baseStyle,
-                                color = textColor,
-                                modifier = Modifier
-                                    .padding(bottom = settings.paragraphSpacing.dp)
-                                    .pointerInput(Unit) {
-                                        detectTapGestures(
-                                            onLongPress = {
-                                                selectedText = paraTrimmed
-                                                selectionStart = paraStart
-                                                selectionEnd = paraEnd
-                                                showHighlightMenu = true
-                                            }
-                                        )
-                                    }
-                            )
+                                Text(
+                                    text = text,
+                                    style = bodyStyle,
+                                    modifier = Modifier
+                                        .padding(bottom = paragraphGap)
+                                        .pointerInput(paraStart, paraEnd) {
+                                            detectTapGestures(
+                                                onLongPress = { onParagraphLongPress(paraTrimmed, paraStart, paraEnd) }
+                                            )
+                                        }
+                                )
+                            }
                         }
                     }
+                    cumulativeOffset += paragraph.length + 2
                 }
-                cumulativeOffset += paragraph.length + 2
+
+                Spacer(modifier = Modifier.height(100.dp))
             }
-
-            Spacer(modifier = Modifier.height(100.dp))
         }
+    }
+}
 
-        if (showHighlightMenu) {
-            HighlightMenu(
-                onDismiss = {
-                    showHighlightMenu = false
-                    selectedText = ""
-                },
-                onHighlight = { color ->
-                    if (selectedText.isNotEmpty()) {
-                        onTextSelected(selectedText, selectionStart, selectionEnd, color)
-                    }
-                    showHighlightMenu = false
-                    selectedText = ""
-                },
-                onBookmark = { note ->
-                    onBookmarkRequested(note, scrollState.value)
-                    showHighlightMenu = false
-                    selectedText = ""
-                },
-                textColor = textColor,
-                backgroundColor = backgroundColor,
-                selectedText = selectedText
+@Composable
+private fun ReaderImage(path: String, tint: Color) {
+    val file = remember(path) { File(path) }
+    val exists = remember(path) { file.isFile }
+    if (exists) {
+        AsyncImage(
+            model = file,
+            contentDescription = "插图",
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = FlowSpacing.sm)
+                .clip(RoundedCornerShape(FlowSpacing.xs)),
+            contentScale = ContentScale.Fit
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .padding(vertical = FlowSpacing.sm),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.BrokenImage,
+                contentDescription = "插图缺失",
+                tint = tint.copy(alpha = 0.3f)
             )
         }
     }
 }
 
-private fun buildFormattedText(text: String): androidx.compose.ui.text.AnnotatedString {
+/**
+ * Applies stored highlights and inline markdown emphasis to one paragraph, prefixing the
+ * two-character CJK indent when it is enabled.
+ */
+private fun buildParagraph(
+    paragraph: String,
+    paragraphStart: Int,
+    annotations: List<Annotation>,
+    indent: Boolean
+): AnnotatedString {
+    val prefix = if (indent) "　　" else ""
+    if (annotations.isEmpty()) {
+        return buildAnnotatedString {
+            append(prefix)
+            append(buildFormattedText(paragraph))
+        }
+    }
+    return buildAnnotatedString {
+        append(prefix)
+        var lastEnd = 0
+        annotations.sortedBy { it.startPosition }.forEach { annotation ->
+            val relStart = (annotation.startPosition - paragraphStart).coerceIn(0, paragraph.length)
+            val relEnd = (annotation.endPosition - paragraphStart).coerceIn(relStart, paragraph.length)
+            if (relStart > lastEnd) {
+                append(paragraph.substring(lastEnd, relStart))
+            }
+            withStyle(SpanStyle(background = Color(annotation.color.colorValue).copy(alpha = 0.4f))) {
+                append(paragraph.substring(relStart, relEnd))
+            }
+            lastEnd = relEnd
+        }
+        if (lastEnd < paragraph.length) {
+            append(paragraph.substring(lastEnd))
+        }
+    }
+}
+
+private fun buildFormattedText(text: String): AnnotatedString {
     return buildAnnotatedString {
         var i = 0
         while (i < text.length) {
@@ -278,101 +290,6 @@ private fun buildFormattedText(text: String): androidx.compose.ui.text.Annotated
                 }
             } else {
                 i = nextMarker + 1
-            }
-        }
-    }
-}
-
-@Composable
-fun HighlightMenu(
-    onDismiss: () -> Unit,
-    onHighlight: (AnnotationColor) -> Unit,
-    onBookmark: (String) -> Unit = {},
-    textColor: androidx.compose.ui.graphics.Color,
-    backgroundColor: androidx.compose.ui.graphics.Color,
-    selectedText: String = ""
-) {
-    var inputText by remember { mutableStateOf(selectedText) }
-
-    LaunchedEffect(selectedText) {
-        inputText = selectedText
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onDismiss() })
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Surface(
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-            color = backgroundColor.copy(alpha = 0.95f),
-            shadowElevation = 8.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "添加高亮",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = textColor,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                OutlinedTextField(
-                    value = inputText,
-                    onValueChange = { inputText = it },
-                    label = { Text("输入要高亮的文本") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        color = textColor
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    AnnotationColor.entries.forEach { color ->
-                        IconButton(
-                            onClick = {
-                                if (inputText.isNotEmpty()) {
-                                    onHighlight(color)
-                                }
-                            },
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(
-                                    androidx.compose.ui.graphics.Color(color.colorValue),
-                                    androidx.compose.foundation.shape.RoundedCornerShape(8.dp)
-                                )
-                        ) {
-                            Icon(
-                                Icons.Filled.Check,
-                                contentDescription = color.name,
-                                tint = androidx.compose.ui.graphics.Color.Black
-                            )
-                        }
-                    }
-                }
-                OutlinedButton(
-                    onClick = { onBookmark(inputText.ifBlank { selectedText.ifBlank { "书签" } }) },
-                    modifier = Modifier.padding(top = 12.dp)
-                ) {
-                    Text("添加书签备注", color = textColor)
-                }
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.padding(top = 16.dp)
-                ) {
-                    Text("取消", color = textColor)
-                }
             }
         }
     }

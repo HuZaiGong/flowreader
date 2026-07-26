@@ -4,6 +4,51 @@
 
 ---
 
+## [v52.0.0] - 2026-07
+> UI 全面重构第一阶段：地基与清账。主题是「先把假的变成真的，再谈美」。
+
+### 死设置清账（UI 上能点的，渲染层必须生效）
+- **字体族真实生效**：`:core` 新增 `ReaderTypography`，`ReaderContent` 改为消费 `readerBodyStyle`，字体选择不再被 `bodyLarge` 吞掉。字体枚举同时从 8 项收敛为 4 项（默认/衬线/无衬线/等宽）——楷体、仿宋在系统上无法解析，属于同一批假选项；旧值按语义迁移到最接近的真实字体。
+- **自定义字体真实加载**：导入的 `.ttf/.otf` 通过 `Typeface.createFromFile` 校验后加载，失败静默回落内置字体，不再是"导入成功但毫无变化"。
+- **段间距语义修正**：`paragraphSpacing` 从被当作 dp 使用（默认值 1.0f → 1dp 间距，等于没有间距）改为字号倍数，读取侧对旧值做值域迁移。设置面板新增段间距滑块与首行缩进开关。
+- **手势设置真实接线**：左/中/右点击、双击、长按、左右滑动全部映射到 `GestureAction`；边缘热区宽度 `leftEdgeWidth/rightEdgeWidth` 现在生效并可在设置中调节，此前仅 `tapZoneRatio` 被读取且左右行为硬编码。
+- **翻页模式收敛**：删除从未实现的 `SIMULATION`（仿真）、`CURL`（卷曲）、`SLIDE_OVER`（滑动覆盖）三个假开关，只保留真实存在差异的 `SLIDE`（动画翻页）与 `NONE`（瞬时切换）；旧持久化值回落到 `SLIDE`。仿真翻页降级为 v55+ 独立课题。
+- **备份/恢复接线**：`onExportReady`/`onImportReady` 此前无任何调用点，备份与恢复按钮点了没有反应；现已接上系统文件选择器。
+- **书签死代码处置**：书籍详情页补齐第三个「书签」Tab，渲染此前已实现但从未被调用的书签列表。
+
+### 设计系统（`:core` 从空壳变成真实模块）
+- 新增 `designsystem/token`：`FlowSpacing`（6 档）、`FlowRadius`（4 档）、`FlowElevation`、`FlowMotion`（4 时长 + 3 曲线）、`FlowShapes`、`FlowTypography`（正文去掉为拉丁文设计的 0.5sp 字距）、`FlowBrandColors`。
+- 新增 `FlowTheme`：**动态取色不再是 Android 12+ 的强制行为**。新增 `ColorSource`（品牌配色 / 跟随壁纸），默认品牌配色，设置页可切换；`AppThemeMode` 新增「跟随系统」。
+- 新增 12 套 `ReaderPalette`（纸白/米黄/护眼绿/亚麻/晨雾/冷灰/电子墨水/夜黑/墨蓝/深棕/曜石/纯黑），阅读设置面板改为色板网格，所见即所得。此前阅读器只有 2 组硬编码配色。
+- 新增 `FlowStateHost`：书架/详情/阅读器/统计四套各写一遍的 loading/empty/error 收敛为一套。
+
+### 阅读器
+- **自动夜间模式真实触发**：改为每分钟轮询时间源，19:00 到点即切换到所选夜间色板；此前 `Calendar` 在组合期只读一次，必须退出重进阅读器才生效。
+- **进度条是真实阅读进度**：进度 = 章节序号 + 章内滚动比例，此前是 `当前章/总章数`（5 章的书读完第 1 章直接显示 20%，章内滚动毫无变化）。拖动时浮层显示目标章节名，松手才跳转。
+- **控制层避让系统栏**：顶栏/底栏改用 `WindowInsets`，边到边模式下不再被状态栏压住；顶栏 8 个同权重图标收敛为 4 个高频动作 + overflow。
+- **高亮范围与文本一致**：删除让用户"自己输入要高亮的文本"的对话框（输入内容与实际存储的字符区间可能不一致），改为长按段落弹出底部操作面板，高亮精确覆盖该段落，并支持复制与带备注书签。
+- **阅读设置面板**：`AlertDialog` → `ModalBottomSheet`，改动实时预览；`ReaderViewModel` 六个近乎重复的设置写入方法收敛为一个。
+- **CJK 排版**：正文行宽上限 34 字（平板不再拉出 100+ 字的长行），首行缩进两字可开关，标点避头尾。
+
+### 信息架构
+- **转盘降级**：从底部一级 Tab 移出（底部导航 4 项 → 3 项：书架/统计/设置），改由书架顶栏 overflow 进入。转盘的 60fps 实现原样保留。
+- **书架继续阅读直达**：「继续阅读」卡片点击直接进入阅读器，不再绕一次详情页。
+- 导入改为 `ExtendedFloatingActionButton`，排序/转盘/设置收进 overflow。
+- 设置页删除与阅读器面板重复的字号/行间距/翻页模式入口（此前两处互相覆盖），只保留应用级与设备级设置。
+
+### 修复与性能
+- **书架导入失败不再静音**：`LibraryScreen` 此前用 `LaunchedEffect { clearError() }` 直接丢弃错误，用户永远看不到失败原因；改为 Snackbar 呈现。
+- **千章详情页不再卡死**：章节从"塞进 `LazyColumn` 单个 item 的 `Column`"改为 `LazyColumn` 自己的 items，2000 章书籍不再一次性组合全部行。
+- 书架封面改用 Coil 异步解析，移除组合期的 `File(...).exists()` 主线程磁盘 IO。
+- 统计图表重写：删除被完全覆盖的重复矩形（每帧白画一次）、补坐标轴与今日高亮、逐柱语义标签供 TalkBack 朗读；删除与 `formatDateShort` 完全重复且从未被调用的 `formatDate`。
+- 标注导出从截断 12 行的 `AlertDialog` 改为系统分享。
+
+### 工程
+- `coverageSummary` 口径扩展到 `:core` 与 `:feature`，避免"把代码搬出 :app 就自动过门禁"的失真；测试广度 41.9% → **55.8%**（24/43）。
+- 新增 40 个 JVM 单测：阅读排版数学、进度计算、手势判定、时长/日期格式化，以及**12 套阅读主题与品牌配色的 WCAG AA 对比度断言**（正文 ≥ 4.5:1）。
+- `.editorconfig` 增加 `ktlint_function_naming_ignore_when_annotated_with = Composable`，使 `:core` 的 Compose 代码可通过完整 ktlint。
+- 删除 9 个从未被调用的 `SettingsRepository` 方法与 `app/ui/theme` 整包（迁入 `:core`）。
+
 ## [v51.0.0] - 2026-07
 - **多模块架构升级**：新增 `:core`、`:data`、`:domain`、`:feature:library`、`:feature:reader` 模块，应用层保留导航/Hilt 装配，Room 本地层迁入 `:data`。
 - **工具链升级**：Kotlin 与 Compose compiler 升级到 `2.1.0`，KSP 升级到 `2.1.0-1.0.29`，Hilt 升级到 `2.55` 以兼容 Kotlin 2.1 metadata。

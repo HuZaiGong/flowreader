@@ -34,7 +34,6 @@
     <string name="amoled_theme">夜间</string>
     <string name="page_mode">翻页模式</string>
     <string name="slide_mode">滑动</string>
-    <string name="simulation_mode">仿真翻页</string>
     <string name="none_mode">无动画</string>
     <string name="screen_timeout">屏幕超时</string>
     <string name="reading_settings">阅读设置</string>

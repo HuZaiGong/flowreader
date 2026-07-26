@@ -40,19 +40,29 @@ tasks.register("verifyKotlinStyle") {
 
 tasks.register("coverageSummary") {
     group = "verification"
-    description = "Reports JVM test breadth for v51 Repository and ViewModel targets and enforces a 40% file target."
+    description = "Reports JVM test breadth for Repository, ViewModel, domain and :core targets and enforces a 40% file target."
     doLast {
+        // v52: the caliber now covers :core and :feature too. Without this, moving a ViewModel or
+        // a pure function out of :app would quietly drop it from the denominator and let the gate
+        // pass on refactoring alone.
         val sourceFiles = fileTree(rootDir) {
             include(
                 "app/src/main/java/**/data/repository/*Repository*.kt",
                 "app/src/main/java/**/ui/screens/**/*ViewModel.kt",
+                "feature/*/src/main/java/**/*ViewModel.kt",
+                "core/src/main/java/**/*.kt",
                 "domain/src/main/java/**/repository/*.kt",
                 "domain/src/main/java/**/model/*.kt"
             )
             exclude("**/build/**")
         }.files
         val testFiles = fileTree(rootDir) {
-            include("app/src/test/java/**/*.kt", "domain/src/test/java/**/*.kt")
+            include(
+                "app/src/test/java/**/*.kt",
+                "core/src/test/java/**/*.kt",
+                "feature/*/src/test/java/**/*.kt",
+                "domain/src/test/java/**/*.kt"
+            )
             exclude("**/build/**")
         }.files
         val ratio = if (sourceFiles.isEmpty()) 1.0 else testFiles.size.toDouble() / sourceFiles.size.toDouble()

@@ -4,7 +4,10 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.flowreader.app.domain.model.*
+import com.flowreader.app.domain.model.AppThemeMode
+import com.flowreader.app.domain.model.ColorSource
+import com.flowreader.app.domain.model.GestureSettings
+import com.flowreader.app.domain.model.ReadingSettings
 import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.domain.repository.BackupRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -14,7 +17,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class SettingsUiState(
-    val appTheme: ReaderTheme = ReaderTheme.LIGHT,
+    val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
+    val colorSource: ColorSource = ColorSource.BRAND,
     val readingSettings: ReadingSettings = ReadingSettings(),
     val isLoading: Boolean = true,
     val readingReminderEnabled: Boolean = false,
@@ -52,7 +56,8 @@ class SettingsViewModel @Inject constructor(
                 settingsRepository.getCustomFontPath()
             ) { settings, goal, onboardingCompleted, fontPath ->
                 SettingsUiState(
-                    appTheme = settings.theme,
+                    themeMode = settings.themeMode,
+                    colorSource = settings.colorSource,
                     readingSettings = settings.defaultReadingSettings,
                     isLoading = false,
                     readingReminderEnabled = settings.readingReminderEnabled,
@@ -127,30 +132,15 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(importResult = null) }
     }
 
-    fun updateAppTheme(theme: ReaderTheme) {
+    fun updateThemeMode(mode: AppThemeMode) {
         viewModelScope.launch {
-            settingsRepository.updateTheme(theme)
+            settingsRepository.updateThemeMode(mode)
         }
     }
 
-    fun updateFontSize(size: Int) {
+    fun updateColorSource(source: ColorSource) {
         viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            settingsRepository.updateReadingSettings(currentSettings.copy(fontSize = size))
-        }
-    }
-
-    fun updateLineSpacing(spacing: Float) {
-        viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            settingsRepository.updateReadingSettings(currentSettings.copy(lineSpacing = spacing))
-        }
-    }
-
-    fun updatePageMode(mode: PageMode) {
-        viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            settingsRepository.updateReadingSettings(currentSettings.copy(pageMode = mode))
+            settingsRepository.updateColorSource(source)
         }
     }
 
@@ -158,13 +148,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             val currentSettings = _uiState.value.readingSettings
             settingsRepository.updateReadingSettings(currentSettings.copy(keepScreenOn = keepOn))
-        }
-    }
-
-    fun updateScreenTimeout(minutes: Int) {
-        viewModelScope.launch {
-            val currentSettings = _uiState.value.readingSettings
-            settingsRepository.updateReadingSettings(currentSettings.copy(screenTimeoutMinutes = minutes))
         }
     }
 

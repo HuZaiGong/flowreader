@@ -2,9 +2,24 @@ package com.flowreader.app.data.repository
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.flowreader.app.domain.model.*
+import com.flowreader.app.domain.model.AppSettings
+import com.flowreader.app.domain.model.AppThemeMode
+import com.flowreader.app.domain.model.ColorSource
+import com.flowreader.app.domain.model.GestureAction
+import com.flowreader.app.domain.model.GestureSettings
+import com.flowreader.app.domain.model.PageMode
+import com.flowreader.app.domain.model.ReaderFontFamily
+import com.flowreader.app.domain.model.ReaderPaletteId
+import com.flowreader.app.domain.model.ReadingSettings
 import com.flowreader.app.domain.repository.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
@@ -22,17 +37,21 @@ class SettingsRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : SettingsRepository {
     private object PreferencesKeys {
-        val THEME = stringPreferencesKey("theme")
+        val THEME = stringPreferencesKey(SettingsRepository.THEME_KEY)
+        val COLOR_SOURCE = stringPreferencesKey("color_source")
         val FONT_SIZE = intPreferencesKey("font_size")
         val LINE_SPACING = floatPreferencesKey("line_spacing")
         val PARAGRAPH_SPACING = floatPreferencesKey("paragraph_spacing")
+        val FIRST_LINE_INDENT = booleanPreferencesKey("first_line_indent")
         val FONT_FAMILY = stringPreferencesKey("font_family")
-        val READER_THEME = stringPreferencesKey("reader_theme")
+        val READER_PALETTE = stringPreferencesKey("reader_theme")
+        val READER_NIGHT_PALETTE = stringPreferencesKey("reader_night_palette")
         val PAGE_MODE = stringPreferencesKey("page_mode")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SCREEN_TIMEOUT_MINUTES = intPreferencesKey("screen_timeout_minutes")
         val EYE_PROTECTION_INTERVAL_MINUTES = intPreferencesKey("eye_protection_interval_minutes")
         val AUTO_NIGHT_MODE = booleanPreferencesKey("auto_night_mode")
+        val TAP_ZONE_RATIO = floatPreferencesKey("tap_zone_ratio")
         val READING_REMINDER_ENABLED = booleanPreferencesKey("reading_reminder_enabled")
         val READING_REMINDER_HOUR = intPreferencesKey("reading_reminder_hour")
         val READING_REMINDER_MINUTE = intPreferencesKey("reading_reminder_minute")
@@ -50,34 +69,51 @@ class SettingsRepositoryImpl @Inject constructor(
         val GESTURE_DOUBLE_TAP = stringPreferencesKey("gesture_double_tap")
         val GESTURE_LONG_PRESS = stringPreferencesKey("gesture_long_press")
         val GESTURE_EDGE_ENABLED = booleanPreferencesKey("gesture_edge_enabled")
+        val GESTURE_LEFT_EDGE_WIDTH = intPreferencesKey("gesture_left_edge_width")
+        val GESTURE_RIGHT_EDGE_WIDTH = intPreferencesKey("gesture_right_edge_width")
         val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
-    private fun getGestureSettings(preferences: Preferences): GestureSettings = GestureSettings(
-        leftTapAction = preferences[PreferencesKeys.GESTURE_LEFT_TAP]?.let {
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE }
-        } ?: GestureAction.PREVIOUS_PAGE,
-        middleTapAction = preferences[PreferencesKeys.GESTURE_MIDDLE_TAP]?.let {
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.TOGGLE_CONTROLS }
-        } ?: GestureAction.TOGGLE_CONTROLS,
-        rightTapAction = preferences[PreferencesKeys.GESTURE_RIGHT_TAP]?.let {
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE }
-        } ?: GestureAction.NEXT_PAGE,
-        swipeLeftAction = preferences[PreferencesKeys.GESTURE_SWIPE_LEFT]?.let {
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE }
-        } ?: GestureAction.NEXT_PAGE,
-        swipeRightAction = preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT]?.let {
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE }
-        } ?: GestureAction.PREVIOUS_PAGE,
-        doubleTapAction = preferences[PreferencesKeys.GESTURE_DOUBLE_TAP]?.let {
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.SHOW_SETTINGS }
-        } ?: GestureAction.SHOW_SETTINGS,
-        longPressAction = preferences[PreferencesKeys.GESTURE_LONG_PRESS]?.let {
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.ADD_BOOKMARK }
-        } ?: GestureAction.ADD_BOOKMARK,
-        edgeGestureEnabled = preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] ?: true
-    )
+    private fun readGestureSettings(preferences: Preferences): GestureSettings {
+        val defaults = GestureSettings()
+        return GestureSettings(
+            leftTapAction = GestureAction.fromStoredName(preferences[PreferencesKeys.GESTURE_LEFT_TAP], defaults.leftTapAction),
+            middleTapAction = GestureAction.fromStoredName(preferences[PreferencesKeys.GESTURE_MIDDLE_TAP], defaults.middleTapAction),
+            rightTapAction = GestureAction.fromStoredName(preferences[PreferencesKeys.GESTURE_RIGHT_TAP], defaults.rightTapAction),
+            swipeLeftAction = GestureAction.fromStoredName(preferences[PreferencesKeys.GESTURE_SWIPE_LEFT], defaults.swipeLeftAction),
+            swipeRightAction = GestureAction.fromStoredName(preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT], defaults.swipeRightAction),
+            doubleTapAction = GestureAction.fromStoredName(preferences[PreferencesKeys.GESTURE_DOUBLE_TAP], defaults.doubleTapAction),
+            longPressAction = GestureAction.fromStoredName(preferences[PreferencesKeys.GESTURE_LONG_PRESS], defaults.longPressAction),
+            edgeGestureEnabled = preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] ?: defaults.edgeGestureEnabled,
+            leftEdgeWidth = (preferences[PreferencesKeys.GESTURE_LEFT_EDGE_WIDTH] ?: defaults.leftEdgeWidth).coerceIn(0, 45),
+            rightEdgeWidth = (preferences[PreferencesKeys.GESTURE_RIGHT_EDGE_WIDTH] ?: defaults.rightEdgeWidth).coerceIn(0, 45)
+        )
+    }
+
+    private fun readReadingSettings(preferences: Preferences): ReadingSettings {
+        val palette = ReaderPaletteId.fromStoredName(preferences[PreferencesKeys.READER_PALETTE], ReaderPaletteId.PAPER)
+        return ReadingSettings(
+            fontSize = (preferences[PreferencesKeys.FONT_SIZE] ?: 18).coerceIn(12, 32),
+            lineSpacing = (preferences[PreferencesKeys.LINE_SPACING] ?: 1.5f).coerceIn(1.0f, 2.5f),
+            paragraphSpacing = ReadingSettings.normalizeParagraphSpacing(preferences[PreferencesKeys.PARAGRAPH_SPACING] ?: 1.0f),
+            firstLineIndent = preferences[PreferencesKeys.FIRST_LINE_INDENT] ?: true,
+            fontFamily = ReaderFontFamily.fromStoredName(preferences[PreferencesKeys.FONT_FAMILY]),
+            customFontPath = preferences[PreferencesKeys.CUSTOM_FONT_PATH],
+            palette = palette,
+            nightPalette = ReaderPaletteId.fromStoredName(
+                preferences[PreferencesKeys.READER_NIGHT_PALETTE],
+                ReaderPaletteId.NIGHT
+            ).takeIf { it.isDark } ?: ReaderPaletteId.NIGHT,
+            pageMode = PageMode.fromStoredName(preferences[PreferencesKeys.PAGE_MODE]),
+            keepScreenOn = preferences[PreferencesKeys.KEEP_SCREEN_ON] ?: true,
+            screenTimeoutMinutes = preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] ?: 0,
+            eyeProtectionIntervalMinutes = preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] ?: 20,
+            autoNightMode = preferences[PreferencesKeys.AUTO_NIGHT_MODE] ?: false,
+            tapZoneRatio = (preferences[PreferencesKeys.TAP_ZONE_RATIO] ?: 0.3f).coerceIn(0.1f, 0.45f),
+            gestureSettings = readGestureSettings(preferences)
+        )
+    }
 
     override val appSettings: Flow<AppSettings> = context.dataStore.data
         .retry(3) { it is IOException }
@@ -90,46 +126,24 @@ class SettingsRepositoryImpl @Inject constructor(
         }
         .map { preferences ->
             AppSettings(
-                theme = try {
-                    ReaderTheme.valueOf(preferences[PreferencesKeys.THEME] ?: ReaderTheme.LIGHT.name)
-                } catch (e: Exception) {
-                    ReaderTheme.LIGHT
-                },
-                defaultReadingSettings = ReadingSettings(
-                    fontSize = preferences[PreferencesKeys.FONT_SIZE] ?: 18,
-                    lineSpacing = preferences[PreferencesKeys.LINE_SPACING] ?: 1.5f,
-                    paragraphSpacing = preferences[PreferencesKeys.PARAGRAPH_SPACING] ?: 1.0f,
-                    fontFamily = try {
-                        FontFamily.valueOf(preferences[PreferencesKeys.FONT_FAMILY] ?: FontFamily.DEFAULT.name)
-                    } catch (e: Exception) {
-                        FontFamily.DEFAULT
-                    },
-                    theme = try {
-                        ReaderTheme.valueOf(preferences[PreferencesKeys.READER_THEME] ?: ReaderTheme.LIGHT.name)
-                    } catch (e: Exception) {
-                        ReaderTheme.LIGHT
-                    },
-                    customFontPath = preferences[PreferencesKeys.CUSTOM_FONT_PATH],
-                    pageMode = try {
-                        PageMode.valueOf(preferences[PreferencesKeys.PAGE_MODE] ?: PageMode.SLIDE.name)
-                    } catch (e: Exception) {
-                        PageMode.SLIDE
-                    },
-                    keepScreenOn = preferences[PreferencesKeys.KEEP_SCREEN_ON] ?: true,
-                    screenTimeoutMinutes = preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] ?: 0,
-                    eyeProtectionIntervalMinutes = preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] ?: 20,
-                    autoNightMode = preferences[PreferencesKeys.AUTO_NIGHT_MODE] ?: false,
-                    gestureSettings = getGestureSettings(preferences)
-                ),
+                themeMode = AppThemeMode.fromStoredName(preferences[PreferencesKeys.THEME]),
+                colorSource = ColorSource.fromStoredName(preferences[PreferencesKeys.COLOR_SOURCE]),
+                defaultReadingSettings = readReadingSettings(preferences),
                 readingReminderEnabled = preferences[PreferencesKeys.READING_REMINDER_ENABLED] ?: false,
                 readingReminderHour = preferences[PreferencesKeys.READING_REMINDER_HOUR] ?: 20,
                 readingReminderMinute = preferences[PreferencesKeys.READING_REMINDER_MINUTE] ?: 0
             )
         }
 
-    override suspend fun updateTheme(theme: ReaderTheme) {
+    override suspend fun updateThemeMode(mode: AppThemeMode) {
         context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.THEME] = theme.name
+            preferences[PreferencesKeys.THEME] = mode.name
+        }
+    }
+
+    override suspend fun updateColorSource(source: ColorSource) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.COLOR_SOURCE] = source.name
         }
     }
 
@@ -138,13 +152,17 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.FONT_SIZE] = settings.fontSize
             preferences[PreferencesKeys.LINE_SPACING] = settings.lineSpacing
             preferences[PreferencesKeys.PARAGRAPH_SPACING] = settings.paragraphSpacing
+            preferences[PreferencesKeys.FIRST_LINE_INDENT] = settings.firstLineIndent
             preferences[PreferencesKeys.FONT_FAMILY] = settings.fontFamily.name
-            preferences[PreferencesKeys.READER_THEME] = settings.theme.name
+            preferences[PreferencesKeys.READER_PALETTE] = settings.palette.name
+            preferences[PreferencesKeys.READER_NIGHT_PALETTE] = settings.nightPalette.name
             preferences[PreferencesKeys.PAGE_MODE] = settings.pageMode.name
             preferences[PreferencesKeys.KEEP_SCREEN_ON] = settings.keepScreenOn
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = settings.screenTimeoutMinutes
             preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] = settings.eyeProtectionIntervalMinutes
             preferences[PreferencesKeys.AUTO_NIGHT_MODE] = settings.autoNightMode
+            preferences[PreferencesKeys.TAP_ZONE_RATIO] = settings.tapZoneRatio
+            writeGestureSettings(preferences, settings.gestureSettings)
             val customFontPath = settings.customFontPath
             if (customFontPath != null) {
                 preferences[PreferencesKeys.CUSTOM_FONT_PATH] = customFontPath
@@ -154,52 +172,17 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateReaderTheme(theme: ReaderTheme) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.READER_THEME] = theme.name
-        }
-    }
-
-    override suspend fun updateFontSize(size: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.FONT_SIZE] = size
-        }
-    }
-
-    override suspend fun updateLineSpacing(spacing: Float) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.LINE_SPACING] = spacing
-        }
-    }
-
-    override suspend fun updatePageMode(mode: PageMode) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.PAGE_MODE] = mode.name
-        }
-    }
-
-    override suspend fun updateKeepScreenOn(keepOn: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.KEEP_SCREEN_ON] = keepOn
-        }
-    }
-
-    override suspend fun updateScreenTimeout(minutes: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = minutes
-        }
-    }
-
-    override suspend fun updateEyeProtectionInterval(minutes: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] = minutes
-        }
-    }
-
-    override suspend fun updateAutoNightMode(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.AUTO_NIGHT_MODE] = enabled
-        }
+    private fun writeGestureSettings(preferences: MutablePreferences, settings: GestureSettings) {
+        preferences[PreferencesKeys.GESTURE_LEFT_TAP] = settings.leftTapAction.name
+        preferences[PreferencesKeys.GESTURE_MIDDLE_TAP] = settings.middleTapAction.name
+        preferences[PreferencesKeys.GESTURE_RIGHT_TAP] = settings.rightTapAction.name
+        preferences[PreferencesKeys.GESTURE_SWIPE_LEFT] = settings.swipeLeftAction.name
+        preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT] = settings.swipeRightAction.name
+        preferences[PreferencesKeys.GESTURE_DOUBLE_TAP] = settings.doubleTapAction.name
+        preferences[PreferencesKeys.GESTURE_LONG_PRESS] = settings.longPressAction.name
+        preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] = settings.edgeGestureEnabled
+        preferences[PreferencesKeys.GESTURE_LEFT_EDGE_WIDTH] = settings.leftEdgeWidth
+        preferences[PreferencesKeys.GESTURE_RIGHT_EDGE_WIDTH] = settings.rightEdgeWidth
     }
 
     override suspend fun updateReadingReminder(enabled: Boolean, hour: Int, minute: Int) {
@@ -275,19 +258,6 @@ class SettingsRepositoryImpl @Inject constructor(
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.WIDGET_BOOK_TITLE] = bookTitle
             preferences[PreferencesKeys.WIDGET_PROGRESS_PERCENT] = progressPercent.coerceIn(0, 100)
-        }
-    }
-
-    override suspend fun updateGestureSettings(settings: GestureSettings) {
-        context.dataStore.edit { preferences ->
-            preferences[PreferencesKeys.GESTURE_LEFT_TAP] = settings.leftTapAction.name
-            preferences[PreferencesKeys.GESTURE_MIDDLE_TAP] = settings.middleTapAction.name
-            preferences[PreferencesKeys.GESTURE_RIGHT_TAP] = settings.rightTapAction.name
-            preferences[PreferencesKeys.GESTURE_SWIPE_LEFT] = settings.swipeLeftAction.name
-            preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT] = settings.swipeRightAction.name
-            preferences[PreferencesKeys.GESTURE_DOUBLE_TAP] = settings.doubleTapAction.name
-            preferences[PreferencesKeys.GESTURE_LONG_PRESS] = settings.longPressAction.name
-            preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] = settings.edgeGestureEnabled
         }
     }
 

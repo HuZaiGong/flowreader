@@ -18,10 +18,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.flowreader.app.core.designsystem.component.FlowStateHost
+import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.core.util.FlowFormatters
 import com.flowreader.app.domain.model.DailyStats
 import com.flowreader.app.domain.model.ReadingReport
-import java.text.SimpleDateFormat
-import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,41 +42,20 @@ fun StatsScreen(
             )
         }
     ) { paddingValues ->
-        if (uiState.error != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = uiState.error!!,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = { viewModel.clearError() }) {
-                        Text("重试")
-                    }
-                }
-            }
-        } else if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
+        FlowStateHost(
+            isLoading = uiState.isLoading,
+            isEmpty = false,
+            error = uiState.error,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            onRetry = { viewModel.clearError() }
+        ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(FlowSpacing.lg),
+                verticalArrangement = Arrangement.spacedBy(FlowSpacing.lg)
             ) {
                 item {
                     Text(
@@ -92,7 +74,7 @@ fun StatsScreen(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Timer,
                             title = "阅读时长",
-                            value = formatReadTime(uiState.todayReadTime),
+                            value = FlowFormatters.duration(uiState.todayReadTime),
                             subtitle = "今日"
                         )
                         StatCard(
@@ -123,7 +105,7 @@ fun StatsScreen(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.AccessTime,
                             title = "总时长",
-                            value = formatReadTime(uiState.totalReadTime),
+                            value = FlowFormatters.duration(uiState.totalReadTime),
                             subtitle = "累计"
                         )
                         StatCard(
@@ -243,7 +225,7 @@ private fun ReadingReportCard(
                 TextButton(onClick = onGoalClick) { Text("目标 ${goalMinutes}分钟") }
             }
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-            Text("时长 ${formatReadTime(report.totalReadTime)} · 页数 ${report.totalReadPages}")
+            Text("时长 ${FlowFormatters.duration(report.totalReadTime)} · 页数 ${report.totalReadPages}")
             Text("最快阅读日：${report.fastestReadingDay?.date ?: "暂无"}")
             Text("最常读书籍：${report.mostReadBookTitle ?: "暂无"}")
             if (progress < 1f) {
@@ -332,96 +314,115 @@ private fun ReadTimeBarChart(
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
-    val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant
-    val onSurface = MaterialTheme.colorScheme.onSurface
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val axisColor = MaterialTheme.colorScheme.outlineVariant
 
-    val maxReadTime = dailyStats.maxOfOrNull { it.totalReadTime } ?: 1L
-    val barCount = dailyStats.size
+    val maxReadTime = dailyStats.maxOfOrNull { it.totalReadTime } ?: 0L
+    val todayDate = dailyStats.lastOrNull()?.date
 
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        )
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Canvas(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                if (barCount == 0) return@Canvas
-                val barWidth = (size.width / barCount) * 0.6f
-                val gap = (size.width / barCount) * 0.4f
-                val chartHeight = size.height - 20f
-
-                dailyStats.forEachIndexed { index, stat ->
-                    val barHeight = if (maxReadTime > 0) {
-                        (stat.totalReadTime.toFloat() / maxReadTime) * chartHeight
-                    } else 0f
-                    val x = index * (barWidth + gap) + gap / 2
-
-                    drawRect(
-                        color = surfaceVariant,
-                        topLeft = Offset(x, chartHeight - barHeight),
-                        size = Size(barWidth, barHeight),
-                        alpha = 1f
-                    )
-                    drawRect(
-                        color = primaryColor,
-                        topLeft = Offset(x, chartHeight - barHeight),
-                        size = Size(barWidth, barHeight),
-                        alpha = 0.7f
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                dailyStats.forEach { stat ->
-                    Text(
-                        text = formatDateShort(stat.date),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = onSurface.copy(alpha = 0.6f),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+    // Each column carries semantics so TalkBack reads "7 月 20 日阅读 35 分钟" instead of
+    // announcing an unlabelled Canvas. The v51 chart also painted every bar twice — an identical
+    // surfaceVariant rect completely covered by the primary one — so the track is now the full
+    // column height and the value bar is drawn once.
+    val chartDescription = remember(dailyStats) {
+        if (dailyStats.isEmpty()) {
+            "近期无阅读记录"
+        } else {
+            dailyStats.joinToString("，") { stat ->
+                "${FlowFormatters.spokenDate(stat.date)}阅读${FlowFormatters.duration(stat.totalReadTime)}"
             }
         }
     }
-}
 
-private fun formatDateShort(dateStr: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("MM/dd", Locale.getDefault())
-        val date = inputFormat.parse(dateStr)
-        date?.let { outputFormat.format(it) } ?: dateStr
-    } catch (e: Exception) {
-        dateStr
-    }
-}
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(FlowSpacing.lg)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("近 7 日阅读时长", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "峰值 ${FlowFormatters.duration(maxReadTime)}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-private fun formatReadTime(seconds: Long): String {
-    return when {
-        seconds < 60 -> "${seconds}秒"
-        seconds < 3600 -> "${seconds / 60}分钟"
-        else -> "${seconds / 3600}小时${(seconds % 3600) / 60}分钟"
-    }
-}
+            Spacer(modifier = Modifier.height(FlowSpacing.sm))
 
-private fun formatDate(dateStr: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-        val outputFormat = SimpleDateFormat("MM/dd", Locale.getDefault())
-        val date = inputFormat.parse(dateStr)
-        date?.let { outputFormat.format(it) } ?: dateStr
-    } catch (e: Exception) {
-        dateStr
+            if (dailyStats.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("暂无阅读记录", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .semantics { contentDescription = chartDescription }
+                ) {
+                    val slot = size.width / dailyStats.size
+                    val barWidth = slot * 0.55f
+                    val chartHeight = size.height - 4f
+
+                    drawRect(
+                        color = axisColor,
+                        topLeft = Offset(0f, chartHeight),
+                        size = Size(size.width, 2f)
+                    )
+
+                    dailyStats.forEachIndexed { index, stat ->
+                        val x = index * slot + (slot - barWidth) / 2f
+                        drawRect(
+                            color = trackColor,
+                            topLeft = Offset(x, 0f),
+                            size = Size(barWidth, chartHeight)
+                        )
+                        val barHeight = if (maxReadTime > 0) {
+                            (stat.totalReadTime.toFloat() / maxReadTime) * chartHeight
+                        } else {
+                            0f
+                        }
+                        if (barHeight > 0f) {
+                            drawRect(
+                                color = primaryColor,
+                                topLeft = Offset(x, chartHeight - barHeight),
+                                size = Size(barWidth, barHeight)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(FlowSpacing.sm))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    dailyStats.forEach { stat ->
+                        Text(
+                            text = FlowFormatters.shortDate(stat.date),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (stat.date == todayDate) FontWeight.Bold else FontWeight.Normal,
+                            color = if (stat.date == todayDate) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
     }
 }
