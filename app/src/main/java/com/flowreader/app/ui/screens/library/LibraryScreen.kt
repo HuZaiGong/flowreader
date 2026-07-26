@@ -73,7 +73,7 @@ fun LibraryScreen(
 
     var showSearchBar by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
-    
+
     // 下拉刷新状态
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
@@ -289,7 +289,7 @@ fun LibraryScreen(
                             )
                         }
                     }
-                    
+
                     PullToRefreshDefaults.Indicator(
                         state = pullToRefreshState,
                         isRefreshing = isRefreshing,

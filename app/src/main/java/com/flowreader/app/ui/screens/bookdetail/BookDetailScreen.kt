@@ -640,7 +640,7 @@ private fun BookmarkItem(
             }
         }
     }
-    
+
     if (isDeleting) {
         LaunchedEffect(isDeleting) {
             onDelete()

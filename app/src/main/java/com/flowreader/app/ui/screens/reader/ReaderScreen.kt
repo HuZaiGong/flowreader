@@ -50,7 +50,7 @@ fun ReaderScreen(
 
     val contentScrollState = rememberScrollState()
 
-    LaunchedEffect(uiState.currentChapterIndex, uiState.currentPosition) {
+    LaunchedEffect(uiState.scrollRequestVersion) {
         contentScrollState.scrollTo(uiState.currentPosition.coerceAtLeast(0))
     }
 

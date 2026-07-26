@@ -15,11 +15,15 @@ class SearchRepositoryImpl @Inject constructor(
     private val chapterRepository: ChapterRepository,
     private val fullTextSearch: FullTextSearch
 ) : SearchRepository {
+    private var indexedBookIds: Set<Long> = emptySet()
+    private var hasBuiltIndex = false
+
     override suspend fun rebuildIndex() {
         fullTextSearch.initialize()
-        bookRepository.getAllBooks().first().forEach { book ->
+        val books = bookRepository.getAllBooks().first()
+        fullTextSearch.deleteAllContent()
+        books.forEach { book ->
             val chapters = chapterRepository.getChapterMetadataList(book.id)
-            fullTextSearch.deleteBookContent(book.id)
             chapters.forEach { chapter ->
                 val content = chapterRepository.getChapterContent(book.id, chapter.index).orEmpty()
                 if (content.isNotBlank()) {
@@ -27,11 +31,18 @@ class SearchRepositoryImpl @Inject constructor(
                 }
             }
         }
+        indexedBookIds = books.map { it.id }.toSet()
+        hasBuiltIndex = true
     }
 
     override suspend fun searchAll(query: String): List<GlobalSearchResult> {
-        rebuildIndex()
-        val booksById = bookRepository.getAllBooks().first().associateBy { it.id }
+        val books = bookRepository.getAllBooks().first()
+        val bookIds = books.map { it.id }.toSet()
+        fullTextSearch.initialize()
+        if (!hasBuiltIndex || bookIds != indexedBookIds) {
+            rebuildIndex()
+        }
+        val booksById = books.associateBy { it.id }
         return fullTextSearch.searchAll(query).map { result ->
             GlobalSearchResult(
                 bookId = result.bookId,

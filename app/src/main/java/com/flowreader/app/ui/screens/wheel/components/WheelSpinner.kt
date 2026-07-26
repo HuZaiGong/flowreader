@@ -56,7 +56,7 @@ fun WheelSpinner(
             val startAngle = index * sliceAngle - 90f
 
             drawArc(
-                color = item.color.copy(alpha = 0.8f),
+                color = Color(item.colorValue).copy(alpha = 0.8f),
                 startAngle = startAngle,
                 sweepAngle = sliceAngle,
                 useCenter = true,

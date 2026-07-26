@@ -1,5 +1,8 @@
 package com.flowreader.app.ui.screens.wheel
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -27,6 +31,19 @@ fun WheelScreen(
 
     val error by remember { derivedStateOf { uiState.error } }
     val result by remember { derivedStateOf { uiState.result } }
+    val rotation = remember { Animatable(uiState.rotationAngle) }
+
+    LaunchedEffect(uiState.spinRequestId) {
+        if (uiState.isSpinning) {
+            rotation.snapTo(uiState.rotationAngle)
+            rotation.animateTo(
+                targetValue = uiState.spinTargetAngle,
+                animationSpec = tween(durationMillis = 4_000, easing = FastOutSlowInEasing)
+            )
+            rotation.snapTo(rotation.value.mod(360f))
+            viewModel.finishSpin()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -65,7 +82,7 @@ fun WheelScreen(
 
                     WheelSpinner(
                         items = uiState.items,
-                        rotationAngle = uiState.rotationAngle,
+                        rotationAngle = if (uiState.isSpinning) rotation.value else uiState.rotationAngle,
                         size = 280.dp
                     )
                 }
@@ -140,7 +157,7 @@ fun WheelScreen(
                         Text(
                             text = currentResult.item.label,
                             style = MaterialTheme.typography.headlineMedium,
-                            color = currentResult.item.color
+                            color = Color(currentResult.item.colorValue)
                         )
                     }
                 }
@@ -168,7 +185,7 @@ fun WheelScreen(
                     Text(
                         text = dialogResult.item.label,
                         style = MaterialTheme.typography.headlineMedium,
-                        color = dialogResult.item.color
+                        color = Color(dialogResult.item.colorValue)
                     )
                 },
                 confirmButton = {
@@ -253,7 +270,7 @@ private fun EditPanel(
                                 androidx.compose.foundation.Canvas(
                                     modifier = Modifier.fillMaxSize()
                                 ) {
-                                    drawCircle(color = item.color)
+                                    drawCircle(color = Color(item.colorValue))
                                 }
                             }
                             Text(item.label)

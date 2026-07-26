@@ -13,6 +13,7 @@ import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.SearchRepository
 import com.flowreader.app.util.BookParser
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -51,7 +52,7 @@ class LibraryViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
-    
+
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
@@ -64,6 +65,7 @@ class LibraryViewModel @Inject constructor(
     init {
         loadCategories()
         loadBooks()
+        observeGlobalSearch()
     }
 
     private fun loadCategories() {
@@ -74,6 +76,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
+    @OptIn(FlowPreview::class)
     private fun loadBooks() {
         booksCollectionJob?.cancel()
         booksCollectionJob = viewModelScope.launch {
@@ -87,11 +90,11 @@ class LibraryViewModel @Inject constructor(
                 _selectedCategoryId
             ) { allBooks, recentlyRead, query, sortOrder, categoryId ->
                 var filteredBooks = allBooks
-                
+
                 if (categoryId != null) {
                     filteredBooks = filteredBooks.filter { it.categoryId == categoryId }
                 }
-                
+
                 val sortedBooks = when (sortOrder) {
                     SortOrder.ADDED_TIME -> filteredBooks.sortedByDescending { it.addedTime }
                     SortOrder.LAST_READ -> filteredBooks.sortedByDescending { it.lastReadTime ?: it.addedTime }
@@ -170,20 +173,29 @@ class LibraryViewModel @Inject constructor(
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
-        globalSearchJob?.cancel()
-        if (query.isBlank()) {
-            _uiState.update { it.copy(globalSearchResults = emptyList(), isGlobalSearching = false) }
-            return
-        }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun observeGlobalSearch() {
         globalSearchJob = viewModelScope.launch {
-            _uiState.update { it.copy(isGlobalSearching = true) }
-            try {
-                val results = searchRepository.searchAll(query)
-                _uiState.update { it.copy(globalSearchResults = results, isGlobalSearching = false) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(globalSearchResults = emptyList(), isGlobalSearching = false, error = "全局搜索失败: ${e.localizedMessage ?: "未知错误"}") }
+            _searchQuery
+                .debounce(350)
+                .map { it.trim() }
+                .distinctUntilChanged()
+                .collectLatest { query ->
+                    if (query.isBlank()) {
+                        _uiState.update { it.copy(globalSearchResults = emptyList(), isGlobalSearching = false) }
+                        return@collectLatest
+                    }
+                    _uiState.update { it.copy(isGlobalSearching = true) }
+                    try {
+                        val results = searchRepository.searchAll(query)
+                        _uiState.update { it.copy(globalSearchResults = results, isGlobalSearching = false) }
+                    } catch (e: Exception) {
+                        _uiState.update { it.copy(globalSearchResults = emptyList(), isGlobalSearching = false, error = "全局搜索失败: ${e.localizedMessage ?: "未知错误"}") }
+                    }
+                }
             }
-        }
     }
 
     fun importBook(uri: Uri) {
@@ -224,7 +236,7 @@ class LibraryViewModel @Inject constructor(
     fun clearError() {
         _uiState.update { it.copy(error = null) }
     }
-    
+
     fun refreshBooks() {
         viewModelScope.launch {
             _isRefreshing.value = true

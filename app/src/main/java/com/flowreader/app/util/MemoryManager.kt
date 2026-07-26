@@ -40,7 +40,7 @@ class MemoryManager @Inject constructor(
     fun getMemoryPressureLevel(): MemoryPressureLevel {
         val available = getAvailableMemoryMB()
         val usage = getMemoryUsagePercent()
-        
+
         return when {
             available < 100 || usage > 85 -> MemoryPressureLevel.CRITICAL
             available < 200 || usage > 75 -> MemoryPressureLevel.HIGH

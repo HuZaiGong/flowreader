@@ -16,6 +16,7 @@ import com.flowreader.app.data.local.entity.CategoryEntity
 import com.flowreader.app.data.local.entity.ChapterEntity
 import com.flowreader.app.data.local.entity.ReadingStatsEntity
 import com.flowreader.app.domain.repository.BackupRepository
+import com.flowreader.app.domain.repository.ImportResult
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -148,12 +149,6 @@ class BackupRepositoryImpl @Inject constructor(
         }
     }
 }
-
-data class ImportResult(
-    val booksImported: Int,
-    val bookmarksImported: Int,
-    val annotationsImported: Int = 0
-)
 
 private fun BookEntity.toJson(): JSONObject = JSONObject().apply {
     put("id", id)

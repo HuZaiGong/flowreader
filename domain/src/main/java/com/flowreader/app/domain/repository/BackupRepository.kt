@@ -1,7 +1,6 @@
 package com.flowreader.app.domain.repository
 
 import android.net.Uri
-import com.flowreader.app.data.repository.ImportResult
 
 /**
  * 备份和恢复仓库接口
@@ -29,3 +28,9 @@ interface BackupRepository {
      */
     suspend fun exportReadingProgress(bookId: Long): Result<String>
 }
+
+data class ImportResult(
+    val booksImported: Int,
+    val bookmarksImported: Int,
+    val annotationsImported: Int = 0
+)

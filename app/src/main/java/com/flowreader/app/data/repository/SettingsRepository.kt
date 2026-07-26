@@ -55,26 +55,26 @@ class SettingsRepositoryImpl @Inject constructor(
     }
 
     private fun getGestureSettings(preferences: Preferences): GestureSettings = GestureSettings(
-        leftTapAction = preferences[PreferencesKeys.GESTURE_LEFT_TAP]?.let { 
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE } 
+        leftTapAction = preferences[PreferencesKeys.GESTURE_LEFT_TAP]?.let {
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE }
         } ?: GestureAction.PREVIOUS_PAGE,
-        middleTapAction = preferences[PreferencesKeys.GESTURE_MIDDLE_TAP]?.let { 
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.TOGGLE_CONTROLS } 
+        middleTapAction = preferences[PreferencesKeys.GESTURE_MIDDLE_TAP]?.let {
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.TOGGLE_CONTROLS }
         } ?: GestureAction.TOGGLE_CONTROLS,
-        rightTapAction = preferences[PreferencesKeys.GESTURE_RIGHT_TAP]?.let { 
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE } 
+        rightTapAction = preferences[PreferencesKeys.GESTURE_RIGHT_TAP]?.let {
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE }
         } ?: GestureAction.NEXT_PAGE,
-        swipeLeftAction = preferences[PreferencesKeys.GESTURE_SWIPE_LEFT]?.let { 
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE } 
+        swipeLeftAction = preferences[PreferencesKeys.GESTURE_SWIPE_LEFT]?.let {
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.NEXT_PAGE }
         } ?: GestureAction.NEXT_PAGE,
-        swipeRightAction = preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT]?.let { 
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE } 
+        swipeRightAction = preferences[PreferencesKeys.GESTURE_SWIPE_RIGHT]?.let {
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.PREVIOUS_PAGE }
         } ?: GestureAction.PREVIOUS_PAGE,
-        doubleTapAction = preferences[PreferencesKeys.GESTURE_DOUBLE_TAP]?.let { 
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.SHOW_SETTINGS } 
+        doubleTapAction = preferences[PreferencesKeys.GESTURE_DOUBLE_TAP]?.let {
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.SHOW_SETTINGS }
         } ?: GestureAction.SHOW_SETTINGS,
-        longPressAction = preferences[PreferencesKeys.GESTURE_LONG_PRESS]?.let { 
-            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.ADD_BOOKMARK } 
+        longPressAction = preferences[PreferencesKeys.GESTURE_LONG_PRESS]?.let {
+            try { GestureAction.valueOf(it) } catch (e: Exception) { GestureAction.ADD_BOOKMARK }
         } ?: GestureAction.ADD_BOOKMARK,
         edgeGestureEnabled = preferences[PreferencesKeys.GESTURE_EDGE_ENABLED] ?: true
     )
@@ -145,8 +145,9 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = settings.screenTimeoutMinutes
             preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] = settings.eyeProtectionIntervalMinutes
             preferences[PreferencesKeys.AUTO_NIGHT_MODE] = settings.autoNightMode
-            if (settings.customFontPath != null) {
-                preferences[PreferencesKeys.CUSTOM_FONT_PATH] = settings.customFontPath
+            val customFontPath = settings.customFontPath
+            if (customFontPath != null) {
+                preferences[PreferencesKeys.CUSTOM_FONT_PATH] = customFontPath
             } else {
                 preferences.remove(PreferencesKeys.CUSTOM_FONT_PATH)
             }

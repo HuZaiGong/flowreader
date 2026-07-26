@@ -207,7 +207,7 @@ fun ReaderContent(
 
         if (showHighlightMenu) {
             HighlightMenu(
-                onDismiss = { 
+                onDismiss = {
                     showHighlightMenu = false
                     selectedText = ""
                 },
@@ -293,11 +293,11 @@ fun HighlightMenu(
     selectedText: String = ""
 ) {
     var inputText by remember { mutableStateOf(selectedText) }
-    
+
     LaunchedEffect(selectedText) {
         inputText = selectedText
     }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -321,7 +321,7 @@ fun HighlightMenu(
                     color = textColor,
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
-                
+
                 OutlinedTextField(
                     value = inputText,
                     onValueChange = { inputText = it },
@@ -333,15 +333,15 @@ fun HighlightMenu(
                         color = textColor
                     )
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     AnnotationColor.entries.forEach { color ->
                         IconButton(
-                            onClick = { 
+                            onClick = {
                                 if (inputText.isNotEmpty()) {
                                     onHighlight(color)
                                 }

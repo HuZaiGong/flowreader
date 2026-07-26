@@ -217,6 +217,16 @@ class FullTextSearch @Inject constructor(
         }
     }
 
+    suspend fun deleteAllContent() = withContext(Dispatchers.IO) {
+        ensureInitialized()
+        try {
+            database?.execSQL("DELETE FROM book_content")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to delete all indexed content", e)
+            throw FtsException("Failed to delete all indexed content", e)
+        }
+    }
+
     /**
      * Close the database when the singleton is being destroyed.
      * Hilt will call this when the application is terminated.

@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "FlowReader"
 include(":app")
+include(":domain")

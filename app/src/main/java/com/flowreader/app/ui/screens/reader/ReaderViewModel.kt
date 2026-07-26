@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 data class ReaderUiState(
@@ -61,7 +62,8 @@ data class ReaderUiState(
     val dailyGoalProgress: Float = 0f,
     val suggestedBreakTime: Long = 0,
     val isTtsPlaying: Boolean = false,
-    val isImmersiveMode: Boolean = false
+    val isImmersiveMode: Boolean = false,
+    val scrollRequestVersion: Long = 0L
 )
 
 @HiltViewModel
@@ -91,17 +93,22 @@ class ReaderViewModel @Inject constructor(
     private var eyeProtectionJob: Job? = null
     private var predictionJob: Job? = null
     private val progressDebounceMs = 3000L
-    
+
     private var sessionStartTime: Long = 0
     private var sessionReadPages: Int = 0
     private var sessionReadChars: Int = 0
     private var lastPositionUpdateTime: Long = 0
+    private var lastUiPositionUpdateTime: Long = 0
+    private var lastPredictionUpdateTime: Long = 0
+    private var lastWidgetProgressPercent: Int = -1
     private var lastPosition: Int = 0
     private var lastSessionInteractionTime: Long = 0
     private val chapterPositions = mutableMapOf<Int, Int>()
-    
+
     private val sessionPauseThresholdMs = 5 * 60 * 1000L
     private val defaultDailyGoalMinutes = 30
+    private val positionUpdateIntervalMs = 250L
+    private val predictionUpdateIntervalMs = 1_500L
 
     init {
         loadBook()
@@ -136,10 +143,10 @@ class ReaderViewModel @Inject constructor(
             val readPages = readingStatsRepository.getTodayReadPages()
             val dailyGoal = settingsRepository.getDailyReadingGoal().first()
             val goalProgress = if (dailyGoal > 0) (readTime.toFloat() / (dailyGoal * 60)).coerceIn(0f, 1f) else 0f
-            
+
             _uiState.update {
                 it.copy(
-                    todayReadTime = readTime, 
+                    todayReadTime = readTime,
                     todayReadPages = readPages,
                     dailyGoalProgress = goalProgress
                 )
@@ -182,12 +189,13 @@ class ReaderViewModel @Inject constructor(
     private fun saveProgressImmediately() {
         val state = _uiState.value
         if (state.chapters.isNotEmpty()) {
-            val progress = (state.currentChapterIndex.toFloat() + 1) / state.chapters.size
+            val position = chapterPositions[state.currentChapterIndex] ?: state.currentPosition
+            val progress = calculateProgress(state, position)
             viewModelScope.launch {
                 bookRepository.updateReadingProgress(
-                    bookId, 
-                    state.currentChapterIndex, 
-                    state.currentPosition, 
+                    bookId,
+                    state.currentChapterIndex,
+                    position,
                     progress
                 )
             }
@@ -253,7 +261,8 @@ class ReaderViewModel @Inject constructor(
                             currentPosition = book.currentPosition,
                             bookmarks = bookmarks,
                             annotations = annotations,
-                            isLoading = false
+                            isLoading = false,
+                            scrollRequestVersion = it.scrollRequestVersion + 1
                         )
                     }
 
@@ -357,7 +366,8 @@ class ReaderViewModel @Inject constructor(
                     currentChapterIndex = index,
                     currentPosition = restoredPosition,
                     isLoading = false,
-                    showChapterList = false
+                    showChapterList = false,
+                    scrollRequestVersion = it.scrollRequestVersion + 1
                 )
             }
 
@@ -365,7 +375,7 @@ class ReaderViewModel @Inject constructor(
             preloadAdjacentChapters(index, _uiState.value.chapters.size)
         }
     }
-    
+
     private fun preloadAdjacentChapters(currentIndex: Int, totalChapters: Int) {
         viewModelScope.launch {
             bookLoader.preloadChapters(
@@ -379,7 +389,14 @@ class ReaderViewModel @Inject constructor(
 
     fun updatePosition(position: Int) {
         val state = _uiState.value
+        if (position < 0) return
         val now = System.currentTimeMillis()
+        chapterPositions[state.currentChapterIndex] = position
+
+        val movedEnough = abs(position - lastPosition) >= 200
+        val waitedEnough = now - lastPositionUpdateTime >= positionUpdateIntervalMs
+        if (lastPositionUpdateTime > 0 && !movedEnough && !waitedEnough) return
+
         if (lastSessionInteractionTime > 0 && now - lastSessionInteractionTime > sessionPauseThresholdMs) {
             saveReadingStats()
             sessionStartTime = now
@@ -388,14 +405,14 @@ class ReaderViewModel @Inject constructor(
         lastSessionInteractionTime = now
 
         val positionDelta = if (lastPositionUpdateTime > 0) (position - lastPosition).coerceAtLeast(0) else 0
-        
+
         if (lastPositionUpdateTime > 0) {
             val timeDelta = now - lastPositionUpdateTime
-            
+
             if (timeDelta > 0 && positionDelta > 0) {
                 val charsPerSecond = positionDelta.toFloat() / (timeDelta / 1000f)
                 val charsPerMinute = charsPerSecond * 60
-                
+
                 val currentSpeed = state.readingSpeed
                 val alpha = 0.3f
                 val newSpeed = if (currentSpeed > 0) {
@@ -403,9 +420,9 @@ class ReaderViewModel @Inject constructor(
                 } else {
                     charsPerMinute
                 }
-                
+
                 _uiState.update { it.copy(readingSpeed = newSpeed) }
-                
+
                 val currentChapter = state.currentChapter
                 val charsPerPage = estimateCharsPerPage(state.readingSettings)
                 val readableDelta = currentChapter?.content
@@ -420,30 +437,41 @@ class ReaderViewModel @Inject constructor(
                 }
             }
         }
-        
+
         lastPositionUpdateTime = now
         lastPosition = position
 
-        val progress = if (state.chapters.isNotEmpty()) {
-            val currentChapter = state.chapters.getOrNull(state.currentChapterIndex)
-            val contentLength = currentChapter?.content?.length?.coerceAtLeast(1) ?: 1
-            (state.currentChapterIndex.toFloat() + position.toFloat() / contentLength) / state.chapters.size
-        } else 0f
+        val progress = calculateProgress(state, position)
 
-        _uiState.update { it.copy(currentPosition = position) }
-        chapterPositions[state.currentChapterIndex] = position
+        if (now - lastUiPositionUpdateTime >= positionUpdateIntervalMs) {
+            lastUiPositionUpdateTime = now
+            _uiState.update { it.copy(currentPosition = position) }
+        }
         debouncedSaveProgress(state.currentChapterIndex, position, progress)
         updateWidgetSnapshot(progress)
-        
-        calculateReadingPrediction()
+
+        if (now - lastPredictionUpdateTime >= predictionUpdateIntervalMs) {
+            lastPredictionUpdateTime = now
+            calculateReadingPrediction()
+        }
     }
 
     private fun updateWidgetSnapshot(progress: Float) {
         val title = _uiState.value.book?.title ?: return
         val percent = (progress * 100).roundToInt().coerceIn(0, 100)
+        if (percent == lastWidgetProgressPercent) return
+        lastWidgetProgressPercent = percent
         viewModelScope.launch {
             settingsRepository.updateReadingWidgetSnapshot(title, percent)
         }
+    }
+
+    private fun calculateProgress(state: ReaderUiState, position: Int): Float {
+        return if (state.chapters.isNotEmpty()) {
+            val currentChapter = state.chapters.getOrNull(state.currentChapterIndex)
+            val contentLength = currentChapter?.content?.length?.coerceAtLeast(1) ?: 1
+            (state.currentChapterIndex.toFloat() + position.toFloat() / contentLength) / state.chapters.size
+        } else 0f
     }
 
     private fun estimateCharsPerPage(settings: ReadingSettings): Int {
@@ -456,7 +484,7 @@ class ReaderViewModel @Inject constructor(
         predictionJob?.cancel()
         predictionJob = viewModelScope.launch {
             val state = _uiState.value
-            
+
             var remainingChars = 0
             for (i in state.currentChapterIndex until state.chapters.size) {
                 val chapter = state.chapters.getOrNull(i) ?: continue
@@ -466,12 +494,12 @@ class ReaderViewModel @Inject constructor(
                     remainingChars += chapter.content.length
                 }
             }
-            
+
             val speed = state.readingSpeed.coerceAtLeast(100f)
             val estimatedMinutes = (remainingChars / speed).roundToInt()
             val sessionTime = (System.currentTimeMillis() - sessionStartTime) / 1000 / 60
             val suggestedBreakMinutes = if (sessionTime >= 45) 15 else if (sessionTime >= 30) 10 else 0
-            
+
             _uiState.update {
                 it.copy(
                     estimatedTimeRemaining = estimatedMinutes.toLong(),
@@ -729,7 +757,7 @@ class ReaderViewModel @Inject constructor(
         val state = _uiState.value
         val book = state.book ?: return
         val chapter = state.currentChapter ?: return
-        
+
         val progress = if (state.chapters.isNotEmpty()) {
             ((state.currentChapterIndex + 1).toFloat() / state.chapters.size * 100).roundToInt()
         } else 0

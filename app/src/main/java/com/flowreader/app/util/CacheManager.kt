@@ -25,7 +25,7 @@ class CacheManager @Inject constructor(
         maxBooks = recommended.coerceIn(1, 5)
         maxChaptersPerBook = (recommended + 2).coerceIn(3, 7)
     }
-    
+
     private val chapterCache = object : LinkedHashMap<Long, MutableMap<Int, String>>(32, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, MutableMap<Int, String>>?): Boolean {
             if (size > maxBooks) {
@@ -40,7 +40,7 @@ class CacheManager @Inject constructor(
 
     private val bookMetadataCache = ConcurrentHashMap<Long, BookCacheEntry>()
     private val coverCache = ConcurrentHashMap<String, CoverCacheEntry>()
-    
+
     private val memoryUsage = AtomicInteger(0)
 
     data class BookCacheEntry(
@@ -74,7 +74,7 @@ class CacheManager @Inject constructor(
 
     fun putChapterContent(bookId: Long, chapterIndex: Int, content: String) {
         synchronized(chapterCache) {
-            val bookChapters = chapterCache.getOrPut(bookId) { 
+            val bookChapters = chapterCache.getOrPut(bookId) {
                 object : LinkedHashMap<Int, String>(maxChaptersPerBook, 0.75f, true) {
                     override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?): Boolean {
                         return size > maxChaptersPerBook
@@ -178,7 +178,7 @@ class CacheManager @Inject constructor(
             estimatedMemory = memoryUsage.get()
         )
     }
-    
+
     fun warmUpCache(bookIds: List<Long>, loadChapter: suspend (Long, Int) -> String?) {
         scope.launch {
             bookIds.take(2).forEach { bookId ->
@@ -190,7 +190,7 @@ class CacheManager @Inject constructor(
             }
         }
     }
-    
+
     fun prewarmChapters(bookId: Long, indices: List<Int>, loadContent: suspend (Long, Int) -> String?) {
         scope.launch {
             indices.forEach { index ->
@@ -202,7 +202,7 @@ class CacheManager @Inject constructor(
             }
         }
     }
-    
+
     private var cacheHits = AtomicInteger(1)
     private var cacheMisses = AtomicInteger(1)
 

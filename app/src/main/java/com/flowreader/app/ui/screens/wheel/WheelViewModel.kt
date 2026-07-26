@@ -1,14 +1,11 @@
 package com.flowreader.app.ui.screens.wheel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -19,6 +16,8 @@ data class WheelUiState(
     val isSpinning: Boolean = false,
     val result: com.flowreader.app.domain.model.WheelResult? = null,
     val rotationAngle: Float = 0f,
+    val spinTargetAngle: Float = 0f,
+    val spinRequestId: Long = 0L,
     val showResultDialog: Boolean = false,
     val editingMode: Boolean = false,
     val newItemLabel: String = "",
@@ -48,37 +47,29 @@ class WheelViewModel @Inject constructor() : ViewModel() {
         val additionalAngle = ((targetAngle - currentAngle) % 360 + 360) % 360
         val totalRotation = 360f * 5 + additionalAngle
 
-        _uiState.update { it.copy(isSpinning = true, result = null, showResultDialog = false, error = null) }
-
-        viewModelScope.launch {
-            val startTime = System.nanoTime()
-            val duration = 4_000_000_000L
-            val target = currentAngle + totalRotation
-
-            while (true) {
-                val elapsed = System.nanoTime() - startTime
-                if (elapsed >= duration) break
-
-                val progress = elapsed.toFloat() / duration
-                val eased = easeOutCubic(progress)
-                _uiState.update { it.copy(rotationAngle = (currentAngle + totalRotation * eased) % 360f) }
-                delay(16L)
-            }
-
-            _uiState.update {
-                it.copy(
-                    isSpinning = false,
-                    result = com.flowreader.app.domain.model.WheelResult(selectedItem, selectedIndex),
-                    showResultDialog = true,
-                    rotationAngle = targetAngle
-                )
-            }
+        _uiState.update {
+            it.copy(
+                isSpinning = true,
+                result = com.flowreader.app.domain.model.WheelResult(selectedItem, selectedIndex),
+                rotationAngle = currentAngle,
+                spinTargetAngle = currentAngle + totalRotation,
+                spinRequestId = it.spinRequestId + 1,
+                showResultDialog = false,
+                error = null
+            )
         }
     }
 
-    /**
-     * 加权随机选择
-     */
+    fun finishSpin() {
+        _uiState.update {
+            it.copy(
+                isSpinning = false,
+                showResultDialog = true,
+                rotationAngle = it.spinTargetAngle.mod(360f)
+            )
+        }
+    }
+
     private fun selectWeightedRandom(items: List<com.flowreader.app.domain.model.WheelItem>): Int {
         val totalWeight = items.sumOf { it.weight.toDouble() }
         var random = Math.random() * totalWeight
@@ -87,14 +78,6 @@ class WheelViewModel @Inject constructor() : ViewModel() {
             if (random <= 0) return index
         }
         return items.size - 1
-    }
-
-    /**
-     * 缓动函数（减速）
-     */
-    private fun easeOutCubic(t: Float): Float {
-        val oneMinusT = 1 - t
-        return 1 - (oneMinusT * oneMinusT * oneMinusT)
     }
 
     /**
@@ -123,20 +106,20 @@ class WheelViewModel @Inject constructor() : ViewModel() {
         if (state.newItemLabel.isBlank()) return
 
         val colors = listOf(
-            androidx.compose.ui.graphics.Color(0xFF4CAF50),
-            androidx.compose.ui.graphics.Color(0xFF2196F3),
-            androidx.compose.ui.graphics.Color(0xFFFF9800),
-            androidx.compose.ui.graphics.Color(0xFF9C27B0),
-            androidx.compose.ui.graphics.Color(0xFFE91E63),
-            androidx.compose.ui.graphics.Color(0xFF00BCD4),
-            androidx.compose.ui.graphics.Color(0xFFFF5722),
-            androidx.compose.ui.graphics.Color(0xFF607D8B)
+            0xFF4CAF50,
+            0xFF2196F3,
+            0xFFFF9800,
+            0xFF9C27B0,
+            0xFFE91E63,
+            0xFF00BCD4,
+            0xFFFF5722,
+            0xFF607D8B
         )
         val color = colors[state.items.size % colors.size]
 
         val newItem = com.flowreader.app.domain.model.WheelItem(
             label = state.newItemLabel,
-            color = color
+            colorValue = color
         )
         _uiState.update {
             it.copy(

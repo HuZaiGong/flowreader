@@ -83,7 +83,7 @@ class BookParser @Inject constructor(
 
     fun parseBookWithProgress(uri: Uri) = flow {
         emit(ParseProgress.Starting)
-        
+
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val fileName = getFileName(uri)
