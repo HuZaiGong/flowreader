@@ -90,10 +90,13 @@ class ReaderViewModel @Inject constructor(
     
     private var sessionStartTime: Long = 0
     private var sessionReadPages: Int = 0
+    private var sessionReadChars: Int = 0
     private var lastPositionUpdateTime: Long = 0
     private var lastPosition: Int = 0
+    private var lastSessionInteractionTime: Long = 0
+    private val chapterPositions = mutableMapOf<Int, Int>()
     
-    private val eyeProtectionIntervalMs = 20 * 60 * 1000L
+    private val sessionPauseThresholdMs = 5 * 60 * 1000L
     private val defaultDailyGoalMinutes = 30
 
     init {
@@ -159,6 +162,7 @@ class ReaderViewModel @Inject constructor(
         }
         sessionStartTime = System.currentTimeMillis()
         sessionReadPages = 0
+        sessionReadChars = 0
     }
 
     private fun saveProgressImmediately() {
@@ -187,13 +191,17 @@ class ReaderViewModel @Inject constructor(
     private fun loadSettings() {
         viewModelScope.launch {
             settingsRepository.appSettings
-                .first()
-                .let { settings ->
+                .collect { settings ->
                     _uiState.update {
                         it.copy(readingSettings = settings.defaultReadingSettings)
                     }
+                    startEyeProtectionTimer()
                 }
         }
+    }
+
+    fun retryLoadBook() {
+        loadBook()
     }
 
     private fun loadBook() {
@@ -220,6 +228,7 @@ class ReaderViewModel @Inject constructor(
 
                     sessionStartTime = System.currentTimeMillis()
                     lastPositionUpdateTime = sessionStartTime
+                    lastSessionInteractionTime = sessionStartTime
 
                     _uiState.update {
                         it.copy(
@@ -294,6 +303,8 @@ class ReaderViewModel @Inject constructor(
     fun goToChapter(index: Int) {
         if (index !in _uiState.value.chapters.indices) return
 
+        val previousState = _uiState.value
+        chapterPositions[previousState.currentChapterIndex] = previousState.currentPosition
         saveReadingStats()
 
         viewModelScope.launch {
@@ -311,18 +322,20 @@ class ReaderViewModel @Inject constructor(
                 if (index < size) set(index, chapter)
             }
 
+            val restoredPosition = chapterPositions[index] ?: if (index == state.book?.currentChapter) state.book.currentPosition else 0
             val progress = if (state.chapters.isNotEmpty()) {
-                (index.toFloat() + 1) / state.chapters.size
+                val contentLength = content.length.coerceAtLeast(1)
+                (index.toFloat() + restoredPosition.toFloat() / contentLength) / state.chapters.size
             } else 0f
 
-            bookRepository.updateReadingProgress(bookId, index, 0, progress)
+            bookRepository.updateReadingProgress(bookId, index, restoredPosition, progress)
 
             _uiState.update {
                 it.copy(
                     chapters = updatedChapters,
                     currentChapter = chapter,
                     currentChapterIndex = index,
-                    currentPosition = 0,
+                    currentPosition = restoredPosition,
                     isLoading = false,
                     showChapterList = false
                 )
@@ -347,6 +360,13 @@ class ReaderViewModel @Inject constructor(
     fun updatePosition(position: Int) {
         val state = _uiState.value
         val now = System.currentTimeMillis()
+        if (lastSessionInteractionTime > 0 && now - lastSessionInteractionTime > sessionPauseThresholdMs) {
+            saveReadingStats()
+            sessionStartTime = now
+            lastPosition = position
+        }
+        lastSessionInteractionTime = now
+
         val positionDelta = if (lastPositionUpdateTime > 0) (position - lastPosition).coerceAtLeast(0) else 0
         
         if (lastPositionUpdateTime > 0) {
@@ -366,8 +386,18 @@ class ReaderViewModel @Inject constructor(
                 
                 _uiState.update { it.copy(readingSpeed = newSpeed) }
                 
-                val charsPerPage = 2000
-                sessionReadPages += (positionDelta + charsPerPage - 1) / charsPerPage
+                val currentChapter = state.currentChapter
+                val charsPerPage = estimateCharsPerPage(state.readingSettings)
+                val readableDelta = currentChapter?.content
+                    ?.substring(lastPosition.coerceIn(0, currentChapter.content.length), position.coerceIn(0, currentChapter.content.length))
+                    ?.count { !it.isWhitespace() }
+                    ?: positionDelta
+                sessionReadChars += readableDelta
+                val completedPages = sessionReadChars / charsPerPage
+                if (completedPages > 0) {
+                    sessionReadPages += completedPages
+                    sessionReadChars %= charsPerPage
+                }
             }
         }
         
@@ -381,9 +411,16 @@ class ReaderViewModel @Inject constructor(
         } else 0f
 
         _uiState.update { it.copy(currentPosition = position) }
+        chapterPositions[state.currentChapterIndex] = position
         debouncedSaveProgress(state.currentChapterIndex, position, progress)
         
         calculateReadingPrediction()
+    }
+
+    private fun estimateCharsPerPage(settings: ReadingSettings): Int {
+        val fontFactor = 18f / settings.fontSize.coerceAtLeast(12)
+        val lineFactor = 1.5f / settings.lineSpacing.coerceAtLeast(1f)
+        return (900 * fontFactor * lineFactor).roundToInt().coerceIn(350, 1600)
     }
 
     private fun calculateReadingPrediction() {
@@ -420,7 +457,8 @@ class ReaderViewModel @Inject constructor(
         eyeProtectionJob?.cancel()
         eyeProtectionJob = viewModelScope.launch {
             while (true) {
-                delay(eyeProtectionIntervalMs)
+                val intervalMinutes = _uiState.value.readingSettings.eyeProtectionIntervalMinutes.coerceAtLeast(15)
+                delay(intervalMinutes * 60 * 1000L)
                 _uiState.update { it.copy(showEyeProtectionReminder = true) }
             }
         }
@@ -491,6 +529,15 @@ class ReaderViewModel @Inject constructor(
             )
             val newId = bookmarkRepository.insertBookmark(bookmark)
             _uiState.update { it.copy(bookmarks = it.bookmarks + bookmark.copy(id = newId)) }
+        }
+    }
+
+    fun updateEyeProtectionInterval(minutes: Int) {
+        viewModelScope.launch {
+            val newSettings = _uiState.value.readingSettings.copy(eyeProtectionIntervalMinutes = minutes)
+            settingsRepository.updateReadingSettings(newSettings)
+            _uiState.update { it.copy(readingSettings = newSettings) }
+            startEyeProtectionTimer()
         }
     }
 

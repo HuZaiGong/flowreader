@@ -240,6 +240,27 @@ fun LibraryScreen(
                             )
                         }
 
+                        if (uiState.categories.isNotEmpty()) {
+                            item(key = "category_filters") {
+                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    item(key = "all_categories") {
+                                        FilterChip(
+                                            selected = uiState.selectedCategoryId == null,
+                                            onClick = { viewModel.selectCategory(null) },
+                                            label = { Text("全部") }
+                                        )
+                                    }
+                                    items(uiState.categories, key = { it.id }) { category ->
+                                        FilterChip(
+                                            selected = uiState.selectedCategoryId == category.id,
+                                            onClick = { viewModel.selectCategory(category.id) },
+                                            label = { Text(category.name) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         items(uiState.books, key = { it.id }) { book ->
                             BookListItem(
                                 book = book,

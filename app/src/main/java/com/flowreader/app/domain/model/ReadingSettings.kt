@@ -58,6 +58,7 @@ data class ReadingSettings(
     val pageMode: PageMode = PageMode.SLIDE,
     val keepScreenOn: Boolean = true,
     val screenTimeoutMinutes: Int = 0,
+    val eyeProtectionIntervalMinutes: Int = 20,
     val tapZoneRatio: Float = 0.3f,
     val gestureSettings: GestureSettings = GestureSettings()
 )

@@ -25,6 +25,7 @@ fun ReaderSettingsDialog(
     onFontFamilyChange: (FontFamily) -> Unit,
     onThemeChange: (ReaderTheme) -> Unit,
     onPageModeChange: (PageMode) -> Unit,
+    onEyeProtectionIntervalChange: (Int) -> Unit = {},
     onDismiss: () -> Unit,
     textColor: androidx.compose.ui.graphics.Color,
     backgroundColor: androidx.compose.ui.graphics.Color
@@ -108,6 +109,17 @@ fun ReaderSettingsDialog(
                                     }
                                 )
                             }
+                        )
+                    }
+                }
+
+                Text("护眼提醒间隔", style = MaterialTheme.typography.bodyMedium)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    listOf(15, 20, 30, 45, 60).forEach { minutes ->
+                        FilterChip(
+                            selected = settings.eyeProtectionIntervalMinutes == minutes,
+                            onClick = { onEyeProtectionIntervalChange(minutes) },
+                            label = { Text("${minutes}分钟") }
                         )
                     }
                 }

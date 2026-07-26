@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -46,13 +45,9 @@ fun ReaderScreen(
     val contentScrollState = rememberScrollState()
     val chapterScrollPositions = remember { mutableStateMapOf<Int, Int>() }
 
-    LaunchedEffect(uiState.currentChapterIndex) {
-        val savedPosition = chapterScrollPositions[uiState.currentChapterIndex]
-        if (savedPosition != null && savedPosition > 0) {
-            contentScrollState.scrollTo(savedPosition)
-        } else {
-            contentScrollState.scrollTo(0)
-        }
+    LaunchedEffect(uiState.currentChapterIndex, uiState.currentPosition) {
+        val savedPosition = chapterScrollPositions[uiState.currentChapterIndex] ?: uiState.currentPosition
+        contentScrollState.scrollTo(savedPosition.coerceAtLeast(0))
     }
 
     LaunchedEffect(contentScrollState.value, uiState.currentChapterIndex) {
@@ -89,8 +84,13 @@ fun ReaderScreen(
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onBackClick) {
-                        Text("返回")
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Button(onClick = { viewModel.retryLoadBook() }) {
+                            Text("重试")
+                        }
+                        OutlinedButton(onClick = onBackClick) {
+                            Text("返回")
+                        }
                     }
                 }
             }
@@ -191,6 +191,7 @@ fun ReaderScreen(
                     onFontFamilyChange = { viewModel.updateFontFamily(it) },
                     onThemeChange = { viewModel.updateReaderTheme(it) },
                     onPageModeChange = { viewModel.updatePageMode(it) },
+                    onEyeProtectionIntervalChange = { viewModel.updateEyeProtectionInterval(it) },
                     onDismiss = { viewModel.showSettings(false) },
                     textColor = textColor,
                     backgroundColor = backgroundColor

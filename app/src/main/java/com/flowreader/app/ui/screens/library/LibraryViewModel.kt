@@ -101,15 +101,17 @@ class LibraryViewModel @Inject constructor(
                     }
                 }
                 Triple(filteredByQuery, recentlyRead, query)
-            }.collect { (books, recentlyRead, query) ->
-                _uiState.update {
-                    it.copy(
-                        books = books,
-                        recentlyRead = recentlyRead,
-                        searchQuery = query,
-                        isLoading = false
-                    )
-                }
+                }.collect { (books, recentlyRead, query) ->
+                    _uiState.update {
+                        it.copy(
+                            books = books,
+                            recentlyRead = recentlyRead,
+                            searchQuery = query,
+                            selectedCategoryId = _selectedCategoryId.value,
+                            sortOrder = _sortOrder.value,
+                            isLoading = false
+                        )
+                    }
             }
         }
     }

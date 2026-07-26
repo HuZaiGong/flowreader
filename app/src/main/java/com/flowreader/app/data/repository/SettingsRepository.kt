@@ -31,6 +31,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val PAGE_MODE = stringPreferencesKey("page_mode")
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val SCREEN_TIMEOUT_MINUTES = intPreferencesKey("screen_timeout_minutes")
+        val EYE_PROTECTION_INTERVAL_MINUTES = intPreferencesKey("eye_protection_interval_minutes")
         val READING_REMINDER_ENABLED = booleanPreferencesKey("reading_reminder_enabled")
         val READING_REMINDER_HOUR = intPreferencesKey("reading_reminder_hour")
         val READING_REMINDER_MINUTE = intPreferencesKey("reading_reminder_minute")
@@ -111,6 +112,7 @@ class SettingsRepositoryImpl @Inject constructor(
                     },
                     keepScreenOn = preferences[PreferencesKeys.KEEP_SCREEN_ON] ?: true,
                     screenTimeoutMinutes = preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] ?: 0,
+                    eyeProtectionIntervalMinutes = preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] ?: 20,
                     gestureSettings = getGestureSettings(preferences)
                 ),
                 readingReminderEnabled = preferences[PreferencesKeys.READING_REMINDER_ENABLED] ?: false,
@@ -135,6 +137,7 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.PAGE_MODE] = settings.pageMode.name
             preferences[PreferencesKeys.KEEP_SCREEN_ON] = settings.keepScreenOn
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = settings.screenTimeoutMinutes
+            preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] = settings.eyeProtectionIntervalMinutes
             if (settings.customFontPath != null) {
                 preferences[PreferencesKeys.CUSTOM_FONT_PATH] = settings.customFontPath
             } else {
@@ -176,6 +179,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun updateScreenTimeout(minutes: Int) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.SCREEN_TIMEOUT_MINUTES] = minutes
+        }
+    }
+
+    override suspend fun updateEyeProtectionInterval(minutes: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] = minutes
         }
     }
 

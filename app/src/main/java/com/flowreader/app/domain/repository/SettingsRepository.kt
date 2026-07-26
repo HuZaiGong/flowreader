@@ -23,6 +23,7 @@ interface SettingsRepository {
     suspend fun updatePageMode(mode: PageMode)
     suspend fun updateKeepScreenOn(keepOn: Boolean)
     suspend fun updateScreenTimeout(minutes: Int)
+    suspend fun updateEyeProtectionInterval(minutes: Int)
     suspend fun updateReadingReminder(enabled: Boolean, hour: Int = 20, minute: Int = 0)
     suspend fun addSearchHistory(query: String)
     fun getSearchHistory(): Flow<List<String>>
