@@ -376,13 +376,17 @@ private val IMPORT_MIME_TYPES = arrayOf(
     "text/plain",
     "text/markdown",
     "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "application/vnd.comicbook+zip",
     "application/x-fictionbook+xml",
     "application/x-mobipocket-ebook",
     "application/zip",
     "application/octet-stream"
 )
 
-private val ARCHIVE_MIME_TYPES = arrayOf("application/zip")
+private val ARCHIVE_MIME_TYPES = arrayOf("application/zip", "application/vnd.comicbook+zip")
 
 @Composable
 private fun libraryMessageText(message: LibraryMessage): String = when (message) {

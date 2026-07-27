@@ -25,6 +25,25 @@ class BookParserTest {
     }
 
     @Test
+    fun comicImageFormatsAreRecognised() {
+        assertEquals(BookFormat.COMIC, BookParser.detectFormatStatic("page.jpg"))
+        assertEquals(BookFormat.COMIC, BookParser.detectFormatStatic("page.jpeg"))
+        assertEquals(BookFormat.COMIC, BookParser.detectFormatStatic("page.png"))
+        assertEquals(BookFormat.COMIC, BookParser.detectFormatStatic("page.webp"))
+        assertEquals(BookFormat.COMIC, BookParser.detectFormatStatic("PAGE.WEBP"))
+    }
+
+    @Test
+    fun comicPagesHaveNaturalSortKeys() {
+        val pages = listOf("page10.jpg", "page2.jpg", "page1.jpg")
+
+        assertEquals(
+            listOf("page1.jpg", "page2.jpg", "page10.jpg"),
+            pages.sortedBy { BookParser.naturalComicSortKey(it).joinToString("/") }
+        )
+    }
+
+    @Test
     fun detectionIsCaseInsensitive() {
         assertEquals(BookFormat.EPUB, BookParser.detectFormatStatic("BOOK.EPUB"))
         assertEquals(BookFormat.MOBI, BookParser.detectFormatStatic("Novel.MOBI"))
@@ -37,5 +56,6 @@ class BookParserTest {
         // a plain `.zip` routes to the batch importer instead.
         assertEquals(BookFormat.FB2, BookParser.detectFormatStatic("novel.fb2.zip"))
         assertEquals(BookFormat.UNKNOWN, BookParser.detectFormatStatic("my-books.zip"))
+        assertEquals(BookFormat.UNKNOWN, BookParser.detectFormatStatic("comic.cbz"))
     }
 }

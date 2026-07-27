@@ -40,6 +40,7 @@ import com.flowreader.app.domain.model.PageMode
 import com.flowreader.app.ui.screens.reader.components.AnnotationsDialog
 import com.flowreader.app.ui.screens.reader.components.BookmarksDialog
 import com.flowreader.app.ui.screens.reader.components.ChapterListDialog
+import com.flowreader.app.ui.screens.reader.components.ComicReader
 import com.flowreader.app.ui.screens.reader.components.ParagraphActionSheet
 import com.flowreader.app.ui.screens.reader.components.PdfViewer
 import com.flowreader.app.ui.screens.reader.components.ReaderContent
@@ -142,7 +143,21 @@ fun ReaderScreen(
             val chapter = uiState.currentChapter
             val book = uiState.book
             if (chapter != null) {
-                if (book != null && book.format == BookFormat.PDF) {
+                if (book != null && book.format == BookFormat.COMIC) {
+                    ComicReader(
+                        chapters = uiState.chapters,
+                        currentChapterIndex = uiState.currentChapterIndex,
+                        settings = settings,
+                        palette = palette,
+                        scrollState = contentScrollState,
+                        onTap = { offset, size ->
+                            dispatchGesture(ReaderBehavior.tapAction(offset.x, size.width, settings))
+                        },
+                        onHorizontalDrag = { drag -> dispatchGesture(ReaderBehavior.swipeAction(drag, settings)) },
+                        onPageVisible = { index -> viewModel.setCurrentComicPage(index) },
+                        onPositionChanged = { position -> viewModel.updatePosition(position, chapterFraction) }
+                    )
+                } else if (book != null && book.format == BookFormat.PDF) {
                     PdfViewer(
                         filePath = book.filePath,
                         currentPage = uiState.currentChapterIndex,

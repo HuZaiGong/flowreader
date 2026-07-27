@@ -242,8 +242,15 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             val name = bookParser.displayName(uri)
-            if (BookParser.detectFormatStatic(name) == BookFormat.UNKNOWN && name.endsWith(".zip", ignoreCase = true)) {
-                importArchiveInternal(uri)
+            if (BookParser.detectFormatStatic(name) == BookFormat.UNKNOWN && isZipArchiveName(name)) {
+                if (zipImporter.isComicArchive(uri)) {
+                    importSingle(uri).fold(
+                        onSuccess = { _uiState.update { state -> state.copy(isLoading = false) } },
+                        onFailure = { error -> _uiState.update { state -> state.copy(isLoading = false, error = error.message ?: "导入失败") } }
+                    )
+                } else {
+                    importArchiveInternal(uri)
+                }
                 return@launch
             }
             val result = importSingle(uri)
@@ -255,6 +262,9 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
+
+    private fun isZipArchiveName(name: String): Boolean =
+        name.endsWith(".zip", ignoreCase = true) || name.endsWith(".cbz", ignoreCase = true)
 
     private suspend fun importArchiveInternal(uri: Uri) {
         zipImporter.extract(uri)

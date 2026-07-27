@@ -32,8 +32,17 @@ class ZipImportRulesTest {
     @Test
     fun unsupportedExtensionsAreSkipped() {
         assertNull(ZipImportRules.safeBookName("cover.jpg", isDirectory = false))
+        assertNull(ZipImportRules.safeBookName("page.webp", isDirectory = false))
         assertNull(ZipImportRules.safeBookName("notes", isDirectory = false))
         assertNull(ZipImportRules.safeBookName("payload.apk", isDirectory = false))
+    }
+
+    @Test
+    fun comicImagesUseSeparateArchivePolicy() {
+        assertEquals("001.jpg", ZipImportRules.safeComicImageName("001.jpg", isDirectory = false))
+        assertEquals("002.webp", ZipImportRules.safeComicImageName("nested/002.webp", isDirectory = false))
+        assertNull(ZipImportRules.safeComicImageName("../../evil.png", isDirectory = false))
+        assertNull(ZipImportRules.safeComicImageName("book.epub", isDirectory = false))
     }
 
     @Test

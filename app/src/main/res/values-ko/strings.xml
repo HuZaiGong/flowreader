@@ -37,7 +37,7 @@
     <string name="library_section_all">모든 책</string>
     <string name="library_filter_all">전체</string>
     <string name="library_empty_title">서재가 비어 있습니다</string>
-    <string name="library_empty_message">아래 책 가져오기로 EPUB / TXT / PDF / Markdown / FB2 / MOBI를 추가하세요</string>
+    <string name="library_empty_message">아래 책 가져오기로 EPUB / TXT / PDF / Markdown / FB2 / MOBI / 이미지 만화를 추가하세요</string>
     <string name="library_empty_action">지금 가져오기</string>
     <string name="library_chapter_count">%1$d개 장</string>
     <string name="library_book_actions">%1$s 추가 작업</string>

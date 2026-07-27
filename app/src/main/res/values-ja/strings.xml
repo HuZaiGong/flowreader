@@ -37,7 +37,7 @@
     <string name="library_section_all">すべての本</string>
     <string name="library_filter_all">すべて</string>
     <string name="library_empty_title">本棚が空です</string>
-    <string name="library_empty_message">下の「本をインポート」から EPUB / TXT / PDF / Markdown / FB2 / MOBI を追加できます</string>
+    <string name="library_empty_message">下の「本をインポート」から EPUB / TXT / PDF / Markdown / FB2 / MOBI / 画像コミックを追加できます</string>
     <string name="library_empty_action">今すぐインポート</string>
     <string name="library_chapter_count">%1$d 章</string>
     <string name="library_book_actions">『%1$s』の操作</string>

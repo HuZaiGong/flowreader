@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Book
+import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.core.util.ReadingProgress
@@ -249,10 +250,16 @@ class ReaderViewModel @Inject constructor(
                 val annotations = annotationRepository.getAnnotationsListByBookId(bookId)
 
                 if (book != null && chapterMetadata.isNotEmpty()) {
+                    val chapters = if (book.format == BookFormat.COMIC) {
+                        chapterMetadata.map { meta ->
+                            meta.copy(content = chapterRepository.getChapterContent(bookId, meta.index) ?: "")
+                        }
+                    } else {
+                        chapterMetadata
+                    }
                     val currentChapterIndex = book.currentChapter.coerceIn(0, chapterMetadata.size - 1)
-                    val currentChapter = chapterMetadata.getOrNull(currentChapterIndex)?.let { meta ->
-                        val content = chapterRepository.getChapterContent(bookId, currentChapterIndex) ?: ""
-                        meta.copy(content = content)
+                    val currentChapter = chapters.getOrNull(currentChapterIndex)?.let { meta ->
+                        if (meta.content.isNotEmpty()) meta else meta.copy(content = chapterRepository.getChapterContent(bookId, currentChapterIndex) ?: "")
                     }
 
                     sessionStartTime = System.currentTimeMillis()
@@ -262,7 +269,7 @@ class ReaderViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             book = book,
-                            chapters = chapterMetadata,
+                            chapters = chapters,
                             currentChapter = currentChapter,
                             currentChapterIndex = currentChapterIndex,
                             currentPosition = book.currentPosition,
@@ -274,7 +281,7 @@ class ReaderViewModel @Inject constructor(
                     }
 
                     calculateReadingPrediction()
-                    indexBookForSearch(book, chapterMetadata)
+                    if (book.format != BookFormat.COMIC) indexBookForSearch(book, chapterMetadata)
 
                     if (initialChapterIndex >= 0 && initialChapterIndex < chapterMetadata.size) {
                         goToChapter(initialChapterIndex)
@@ -332,6 +339,22 @@ class ReaderViewModel @Inject constructor(
 
     fun goToChapter(index: Int) {
         goToChapter(index, null)
+    }
+
+    fun setCurrentComicPage(index: Int) {
+        val state = _uiState.value
+        if (state.book?.format != BookFormat.COMIC || index !in state.chapters.indices || index == state.currentChapterIndex) return
+        val progress = ReadingProgress.fraction(index, 0f, state.chapters.size)
+        chapterFraction = 0f
+        _uiState.update {
+            it.copy(
+                currentChapterIndex = index,
+                currentChapter = state.chapters[index],
+                currentPosition = 0
+            )
+        }
+        debouncedSaveProgress(index, 0, progress)
+        updateWidgetSnapshot(progress)
     }
 
     private fun goToChapter(index: Int, positionOverride: Int?) {

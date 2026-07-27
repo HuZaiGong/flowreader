@@ -37,7 +37,7 @@
     <string name="library_section_all">All books</string>
     <string name="library_filter_all">All</string>
     <string name="library_empty_title">Your shelf is empty</string>
-    <string name="library_empty_message">Use Import books below to add EPUB / TXT / PDF / Markdown / FB2 / MOBI</string>
+    <string name="library_empty_message">Use Import books below to add EPUB / TXT / PDF / Markdown / FB2 / MOBI / image comics</string>
     <string name="library_empty_action">Import now</string>
     <string name="library_chapter_count">%1$d chapters</string>
     <string name="library_book_actions">More actions for %1$s</string>

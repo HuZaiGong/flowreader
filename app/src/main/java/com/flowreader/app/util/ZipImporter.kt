@@ -18,8 +18,8 @@ import javax.inject.Singleton
  *
  * The rules are deliberately paranoid: a zip is untrusted input. [ZipImportRules] rejects absolute
  * and `..` paths (zip-slip), caps the entry count and the per-entry size, and only lets through
- * extensions the app can actually parse — an archive of 4000 JPEGs should import zero books, not
- * fill internal storage first and fail afterwards.
+ * extensions the app can actually parse. Image packs are handled separately as one comic book, so
+ * batch-book extraction still ignores loose JPEG/PNG/WebP entries.
  */
 @Singleton
 class ZipImporter @Inject constructor(
@@ -60,6 +60,20 @@ class ZipImporter @Inject constructor(
         } catch (e: Exception) {
             target.deleteRecursively()
             Result.failure(e)
+        }
+    }
+
+    suspend fun isComicArchive(uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        val input = context.contentResolver.openInputStream(uri) ?: return@withContext false
+        ZipInputStream(input.buffered()).use { zip ->
+            var imageCount = 0
+            var entry = zip.nextEntry
+            while (entry != null && imageCount < ZipImportRules.MAX_ENTRIES) {
+                if (ZipImportRules.safeComicImageName(entry.name, entry.isDirectory) != null) imageCount++
+                zip.closeEntry()
+                entry = zip.nextEntry
+            }
+            imageCount > 0
         }
     }
 
@@ -113,7 +127,20 @@ object ZipImportRules {
 
         val fileName = normalized.substringAfterLast('/')
         if (fileName.isBlank() || fileName.startsWith(".")) return null
-        if (BookParser.detectFormatStatic(fileName) == BookFormat.UNKNOWN) return null
+        val format = BookParser.detectFormatStatic(fileName)
+        if (format == BookFormat.UNKNOWN || format == BookFormat.COMIC) return null
+        return fileName
+    }
+
+    fun safeComicImageName(rawName: String, isDirectory: Boolean): String? {
+        if (isDirectory) return null
+        val normalized = rawName.replace('\\', '/')
+        if (normalized.startsWith("/") || normalized.split('/').any { it == ".." }) return null
+        if (normalized.startsWith("__MACOSX/")) return null
+
+        val fileName = normalized.substringAfterLast('/')
+        if (fileName.isBlank() || fileName.startsWith(".")) return null
+        if (!BookParser.isComicImageName(fileName)) return null
         return fileName
     }
 }

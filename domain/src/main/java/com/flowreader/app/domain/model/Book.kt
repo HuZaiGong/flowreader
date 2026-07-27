@@ -24,6 +24,7 @@ data class Book(
 /**
  * [FB2] and [MOBI] are read-only imports added in v53: both are converted to chapters at import
  * time like EPUB, and neither involves DRM — an encrypted MOBI is rejected, not decrypted.
+ * [COMIC] covers single image files and image-only ZIP/CBZ packs, added in v54.
  */
 enum class BookFormat {
     EPUB,
@@ -32,6 +33,7 @@ enum class BookFormat {
     MARKDOWN,
     FB2,
     MOBI,
+    COMIC,
     UNKNOWN
 }
 

@@ -19,6 +19,7 @@ import org.jsoup.nodes.Element
 import org.jsoup.nodes.Node
 import org.jsoup.nodes.TextNode
 import java.io.*
+import java.util.Locale
 import java.util.zip.ZipFile
 import java.util.zip.ZipInputStream
 import javax.inject.Inject
@@ -76,7 +77,14 @@ class BookParser @Inject constructor(
                 }
                 BookFormat.FB2 -> parseFb2Stream(inputStream, fileName, fileSize)
                 BookFormat.MOBI -> parseMobiStream(inputStream, fileName, fileSize)
-                else -> Result.failure(Exception("不支持的格式: $format"))
+                BookFormat.COMIC -> parseComicImageStream(inputStream, fileName, fileSize)
+                BookFormat.UNKNOWN -> {
+                    if (fileName.endsWith(".zip", ignoreCase = true) || fileName.endsWith(".cbz", ignoreCase = true)) {
+                        parseComicZipStream(inputStream, fileName, fileSize)
+                    } else {
+                        Result.failure(Exception("不支持的格式: $format"))
+                    }
+                }
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -130,7 +138,22 @@ class BookParser @Inject constructor(
                         emit(ParseProgress.Parsing)
                         result
                     }
-                    else -> Result.failure(Exception("不支持的格式: $format"))
+                    BookFormat.COMIC -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        val result = parseComicImageStream(inputStream, fileName, fileSize)
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
+                    BookFormat.UNKNOWN -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        val result = if (fileName.endsWith(".zip", ignoreCase = true) || fileName.endsWith(".cbz", ignoreCase = true)) {
+                            parseComicZipStream(inputStream, fileName, fileSize)
+                        } else {
+                            Result.failure(Exception("不支持的格式: $format"))
+                        }
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
                 }.onSuccess {
                     emit(ParseProgress.Complete)
                 }.onFailure {
@@ -158,9 +181,22 @@ class BookParser @Inject constructor(
                 fileName.endsWith(".mobi", ignoreCase = true) ||
                     fileName.endsWith(".prc", ignoreCase = true) ||
                     fileName.endsWith(".azw", ignoreCase = true) -> BookFormat.MOBI
+                isComicImageName(fileName) -> BookFormat.COMIC
+                fileName.endsWith(".cbz", ignoreCase = true) -> BookFormat.UNKNOWN
                 else -> BookFormat.UNKNOWN
             }
         }
+
+        fun isComicImageName(fileName: String): Boolean {
+            val lower = fileName.lowercase(Locale.ROOT)
+            return lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png") || lower.endsWith(".webp")
+        }
+
+        fun naturalComicSortKey(name: String): List<String> =
+            Regex("\\d+|\\D+").findAll(name.lowercase(Locale.ROOT)).map { match ->
+                val value = match.value
+                value.toLongOrNull()?.toString()?.padStart(12, '0') ?: value
+            }.toList()
     }
 
     /**
@@ -614,6 +650,145 @@ class BookParser @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun parseComicImageStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+        return try {
+            val title = fileName.substringBeforeLast('.')
+            val directory = File(context.filesDir, "comics/${System.currentTimeMillis()}_${sanitizeFileName(title)}")
+            if (!directory.mkdirs() && !directory.isDirectory) {
+                return Result.failure(Exception("无法创建漫画目录"))
+            }
+            val image = File(directory, uniqueComicFileName(fileName, 0))
+            inputStream.use { input -> FileOutputStream(image).use { output -> input.copyTo(output) } }
+
+            val chapter = comicChapter(index = 0, title = "第 1 页", imagePath = image.absolutePath)
+            Result.success(
+                BookParseResult(
+                    book = Book(
+                        title = title,
+                        author = "未知作者",
+                        filePath = directory.absolutePath,
+                        coverPath = image.absolutePath,
+                        fileSize = fileSize,
+                        format = BookFormat.COMIC,
+                        totalChapters = 1
+                    ),
+                    chapters = listOf(chapter),
+                    pdfFilePath = directory.absolutePath
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun parseComicZipStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+        val tempFile = File(context.cacheDir, "temp_comic_${System.currentTimeMillis()}.zip")
+        return try {
+            inputStream.use { input -> FileOutputStream(tempFile).use { output -> input.copyTo(output) } }
+
+            val title = fileName.removeSuffixIgnoreCase(".zip").removeSuffixIgnoreCase(".cbz")
+            val directory = File(context.filesDir, "comics/${System.currentTimeMillis()}_${sanitizeFileName(title)}")
+            if (!directory.mkdirs() && !directory.isDirectory) {
+                return Result.failure(Exception("无法创建漫画目录"))
+            }
+
+            val imageEntries = ZipFile(tempFile).use { zip ->
+                zip.entries().asSequence()
+                    .filter { !it.isDirectory }
+                    .mapNotNull { entry -> ZipImportRules.safeComicImageName(entry.name, isDirectory = false)?.let { entry.name to it } }
+                    .sortedWith { left, right -> compareNatural(left.second, right.second) }
+                    .take(ZipImportRules.MAX_ENTRIES)
+                    .toList()
+            }
+            if (imageEntries.isEmpty()) {
+                directory.deleteRecursively()
+                return Result.failure(Exception("压缩包中没有支持的图片"))
+            }
+
+            val images = mutableListOf<File>()
+            ZipFile(tempFile).use { zip ->
+                imageEntries.forEachIndexed { index, (entryName, name) ->
+                    val target = File(directory, uniqueComicFileName(name, index))
+                    val entry = zip.getEntry(entryName) ?: return@forEachIndexed
+                    val written = zip.getInputStream(entry).use { input -> copyCapped(input, target, ZipImportRules.MAX_ENTRY_BYTES) }
+                    if (written > 0) images.add(target) else target.delete()
+                }
+            }
+            if (images.isEmpty()) {
+                directory.deleteRecursively()
+                return Result.failure(Exception("压缩包中的图片超过大小限制"))
+            }
+
+            val chapters = images.mapIndexed { index, image -> comicChapter(index, "第 ${index + 1} 页", image.absolutePath) }
+            Result.success(
+                BookParseResult(
+                    book = Book(
+                        title = title.ifBlank { fileName.substringBeforeLast('.') },
+                        author = "未知作者",
+                        filePath = directory.absolutePath,
+                        coverPath = images.firstOrNull()?.absolutePath,
+                        fileSize = fileSize,
+                        format = BookFormat.COMIC,
+                        totalChapters = chapters.size
+                    ),
+                    chapters = chapters,
+                    pdfFilePath = directory.absolutePath
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            tempFile.delete()
+        }
+    }
+
+    private fun comicChapter(index: Int, title: String, imagePath: String): Chapter =
+        Chapter(
+            bookId = 0,
+            index = index,
+            title = title,
+            content = "[COMIC:$imagePath]",
+            startPosition = index,
+            endPosition = index + 1
+        )
+
+    private fun copyCapped(source: InputStream, target: File, limit: Long): Long {
+        var total = 0L
+        val buffer = ByteArray(bufferSize)
+        FileOutputStream(target).use { output ->
+            while (true) {
+                val read = source.read(buffer)
+                if (read <= 0) break
+                total += read
+                if (total > limit) return -1
+                output.write(buffer, 0, read)
+            }
+        }
+        return total
+    }
+
+    private fun uniqueComicFileName(name: String, index: Int): String {
+        val extension = name.substringAfterLast('.', "jpg").lowercase(Locale.ROOT).takeIf { it.length <= 5 } ?: "jpg"
+        return index.toString().padStart(5, '0') + ".$extension"
+    }
+
+    private fun sanitizeFileName(name: String): String =
+        name.replace(Regex("[^A-Za-z0-9._-]+"), "_").trim('_').ifBlank { "comic" }
+
+    private fun String.removeSuffixIgnoreCase(suffix: String): String =
+        if (endsWith(suffix, ignoreCase = true)) dropLast(suffix.length) else this
+
+    private fun compareNatural(left: String, right: String): Int {
+        val leftKey = naturalComicSortKey(left)
+        val rightKey = naturalComicSortKey(right)
+        val size = minOf(leftKey.size, rightKey.size)
+        for (i in 0 until size) {
+            val result = leftKey[i].compareTo(rightKey[i])
+            if (result != 0) return result
+        }
+        return leftKey.size.compareTo(rightKey.size)
     }
 
     private fun appendChunkedChapter(
