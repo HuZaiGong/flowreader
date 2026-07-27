@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.TextFields
@@ -56,10 +57,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.BuildConfig
+import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
 import com.flowreader.app.domain.model.GestureAction
@@ -110,7 +114,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-        topBar = { TopAppBar(title = { Text("设置") }) }
+        topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }) }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -118,10 +122,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            SettingsSection(title = "外观") {
+            SettingsSection(title = stringResource(R.string.settings_section_appearance)) {
                 SettingsItem(
                     icon = Icons.Default.DarkMode,
-                    title = "主题模式",
+                    title = stringResource(R.string.settings_theme_mode),
                     subtitle = uiState.themeMode.displayName
                 )
                 FlowRow(
@@ -139,8 +143,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
                 SettingsItem(
                     icon = Icons.Default.ColorLens,
-                    title = "配色来源",
-                    subtitle = "品牌配色保持视觉身份；跟随壁纸需要 Android 12 及以上"
+                    title = stringResource(R.string.settings_color_source),
+                    subtitle = stringResource(R.string.settings_color_source_desc)
                 )
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
@@ -154,31 +158,58 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         )
                     }
                 }
+
+                // v53: the app shipped four `values-*` folders that nothing could ever select.
+                SettingsItem(
+                    icon = Icons.Default.Language,
+                    title = stringResource(R.string.settings_language),
+                    subtitle = stringResource(R.string.settings_language_desc)
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
+                    modifier = Modifier.padding(horizontal = FlowSpacing.lg, vertical = FlowSpacing.sm)
+                ) {
+                    AppLanguage.entries.forEach { language ->
+                        FilterChip(
+                            selected = uiState.language == language,
+                            onClick = { viewModel.updateLanguage(language) },
+                            label = {
+                                Text(
+                                    if (language.tag == null) {
+                                        stringResource(R.string.settings_language_follow_system)
+                                    } else {
+                                        language.displayName
+                                    }
+                                )
+                            }
+                        )
+                    }
+                }
             }
 
-            SettingsSection(title = "阅读偏好") {
+            SettingsSection(title = stringResource(R.string.settings_section_reading)) {
                 SettingsItem(
                     icon = Icons.Default.TextFields,
-                    title = "排版与阅读主题",
-                    subtitle = "在阅读界面顶栏「更多 → 阅读设置」中调整，改动实时预览"
+                    title = stringResource(R.string.settings_typography),
+                    subtitle = stringResource(R.string.settings_typography_desc)
                 )
 
                 SettingsItem(
                     icon = Icons.Default.Gesture,
-                    title = "手势自定义",
-                    subtitle = "点击区域、双击、长按、左右滑动",
+                    title = stringResource(R.string.settings_gesture),
+                    subtitle = stringResource(R.string.settings_gesture_desc),
                     onClick = { showGestureDialog = true }
                 )
 
                 SettingsSwitch(
                     icon = Icons.Default.WbSunny,
-                    title = "保持屏幕常亮",
+                    title = stringResource(R.string.settings_keep_screen_on),
                     checked = uiState.readingSettings.keepScreenOn,
                     onCheckedChange = { viewModel.updateKeepScreenOn(it) }
                 )
             }
 
-            SettingsSection(title = "字体管理") {
+            SettingsSection(title = stringResource(R.string.settings_section_font)) {
                 val fontName = remember(uiState.customFontPath) {
                     uiState.customFontPath?.let { path ->
                         runCatching { File(path).takeIf { it.isFile }?.name }.getOrNull()
@@ -187,45 +218,49 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
                 SettingsItem(
                     icon = Icons.Default.TextFields,
-                    title = "自定义字体",
-                    subtitle = fontName ?: "点击选择 .ttf / .otf 字体文件",
+                    title = stringResource(R.string.settings_custom_font),
+                    subtitle = fontName ?: stringResource(R.string.settings_custom_font_desc),
                     onClick = { fontPickerLauncher.launch("*/*") }
                 )
 
                 if (uiState.customFontPath != null) {
                     SettingsItem(
                         icon = Icons.Default.Delete,
-                        title = "清除自定义字体",
-                        subtitle = "恢复所选内置字体",
+                        title = stringResource(R.string.settings_clear_font),
+                        subtitle = stringResource(R.string.settings_clear_font_desc),
                         onClick = { viewModel.clearCustomFont() }
                     )
                 }
             }
 
-            SettingsSection(title = "提醒") {
+            SettingsSection(title = stringResource(R.string.settings_section_reminder)) {
                 SettingsSwitch(
                     icon = Icons.Default.Notifications,
-                    title = "每日阅读提醒",
-                    subtitle = "提醒时间: %d:%02d".format(uiState.readingReminderHour, uiState.readingReminderMinute),
+                    title = stringResource(R.string.settings_daily_reminder),
+                    subtitle = stringResource(
+                        R.string.settings_daily_reminder_time,
+                        uiState.readingReminderHour,
+                        uiState.readingReminderMinute
+                    ),
                     checked = uiState.readingReminderEnabled,
                     onCheckedChange = { viewModel.updateReadingReminder(it) }
                 )
             }
 
-            SettingsSection(title = "阅读目标") {
+            SettingsSection(title = stringResource(R.string.settings_section_goal)) {
                 SettingsItem(
                     icon = Icons.Default.Flag,
-                    title = "每日阅读时长",
-                    subtitle = "${uiState.dailyReadingGoal} 分钟",
+                    title = stringResource(R.string.settings_daily_goal),
+                    subtitle = stringResource(R.string.settings_minutes, uiState.dailyReadingGoal),
                     onClick = { showReadingGoalDialog = true }
                 )
             }
 
-            SettingsSection(title = "数据管理") {
+            SettingsSection(title = stringResource(R.string.settings_section_data)) {
                 SettingsItem(
                     icon = Icons.Default.Backup,
-                    title = "备份数据",
-                    subtitle = "导出书籍、进度、书签与标注",
+                    title = stringResource(R.string.settings_backup),
+                    subtitle = stringResource(R.string.settings_backup_desc),
                     onClick = {
                         viewModel.exportData()
                         exportLauncher.launch("flowreader-backup.json")
@@ -234,8 +269,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
 
                 SettingsItem(
                     icon = Icons.Default.Restore,
-                    title = "恢复数据",
-                    subtitle = "从备份文件导入",
+                    title = stringResource(R.string.settings_restore),
+                    subtitle = stringResource(R.string.settings_restore_desc),
                     onClick = {
                         viewModel.importData()
                         importLauncher.launch(arrayOf("application/json", "text/plain"))
@@ -243,11 +278,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 )
             }
 
-            SettingsSection(title = "关于") {
+            SettingsSection(title = stringResource(R.string.settings_section_about)) {
                 SettingsItem(
                     icon = Icons.Default.Info,
-                    title = "关于心流阅读",
-                    subtitle = "版本 ${BuildConfig.VERSION_NAME}",
+                    title = stringResource(R.string.settings_about),
+                    subtitle = stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
                     onClick = { showAboutDialog = true }
                 )
             }
@@ -330,10 +365,13 @@ private fun ReadingGoalDialog(currentGoal: Int, onGoalChange: (Int) -> Unit, onD
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("每日阅读目标") },
+        title = { Text(stringResource(R.string.settings_goal_dialog_title)) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(text = "$goal 分钟", style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    text = stringResource(R.string.settings_minutes, goal),
+                    style = MaterialTheme.typography.headlineMedium
+                )
                 Spacer(modifier = Modifier.height(FlowSpacing.lg))
                 Slider(
                     value = goal.toFloat(),
@@ -345,8 +383,8 @@ private fun ReadingGoalDialog(currentGoal: Int, onGoalChange: (Int) -> Unit, onD
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text("5 分钟", style = MaterialTheme.typography.bodySmall)
-                    Text("2 小时", style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_goal_min), style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_goal_max), style = MaterialTheme.typography.bodySmall)
                 }
             }
         },
@@ -357,11 +395,11 @@ private fun ReadingGoalDialog(currentGoal: Int, onGoalChange: (Int) -> Unit, onD
                     onDismiss()
                 }
             ) {
-                Text("确定")
+                Text(stringResource(R.string.action_confirm))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }
@@ -370,25 +408,26 @@ private fun ReadingGoalDialog(currentGoal: Int, onGoalChange: (Int) -> Unit, onD
 private fun AboutDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("关于心流阅读") },
+        title = { Text(stringResource(R.string.settings_about)) },
         text = {
             Column {
-                Text("版本: ${BuildConfig.VERSION_NAME}")
+                Text(stringResource(R.string.settings_version, BuildConfig.VERSION_NAME))
                 Spacer(modifier = Modifier.height(FlowSpacing.sm))
-                Text("一款离线优先的电子书阅读应用")
+                Text(stringResource(R.string.settings_about_desc))
                 Spacer(modifier = Modifier.height(FlowSpacing.sm))
-                Text("感谢以下开源项目:")
+                Text(stringResource(R.string.settings_about_thanks))
                 Text("- Jetpack Compose", style = MaterialTheme.typography.bodySmall)
                 Text("- Room Database", style = MaterialTheme.typography.bodySmall)
                 Text("- Hilt", style = MaterialTheme.typography.bodySmall)
                 Text("- Coil", style = MaterialTheme.typography.bodySmall)
+                Text("- jsoup", style = MaterialTheme.typography.bodySmall)
                 Spacer(modifier = Modifier.height(FlowSpacing.sm))
-                Text("作者: HuZaiGong", style = MaterialTheme.typography.bodySmall)
-                Text("GitHub: github.com/HuZaiGong/flowreader", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.settings_about_author), style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.settings_about_github), style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
         }
     )
 }
@@ -403,31 +442,31 @@ private fun GestureSettingsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("手势自定义") },
+        title = { Text(stringResource(R.string.settings_gesture_dialog_title)) },
         text = {
             Column(
                 modifier = Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(FlowSpacing.md)
             ) {
-                GestureRow("左侧点击", localSettings.leftTapAction) {
+                GestureRow(stringResource(R.string.gesture_left_tap), localSettings.leftTapAction) {
                     localSettings = localSettings.copy(leftTapAction = it)
                 }
-                GestureRow("中间点击", localSettings.middleTapAction) {
+                GestureRow(stringResource(R.string.gesture_middle_tap), localSettings.middleTapAction) {
                     localSettings = localSettings.copy(middleTapAction = it)
                 }
-                GestureRow("右侧点击", localSettings.rightTapAction) {
+                GestureRow(stringResource(R.string.gesture_right_tap), localSettings.rightTapAction) {
                     localSettings = localSettings.copy(rightTapAction = it)
                 }
-                GestureRow("左滑", localSettings.swipeLeftAction) {
+                GestureRow(stringResource(R.string.gesture_swipe_left), localSettings.swipeLeftAction) {
                     localSettings = localSettings.copy(swipeLeftAction = it)
                 }
-                GestureRow("右滑", localSettings.swipeRightAction) {
+                GestureRow(stringResource(R.string.gesture_swipe_right), localSettings.swipeRightAction) {
                     localSettings = localSettings.copy(swipeRightAction = it)
                 }
-                GestureRow("双击", localSettings.doubleTapAction) {
+                GestureRow(stringResource(R.string.gesture_double_tap), localSettings.doubleTapAction) {
                     localSettings = localSettings.copy(doubleTapAction = it)
                 }
-                GestureRow("长按", localSettings.longPressAction) {
+                GestureRow(stringResource(R.string.gesture_long_press), localSettings.longPressAction) {
                     localSettings = localSettings.copy(longPressAction = it)
                 }
 
@@ -436,7 +475,7 @@ private fun GestureSettingsDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("边缘热区")
+                    Text(stringResource(R.string.gesture_edge_zone))
                     Switch(
                         checked = localSettings.edgeGestureEnabled,
                         onCheckedChange = { localSettings = localSettings.copy(edgeGestureEnabled = it) }
@@ -444,13 +483,19 @@ private fun GestureSettingsDialog(
                 }
 
                 if (localSettings.edgeGestureEnabled) {
-                    Text("左侧热区: ${localSettings.leftEdgeWidth}%", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = stringResource(R.string.gesture_left_edge, localSettings.leftEdgeWidth),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Slider(
                         value = localSettings.leftEdgeWidth.toFloat(),
                         onValueChange = { localSettings = localSettings.copy(leftEdgeWidth = it.toInt()) },
                         valueRange = 5f..45f
                     )
-                    Text("右侧热区: ${localSettings.rightEdgeWidth}%", style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = stringResource(R.string.gesture_right_edge, localSettings.rightEdgeWidth),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                     Slider(
                         value = localSettings.rightEdgeWidth.toFloat(),
                         onValueChange = { localSettings = localSettings.copy(rightEdgeWidth = it.toInt()) },
@@ -466,11 +511,11 @@ private fun GestureSettingsDialog(
                     onDismiss()
                 }
             ) {
-                Text("确定")
+                Text(stringResource(R.string.action_confirm))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("取消") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
         }
     )
 }

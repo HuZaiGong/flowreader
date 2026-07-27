@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
 import com.flowreader.app.domain.model.GestureSettings
@@ -19,6 +20,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
     val colorSource: ColorSource = ColorSource.BRAND,
+    val language: AppLanguage = AppLanguage.FOLLOW_SYSTEM,
     val readingSettings: ReadingSettings = ReadingSettings(),
     val isLoading: Boolean = true,
     val readingReminderEnabled: Boolean = false,
@@ -58,6 +60,7 @@ class SettingsViewModel @Inject constructor(
                 SettingsUiState(
                     themeMode = settings.themeMode,
                     colorSource = settings.colorSource,
+                    language = settings.language,
                     readingSettings = settings.defaultReadingSettings,
                     isLoading = false,
                     readingReminderEnabled = settings.readingReminderEnabled,
@@ -141,6 +144,12 @@ class SettingsViewModel @Inject constructor(
     fun updateColorSource(source: ColorSource) {
         viewModelScope.launch {
             settingsRepository.updateColorSource(source)
+        }
+    }
+
+    fun updateLanguage(language: AppLanguage) {
+        viewModelScope.launch {
+            settingsRepository.updateLanguage(language)
         }
     }
 

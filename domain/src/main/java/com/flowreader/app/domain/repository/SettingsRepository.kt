@@ -1,5 +1,6 @@
 package com.flowreader.app.domain.repository
 
+import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
@@ -15,6 +16,7 @@ interface SettingsRepository {
 
     suspend fun updateThemeMode(mode: AppThemeMode)
     suspend fun updateColorSource(source: ColorSource)
+    suspend fun updateLanguage(language: AppLanguage)
     suspend fun updateReadingSettings(settings: ReadingSettings)
     suspend fun updateReadingReminder(enabled: Boolean, hour: Int = 20, minute: Int = 0)
     suspend fun addSearchHistory(query: String)

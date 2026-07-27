@@ -79,4 +79,25 @@ class BookRepositoryImpl @Inject constructor(
     override suspend fun updateReadingProgress(bookId: Long, chapter: Int, position: Int, progress: Float) {
         bookDao.updateReadingProgress(bookId, chapter, position, progress)
     }
+
+    override suspend fun deleteBooksByIds(ids: List<Long>) {
+        val valid = ids.filter { it > 0L }.distinct()
+        if (valid.isEmpty()) return
+        bookDao.deleteBooksByIds(valid)
+    }
+
+    override suspend fun moveBooksToCategory(ids: List<Long>, categoryId: Long?) {
+        val valid = ids.filter { it > 0L }.distinct()
+        if (valid.isEmpty()) return
+        bookDao.updateCategoryForBooks(valid, categoryId)
+    }
+
+    override suspend fun updateBooksMetadata(ids: List<Long>, author: String?, tags: List<String>?) {
+        val valid = ids.filter { it > 0L }.distinct()
+        if (valid.isEmpty()) return
+        // A null field means "leave alone"; a blank author would otherwise silently erase every
+        // author in the selection when the user only meant to retag.
+        author?.takeIf { it.isNotBlank() }?.let { bookDao.updateAuthorForBooks(valid, it.trim()) }
+        tags?.let { bookDao.updateTagsForBooks(valid, it.map { tag -> tag.trim() }.filter { tag -> tag.isNotEmpty() }.joinToString(",")) }
+    }
 }

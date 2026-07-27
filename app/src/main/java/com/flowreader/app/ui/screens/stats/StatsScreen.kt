@@ -14,12 +14,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.flowreader.app.core.designsystem.component.FlowStateHost
 import com.flowreader.app.core.designsystem.token.FlowSpacing
 import com.flowreader.app.core.util.FlowFormatters
@@ -79,7 +79,7 @@ fun StatsScreen(
                         )
                         StatCard(
                             modifier = Modifier.weight(1f),
-                            icon = Icons.Default.MenuBook,
+                            icon = Icons.AutoMirrored.Filled.MenuBook,
                             title = "阅读页数",
                             value = "${uiState.todayReadPages}",
                             subtitle = "页"

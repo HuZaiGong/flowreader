@@ -55,4 +55,19 @@ interface BookDao {
 
     @Query("SELECT COUNT(*) FROM books")
     suspend fun getBookCount(): Int
+
+    // v53 batch shelf edits. One statement per action instead of a per-row loop, so a 200-book
+    // selection emits a single Room invalidation rather than 200.
+
+    @Query("DELETE FROM books WHERE id IN (:ids)")
+    suspend fun deleteBooksByIds(ids: List<Long>)
+
+    @Query("UPDATE books SET categoryId = :categoryId WHERE id IN (:ids)")
+    suspend fun updateCategoryForBooks(ids: List<Long>, categoryId: Long?)
+
+    @Query("UPDATE books SET author = :author WHERE id IN (:ids)")
+    suspend fun updateAuthorForBooks(ids: List<Long>, author: String)
+
+    @Query("UPDATE books SET tags = :tags WHERE id IN (:ids)")
+    suspend fun updateTagsForBooks(ids: List<Long>, tags: String)
 }

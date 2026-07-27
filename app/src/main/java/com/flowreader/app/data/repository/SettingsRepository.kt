@@ -11,6 +11,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
@@ -39,6 +40,7 @@ class SettingsRepositoryImpl @Inject constructor(
     private object PreferencesKeys {
         val THEME = stringPreferencesKey(SettingsRepository.THEME_KEY)
         val COLOR_SOURCE = stringPreferencesKey("color_source")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
         val FONT_SIZE = intPreferencesKey("font_size")
         val LINE_SPACING = floatPreferencesKey("line_spacing")
         val PARAGRAPH_SPACING = floatPreferencesKey("paragraph_spacing")
@@ -128,6 +130,7 @@ class SettingsRepositoryImpl @Inject constructor(
             AppSettings(
                 themeMode = AppThemeMode.fromStoredName(preferences[PreferencesKeys.THEME]),
                 colorSource = ColorSource.fromStoredName(preferences[PreferencesKeys.COLOR_SOURCE]),
+                language = AppLanguage.fromStoredName(preferences[PreferencesKeys.APP_LANGUAGE]),
                 defaultReadingSettings = readReadingSettings(preferences),
                 readingReminderEnabled = preferences[PreferencesKeys.READING_REMINDER_ENABLED] ?: false,
                 readingReminderHour = preferences[PreferencesKeys.READING_REMINDER_HOUR] ?: 20,
@@ -144,6 +147,12 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun updateColorSource(source: ColorSource) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.COLOR_SOURCE] = source.name
+        }
+    }
+
+    override suspend fun updateLanguage(language: AppLanguage) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.APP_LANGUAGE] = language.name
         }
     }
 

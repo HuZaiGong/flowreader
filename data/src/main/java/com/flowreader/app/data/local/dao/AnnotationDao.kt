@@ -46,4 +46,11 @@ interface AnnotationDao {
 
     @Query("SELECT * FROM annotations ORDER BY createdTime DESC")
     fun getAllAnnotations(): Flow<List<AnnotationEntity>>
+
+    /** Cross-book note search. Matches the highlighted passage *and* the user's own note body. */
+    @Query(
+        "SELECT * FROM annotations WHERE selectedText LIKE '%' || :query || '%' " +
+            "OR note LIKE '%' || :query || '%' ORDER BY createdTime DESC"
+    )
+    suspend fun searchAllAnnotations(query: String): List<AnnotationEntity>
 }

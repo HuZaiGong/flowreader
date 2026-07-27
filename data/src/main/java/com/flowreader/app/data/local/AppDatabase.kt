@@ -7,12 +7,15 @@ import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.dao.BookmarkDao
 import com.flowreader.app.data.local.dao.CategoryDao
 import com.flowreader.app.data.local.dao.ChapterDao
+import com.flowreader.app.data.local.dao.ReadingListDao
 import com.flowreader.app.data.local.dao.ReadingStatsDao
 import com.flowreader.app.data.local.entity.AnnotationEntity
 import com.flowreader.app.data.local.entity.BookEntity
 import com.flowreader.app.data.local.entity.BookmarkEntity
 import com.flowreader.app.data.local.entity.CategoryEntity
 import com.flowreader.app.data.local.entity.ChapterEntity
+import com.flowreader.app.data.local.entity.ReadingListEntity
+import com.flowreader.app.data.local.entity.ReadingListItemEntity
 import com.flowreader.app.data.local.entity.ReadingStatsEntity
 
 @Database(
@@ -22,9 +25,11 @@ import com.flowreader.app.data.local.entity.ReadingStatsEntity
         BookmarkEntity::class,
         AnnotationEntity::class,
         CategoryEntity::class,
-        ReadingStatsEntity::class
+        ReadingStatsEntity::class,
+        ReadingListEntity::class,
+        ReadingListItemEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,6 +39,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun annotationDao(): AnnotationDao
     abstract fun categoryDao(): CategoryDao
     abstract fun readingStatsDao(): ReadingStatsDao
+    abstract fun readingListDao(): ReadingListDao
 
     companion object {
         const val DATABASE_NAME = "flowreader_db"

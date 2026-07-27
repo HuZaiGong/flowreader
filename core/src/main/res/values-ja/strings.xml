@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flow_state_loading">読み込み中</string>
+    <string name="flow_state_empty">まだ何もありません</string>
+    <string name="flow_state_error">エラー</string>
+    <string name="flow_action_retry">再試行</string>
+    <string name="flow_action_back">戻る</string>
+    <string name="flow_action_navigate_up">前の画面に戻る</string>
+    <string name="flow_action_close_selection">選択を解除</string>
+    <string name="flow_selection_count">%1$d 件選択中</string>
+    <string name="flow_cover_description">『%1$s』の表紙</string>
+</resources>

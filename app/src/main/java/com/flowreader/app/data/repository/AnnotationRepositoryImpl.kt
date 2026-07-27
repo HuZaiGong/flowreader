@@ -1,5 +1,6 @@
 package com.flowreader.app.data.repository
 
+import com.flowreader.app.core.util.AnnotationExporter
 import com.flowreader.app.data.local.dao.AnnotationDao
 import com.flowreader.app.data.local.entity.AnnotationEntity
 import com.flowreader.app.domain.model.Annotation
@@ -64,25 +65,19 @@ class AnnotationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun exportAnnotations(bookId: Long, format: AnnotationExportFormat): String {
-        val annotations = getAnnotationsListByBookId(bookId)
-        return when (format) {
-            AnnotationExportFormat.MARKDOWN -> annotations.joinToString("\n\n") {
-                "- 第 ${it.chapterIndex + 1} 章：${it.selectedText}" + if (it.note.isNotBlank()) "\n  - 笔记：${it.note}" else ""
-            }
-            AnnotationExportFormat.HTML -> buildString {
-                append("<html><body><h1>FlowReader 标注</h1>")
-                annotations.forEach {
-                    append("<section><h2>第 ${it.chapterIndex + 1} 章</h2><blockquote>${it.selectedText.escapeHtml()}</blockquote>")
-                    if (it.note.isNotBlank()) append("<p>${it.note.escapeHtml()}</p>")
-                    append("</section>")
-                }
-                append("</body></html>")
-            }
-            AnnotationExportFormat.TEXT -> annotations.joinToString("\n\n") {
-                "第 ${it.chapterIndex + 1} 章\n${it.selectedText}" + if (it.note.isNotBlank()) "\n笔记：${it.note}" else ""
-            }
+        // Formatting lives in :core so the cross-book notes screen shares it instead of forking.
+        return AnnotationExporter.export(getAnnotationsListByBookId(bookId), format)
+    }
+
+    override fun getAllAnnotations(): Flow<List<Annotation>> {
+        return annotationDao.getAllAnnotations().map { entities ->
+            entities.map { it.toDomain() }
         }
     }
 
-    private fun String.escapeHtml(): String = replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    override suspend fun searchAllAnnotations(query: String): List<Annotation> {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return emptyList()
+        return annotationDao.searchAllAnnotations(trimmed).map { it.toDomain() }
+    }
 }

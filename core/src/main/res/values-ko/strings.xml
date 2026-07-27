@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flow_state_loading">불러오는 중</string>
+    <string name="flow_state_empty">내용이 없습니다</string>
+    <string name="flow_state_error">오류</string>
+    <string name="flow_action_retry">다시 시도</string>
+    <string name="flow_action_back">뒤로</string>
+    <string name="flow_action_navigate_up">이전 화면으로</string>
+    <string name="flow_action_close_selection">선택 해제</string>
+    <string name="flow_selection_count">%1$d개 선택됨</string>
+    <string name="flow_cover_description">%1$s 표지</string>
+</resources>

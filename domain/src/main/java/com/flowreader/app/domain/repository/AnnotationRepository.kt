@@ -16,6 +16,10 @@ interface AnnotationRepository {
     suspend fun deleteAnnotationsByBookId(bookId: Long)
     suspend fun searchAnnotations(bookId: Long, query: String): List<Annotation>
     suspend fun exportAnnotations(bookId: Long, format: AnnotationExportFormat): String
+
+    /** Cross-book notes (v53). [searchAllAnnotations] matches highlighted text *and* note bodies. */
+    fun getAllAnnotations(): Flow<List<Annotation>>
+    suspend fun searchAllAnnotations(query: String): List<Annotation>
 }
 
 enum class AnnotationExportFormat { MARKDOWN, HTML, TEXT }

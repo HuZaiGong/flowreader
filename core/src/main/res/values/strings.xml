@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Strings owned by the design system itself. Screen copy stays in :app. -->
+    <string name="flow_state_loading">加载中</string>
+    <string name="flow_state_empty">暂无内容</string>
+    <string name="flow_state_error">错误</string>
+    <string name="flow_action_retry">重试</string>
+    <string name="flow_action_back">返回</string>
+    <string name="flow_action_navigate_up">返回上一页</string>
+    <string name="flow_action_close_selection">退出多选</string>
+    <string name="flow_selection_count">已选择 %1$d 项</string>
+    <string name="flow_cover_description">《%1$s》封面</string>
+</resources>

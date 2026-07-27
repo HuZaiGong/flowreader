@@ -74,6 +74,8 @@ class BookParser @Inject constructor(
                     val result = parsePdfStream(uri, fileName, fileSize)
                     result.map { it.copy(book = it.book.copy(coverPath = extractPdfCover(uri))) }
                 }
+                BookFormat.FB2 -> parseFb2Stream(inputStream, fileName, fileSize)
+                BookFormat.MOBI -> parseMobiStream(inputStream, fileName, fileSize)
                 else -> Result.failure(Exception("不支持的格式: $format"))
             }
         } catch (e: Exception) {
@@ -116,6 +118,18 @@ class BookParser @Inject constructor(
                         emit(ParseProgress.Parsing)
                         result
                     }
+                    BookFormat.FB2 -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        val result = parseFb2Stream(inputStream, fileName, fileSize)
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
+                    BookFormat.MOBI -> {
+                        emit(ParseProgress.Reading(0, fileSize))
+                        val result = parseMobiStream(inputStream, fileName, fileSize)
+                        emit(ParseProgress.Parsing)
+                        result
+                    }
                     else -> Result.failure(Exception("不支持的格式: $format"))
                 }.onSuccess {
                     emit(ParseProgress.Complete)
@@ -139,35 +153,50 @@ class BookParser @Inject constructor(
                 fileName.endsWith(".txt", ignoreCase = true) -> BookFormat.TXT
                 fileName.endsWith(".pdf", ignoreCase = true) -> BookFormat.PDF
                 fileName.endsWith(".md", ignoreCase = true) || fileName.endsWith(".markdown", ignoreCase = true) -> BookFormat.MARKDOWN
+                fileName.endsWith(".fb2", ignoreCase = true) || fileName.endsWith(".fb2.zip", ignoreCase = true) -> BookFormat.FB2
+                // .azw is DRM-free MOBI; an encrypted one is rejected by MobiParser, not decrypted.
+                fileName.endsWith(".mobi", ignoreCase = true) ||
+                    fileName.endsWith(".prc", ignoreCase = true) ||
+                    fileName.endsWith(".azw", ignoreCase = true) -> BookFormat.MOBI
                 else -> BookFormat.UNKNOWN
             }
         }
     }
 
+    /**
+     * The display name the picker reports, resolved off the main thread. Callers need this before
+     * parsing to tell a book apart from a `.zip` of books.
+     */
+    suspend fun displayName(uri: Uri): String = withContext(Dispatchers.IO) { getFileName(uri) }
+
+    /**
+     * `ContentResolver.query` returns nothing for `file://` URIs, which is how batch-extracted ZIP
+     * entries and OPDS downloads arrive. Falling back to the path keeps their titles and sizes
+     * real instead of every one of them importing as "未知书籍" with size 0.
+     */
     private fun getFileName(uri: Uri): String {
-        var name = "未知书籍"
         context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val displayNameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
                 if (displayNameIndex >= 0) {
-                    name = cursor.getString(displayNameIndex) ?: name
+                    cursor.getString(displayNameIndex)?.takeIf { it.isNotBlank() }?.let { return it }
                 }
             }
         }
-        return name
+        return uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "未知书籍"
     }
 
     private fun getFileSize(uri: Uri): Long {
-        var size = 0L
         context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) {
                 val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
-                if (sizeIndex >= 0) {
-                    size = cursor.getLong(sizeIndex)
+                if (sizeIndex >= 0 && !cursor.isNull(sizeIndex)) {
+                    val size = cursor.getLong(sizeIndex)
+                    if (size > 0) return size
                 }
             }
         }
-        return size
+        return uri.path?.let { path -> File(path).takeIf { it.isFile }?.length() } ?: 0L
     }
 
     private fun parseEpubStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
@@ -627,6 +656,106 @@ class BookParser @Inject constructor(
             }
         }
         return nextIndex
+    }
+
+    /**
+     * FB2 (v53). `.fb2.zip` is the common distribution form, so the archive wrapper is unwrapped
+     * here rather than pushed onto the user as "unsupported format".
+     */
+    private fun parseFb2Stream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+        return try {
+            val xml = inputStream.use { stream ->
+                if (fileName.endsWith(".zip", ignoreCase = true)) readFirstZipEntryText(stream) else stream.readBytes().decodeXml()
+            } ?: return Result.failure(Exception("无法读取 FB2 内容"))
+
+            Fb2Parser.parse(xml).map { book ->
+                val fallbackTitle = fileName.removeSuffix(".zip").removeSuffix(".fb2")
+                val chapters = mutableListOf<Chapter>()
+                var index = 0
+                book.sections.forEach { section ->
+                    index = appendChunkedChapter(
+                        chapters = chapters,
+                        title = section.title,
+                        content = section.content,
+                        startPosition = 0,
+                        startIndex = index
+                    )
+                }
+                BookParseResult(
+                    book = Book(
+                        title = book.title.ifBlank { fallbackTitle },
+                        author = book.author.ifBlank { "未知作者" },
+                        filePath = "",
+                        coverPath = book.coverImage?.let { saveCoverImage(it, book.title.ifBlank { fallbackTitle }) },
+                        description = book.description,
+                        fileSize = fileSize,
+                        format = BookFormat.FB2,
+                        totalChapters = chapters.size
+                    ),
+                    chapters = chapters
+                )
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /** MOBI / PRC / AZW (v53), read-only. DRM-protected files are declined, never decrypted. */
+    private fun parseMobiStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+        return try {
+            val bytes = inputStream.use { it.readBytes() }
+            MobiParser.parse(bytes).map { book ->
+                val fallbackTitle = fileName.substringBeforeLast('.')
+                val document = Jsoup.parse(book.html)
+                document.select("script, style").remove()
+                val text = htmlToFormattedText(document.body(), emptyMap()).trim()
+
+                val chapters = mutableListOf<Chapter>()
+                appendChunkedChapter(
+                    chapters = chapters,
+                    title = book.title.ifBlank { fallbackTitle },
+                    content = text,
+                    startPosition = 0
+                )
+
+                BookParseResult(
+                    book = Book(
+                        title = book.title.ifBlank { fallbackTitle },
+                        author = book.author.ifBlank { "未知作者" },
+                        filePath = "",
+                        description = book.description,
+                        fileSize = fileSize,
+                        format = BookFormat.MOBI,
+                        totalChapters = chapters.size
+                    ),
+                    chapters = chapters
+                )
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private fun readFirstZipEntryText(stream: InputStream): String? {
+        ZipInputStream(stream.buffered()).use { zip ->
+            var entry = zip.nextEntry
+            while (entry != null) {
+                if (!entry.isDirectory && entry.name.endsWith(".fb2", ignoreCase = true)) {
+                    return zip.readBytes().decodeXml()
+                }
+                zip.closeEntry()
+                entry = zip.nextEntry
+            }
+        }
+        return null
+    }
+
+    /** FB2 files ship in UTF-8 or windows-1251; trust the XML declaration over a blind UTF-8 read. */
+    private fun ByteArray.decodeXml(): String {
+        val head = String(this, 0, minOf(size, 200), Charsets.ISO_8859_1)
+        val declared = Regex("encoding=\"([^\"]+)\"", RegexOption.IGNORE_CASE).find(head)?.groupValues?.get(1)
+        val charset = declared?.let { runCatching { java.nio.charset.Charset.forName(it) }.getOrNull() } ?: Charsets.UTF_8
+        return String(this, charset)
     }
 
     private fun parseMarkdownStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {

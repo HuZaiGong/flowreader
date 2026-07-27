@@ -4,6 +4,55 @@
 
 ---
 
+## [v53.0.0] - 2026-07
+> UI 重构第二阶段 + 兑现原 v52 顺延的书架管理能力。主题是「组件成库、文案出码、书架能批量」。
+
+### `:core` 组件库补全
+- 新增 `BookCover`：封面渲染只此一处。传入路径而非 painter，文件解析交给 Coil；**没有封面的书不再共用一个灰色书本图标**，改为按书名/作者哈希生成的确定性渐变 + 首字母（`CoverArt` 纯函数，同一本书永远同一张封面）。
+- 新增 `SkeletonBox` / `SkeletonLine` / `BookShelfSkeleton`：微光扫过基于 `rememberInfiniteTransition`，在 `@Preview` / inspection 模式下自动静止。
+- 新增 `FlowScaffold`（强制接好 snackbar 宿主与内容内边距）、`FlowTopBar`（标题单行省略，返回键有统一 contentDescription）、`FlowSelectionTopBar`（多选态用 primaryContainer，与常态一眼可辨）。
+- 新增 `@FlowComponentPreviews` 多重预览注解：**浅色 / 深色 / 1.5 倍字号 / 阿拉伯语 RTL** 四连拍，`:core` 组件必须四种都过。
+- `FlowStateHost` 新增 `loadingContent` 插槽，并把内置文案迁到 `:core` 自己的 `strings.xml`（四语言）。
+- v52 遗留：标注导出格式化从 `AnnotationRepositoryImpl` 抽到 `:core/AnnotationExporter`，跨书笔记页与单书导出共用一份实现。
+
+### 骨架屏替换转圈
+- 书架冷启动首屏从居中 `CircularProgressIndicator` 改为 `BookShelfSkeleton`，占位几何与真实书架行一致，数据到达时不再跳版。
+
+### 字符串外置与应用内语言切换
+- 书架与设置两屏全部文案迁入 `strings.xml`，中/英/日/韩四语言补齐（此前 `stringResource` 使用率为 **0**，四个 `values-*` 目录是死资源）。
+- 新增 `AppLanguage` 与设置页语言选择器。切换通过 `FlowLocaleProvider` 覆盖 `LocalContext`/`LocalConfiguration`/`LocalLayoutDirection` **即时生效，不重建 Activity、不丢失导航栈**。
+  - 关键约束：`LocalizedContext` 是 `ContextWrapper`（base 仍是 Activity）而非裸的 `createConfigurationContext()` 结果——后者不包裹 Activity，会让 `hiltViewModel()` 的 `findActivity()` 抛异常。
+- 底部导航标题从字面量改为 `@StringRes`，否则语言切换后 Tab 文案会冻结在首次组合的语言上。
+- 批量操作的结果反馈用 `LibraryMessage` 密封类回传，由屏幕决定措辞，避免 ViewModel 里写死中文。
+
+### 批量操作
+- 书架长按进入多选：批量删除、批量移动分类、批量编辑元数据（作者 / 标签，留空表示不修改，空白作者不会清空原作者）、批量加入阅读列表。
+- 每种批量动作是一条 SQL 语句而非逐行循环，选中 200 本只触发一次 Room 失效。
+- 选中项在书籍消失（删除、切换筛选）后自动收敛，不会留下指向空气的 id。
+
+### 阅读列表
+- 新增 `reading_lists` / `reading_list_items` 两张表与 **`MIGRATION_6_7`**（纯新增，不动既有表）；`(listId, bookId)` 唯一索引让「加入书单」在存储层天然幂等。
+- 新增阅读列表页（列表 ↔ 详情同屏切换）：创建/重命名/删除、添加/移出书籍、长按拖拽排序。
+- 拖拽只改内存顺序，手指抬起才写库——20 项重排是一个事务而不是 20 个。排序算术抽成 `ReadingListOrder` 纯函数并单测。
+- 每行同时保留上移/下移按钮：拖拽手势对 TalkBack 不可达，排序不能只有鼠标语义。
+
+### 阅读笔记独立管理
+- 新增阅读笔记页：全库高亮与批注集中呈现，支持跨书搜索（同时匹配原文与批注正文）、按书籍筛选、跳回原文章节、删除、按当前筛选结果导出。
+
+### 导入增强
+- **ZIP 批量导入**：一个压缩包导入整批书。`ZipImportRules` 拒绝绝对路径与 `..`（zip slip）、跳过 `__MACOSX` 与隐藏项、限制条目数与单条目体积、只放行解析器真正支持的扩展名。
+- **OPDS 局域网目录**：新增 OPDS 浏览与下载页。`OpdsAddress` 把可达范围**硬限制在回环 / RFC1918 / RFC4193 / `.local` 类地址**，并对每一跳重定向重新校验，公网地址无法被访问。新增的 `INTERNET` 权限只服务这一条路径，应用仍无账号、无同步、无统计上报。
+- `BookParser` 的文件名/大小解析对 `file://` URI 补了回退，否则解压出的书全部会以「未知书籍」「0 字节」入库。
+
+### 书籍格式扩展（只读）
+- **MOBI / PRC / AZW**：自实现 PDB + PalmDOC LZ77 解码，处理 `extraDataFlags` 尾部条目（不处理会在每 4KB 边界产生乱码）。**受 DRM 保护的文件一律拒绝导入，不做任何解密**；HUFF/CDIC 压缩同样明确拒绝而非半解成乱码。
+- **FB2 / FB2.ZIP**：XML 解析书名、作者、简介、封面（base64 binary）与顶层 section；`<body name="notes">` 脚注不会被当成章节。
+
+### 工程
+- Room DB version 6 → **7**，新增手写 `MIGRATION_6_7`，仍无 destructive fallback。
+- `:core` 新增 Coil 依赖与自有 `res/values*`（组件库要自带文案才谈得上"库"）。
+- 测试 81 → **159 个**，测试广度 55.8% → **58.6%（34/58）**：MOBI 解压与尾部裁剪、DRM 拒绝、FB2 解析、zip slip 防护、OPDS 局域网边界（含 `fcbooks.com` 这类"看起来像 IPv6 前缀"的域名）、批量元数据的 null/空白语义、拖拽排序的越界与不丢项性质。
+
 ## [v52.0.0] - 2026-07
 > UI 全面重构第一阶段：地基与清账。主题是「先把假的变成真的，再谈美」。
 

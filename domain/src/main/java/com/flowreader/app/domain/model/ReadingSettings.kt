@@ -163,6 +163,7 @@ data class ReadingSettings(
 data class AppSettings(
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
     val colorSource: ColorSource = ColorSource.BRAND,
+    val language: AppLanguage = AppLanguage.FOLLOW_SYSTEM,
     val defaultReadingSettings: ReadingSettings = ReadingSettings(),
     val readingReminderEnabled: Boolean = false,
     val readingReminderHour: Int = 20,

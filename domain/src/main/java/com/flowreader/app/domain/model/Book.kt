@@ -21,11 +21,17 @@ data class Book(
     val tags: List<String> = emptyList()
 )
 
+/**
+ * [FB2] and [MOBI] are read-only imports added in v53: both are converted to chapters at import
+ * time like EPUB, and neither involves DRM — an encrypted MOBI is rejected, not decrypted.
+ */
 enum class BookFormat {
     EPUB,
     TXT,
     PDF,
     MARKDOWN,
+    FB2,
+    MOBI,
     UNKNOWN
 }
 

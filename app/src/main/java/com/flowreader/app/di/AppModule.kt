@@ -10,6 +10,7 @@ import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.dao.BookmarkDao
 import com.flowreader.app.data.local.dao.CategoryDao
 import com.flowreader.app.data.local.dao.ChapterDao
+import com.flowreader.app.data.local.dao.ReadingListDao
 import com.flowreader.app.data.local.dao.ReadingStatsDao
 import com.flowreader.app.data.repository.*
 import com.flowreader.app.domain.repository.*
@@ -37,6 +38,37 @@ object DatabaseModule {
         }
     }
 
+    /** v53 reading lists. Additive only — no existing table is touched. */
+    private val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `reading_lists` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`name` TEXT NOT NULL, " +
+                    "`description` TEXT NOT NULL, " +
+                    "`createdTime` INTEGER NOT NULL, " +
+                    "`updatedTime` INTEGER NOT NULL)"
+            )
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `reading_list_items` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`listId` INTEGER NOT NULL, " +
+                    "`bookId` INTEGER NOT NULL, " +
+                    "`position` INTEGER NOT NULL, " +
+                    "`addedTime` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`listId`) REFERENCES `reading_lists`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                    "FOREIGN KEY(`bookId`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )"
+            )
+            db.execSQL(
+                "CREATE UNIQUE INDEX IF NOT EXISTS `index_reading_list_items_listId_bookId` " +
+                    "ON `reading_list_items` (`listId`, `bookId`)"
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_reading_list_items_bookId` ON `reading_list_items` (`bookId`)"
+            )
+        }
+    }
+
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
@@ -44,7 +76,7 @@ object DatabaseModule {
             context,
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
-        ).addMigrations(MIGRATION_4_5, MIGRATION_5_6).build()
+        ).addMigrations(MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7).build()
     }
 
     @Provides
@@ -70,6 +102,10 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideReadingStatsDao(database: AppDatabase): ReadingStatsDao = database.readingStatsDao()
+
+    @Provides
+    @Singleton
+    fun provideReadingListDao(database: AppDatabase): ReadingListDao = database.readingListDao()
 }
 
 @Module
@@ -111,4 +147,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSearchRepository(impl: SearchRepositoryImpl): SearchRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReadingListRepository(impl: ReadingListRepositoryImpl): ReadingListRepository
 }
