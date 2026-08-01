@@ -19,6 +19,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
+import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
@@ -63,6 +65,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.BuildConfig
 import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.ui.screens.settings.ShelfExportFormat
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
@@ -84,11 +87,17 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var showAboutDialog by remember { mutableStateOf(false) }
     var showReadingGoalDialog by remember { mutableStateOf(false) }
     var showGestureDialog by remember { mutableStateOf(false) }
+    var showShelfExportDialog by remember { mutableStateOf(false) }
+    var showLanTransferDialog by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri -> if (uri != null) viewModel.onExportReady(uri) }
+
+    val shelfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("*/*")
+    ) { uri -> if (uri != null) viewModel.onShelfExportReady(uri) }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -275,6 +284,20 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                         viewModel.importData()
                         importLauncher.launch(arrayOf("application/json", "text/plain"))
                     }
+                )
+
+                SettingsItem(
+                    icon = Icons.Default.TableChart,
+                    title = stringResource(R.string.settings_export_shelf),
+                    subtitle = stringResource(R.string.settings_export_shelf_desc),
+                    onClick = { showShelfExportDialog = true }
+                )
+
+                SettingsItem(
+                    icon = Icons.Default.Wifi,
+                    title = stringResource(R.string.settings_lan_transfer),
+                    subtitle = stringResource(R.string.settings_lan_transfer_desc),
+                    onClick = { showLanTransferDialog = true }
                 )
             }
 

@@ -9,7 +9,7 @@ class PageModeTest {
     @Test
     fun onlyImplementedModesAreExposed() {
         // SIMULATION / CURL / SLIDE_OVER were selectable in v51 and rendered by nothing.
-        assertEquals(listOf(PageMode.SLIDE, PageMode.NONE), PageMode.entries.toList())
+        assertEquals(listOf(PageMode.SLIDE, PageMode.PAGED, PageMode.NONE), PageMode.entries.toList())
     }
 
     @Test

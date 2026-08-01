@@ -47,6 +47,7 @@ import com.flowreader.app.ui.screens.library.LibraryScreen
 import com.flowreader.app.ui.screens.notes.NotesScreen
 import com.flowreader.app.ui.screens.opds.OpdsScreen
 import com.flowreader.app.ui.screens.reader.ReaderScreen
+import com.flowreader.app.ui.screens.search.SearchScreen
 import com.flowreader.app.ui.screens.readinglist.ReadingListsScreen
 import com.flowreader.app.ui.screens.settings.SettingsScreen
 import com.flowreader.app.ui.screens.stats.StatsScreen
@@ -68,6 +69,11 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
     object Notes : Screen("notes", R.string.notes_title)
     object ReadingLists : Screen("reading_lists", R.string.reading_lists_title)
     object Opds : Screen("opds", R.string.opds_title)
+
+    object Search : Screen("search?query={query}", R.string.search_title) {
+        fun createRoute(query: String = "") =
+            if (query.isBlank()) "search" else "search?query=${android.net.Uri.encode(query)}"
+    }
 
     object BookDetail : Screen("book_detail/{bookId}", R.string.book_detail_title) {
         fun createRoute(bookId: Long) = "book_detail/$bookId"
@@ -185,6 +191,7 @@ private fun FlowNavHost(navController: androidx.navigation.NavHostController) {
     ) {
         composable(Screen.Library.route) {
             LibraryScreen(
+                onSearchClick = { navController.navigate(Screen.Search.createRoute()) },
                 onBookClick = { bookId ->
                     navController.navigate(Screen.BookDetail.createRoute(bookId))
                 },
@@ -201,6 +208,28 @@ private fun FlowNavHost(navController: androidx.navigation.NavHostController) {
 
         composable(Screen.Stats.route) {
             StatsScreen()
+        }
+
+        composable(
+            route = Screen.Search.route,
+            arguments = listOf(
+                navArgument("query") {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
+            val query = backStackEntry.arguments?.getString("query").orEmpty()
+            SearchScreen(
+                initialQuery = query,
+                onBackClick = { navController.popBackStack() },
+                onBookClick = { bookId ->
+                    navController.navigate(Screen.BookDetail.createRoute(bookId))
+                },
+                onChapterClick = { bookId, chapterIndex ->
+                    navController.navigate(Screen.Reader.createRoute(bookId, chapterIndex))
+                }
+            )
         }
 
         composable(Screen.Wheel.route) {

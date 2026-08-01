@@ -1,3 +1,5 @@
+package com.flowreader.app.domain.repository
+
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.AppThemeMode

@@ -9,13 +9,22 @@ import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
 import com.flowreader.app.domain.model.GestureSettings
 import com.flowreader.app.domain.model.ReadingSettings
+import com.flowreader.app.domain.repository.BookRepository
+import com.flowreader.app.domain.repository.CategoryRepository
+import com.flowreader.app.domain.repository.ReadingListRepository
 import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.domain.repository.BackupRepository
+import com.flowreader.app.core.util.ShelfExporter
+import com.flowreader.app.util.LanTransferClient
+import com.flowreader.app.util.LanTransferServer
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+/** Shelf export target format (v55): CSV table or JSON dump. */
+enum class ShelfExportFormat { CSV, JSON }
 
 data class SettingsUiState(
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
@@ -32,14 +41,20 @@ data class SettingsUiState(
     val isExporting: Boolean = false,
     val isImporting: Boolean = false,
     val isOnboardingCompleted: Boolean = false,
-    val customFontPath: String? = null
+    val customFontPath: String? = null,
+    val shelfExportFormat: ShelfExportFormat? = null,
+    val lanServerUrl: String? = null,
+    val lanTransferMessage: String? = null
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsRepository: SettingsRepository,
-    private val backupRepository: BackupRepository
+    private val backupRepository: BackupRepository,
+    private val bookRepository: BookRepository,
+    private val categoryRepository: CategoryRepository,
+    private val readingListRepository: ReadingListRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -108,6 +123,105 @@ class SettingsViewModel @Inject constructor(
 
     fun importData() {
         _uiState.update { it.copy(isImporting = true, importResult = null) }
+    }
+
+    private var lanServer: LanTransferServer? = null
+
+    fun startLanServer() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(lanTransferMessage = null) }
+            val backupFile = java.io.File(context.cacheDir, "lan_backup_${System.currentTimeMillis()}.json")
+            backupRepository.exportDataToFile(backupFile)
+                .onSuccess {
+                    val server = LanTransferServer(backupFile)
+                    val url = server.start()
+                    if (url != null) {
+                        lanServer?.stop()
+                        lanServer = server
+                        _uiState.update { it.copy(lanServerUrl = url, lanTransferMessage = "服务已启动，同一 WiFi 下的设备可接收") }
+                    } else {
+                        _uiState.update { it.copy(lanTransferMessage = "启动失败：无法绑定端口或获取局域网地址") }
+                    }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(lanTransferMessage = "生成备份失败: ${e.message}") }
+                }
+        }
+    }
+
+    fun stopLanServer() {
+        lanServer?.stop()
+        lanServer = null
+        _uiState.update { it.copy(lanServerUrl = null, lanTransferMessage = "服务已停止") }
+    }
+
+    fun importFromLanUrl(url: String) {
+        val trimmed = url.trim()
+        if (trimmed.isBlank()) {
+            _uiState.update { it.copy(lanTransferMessage = "请输入接收链接") }
+            return
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(lanTransferMessage = "正在接收…") }
+            val target = java.io.File(context.cacheDir, "lan_import_${System.currentTimeMillis()}.json")
+            LanTransferClient.download(trimmed, target)
+                .onSuccess {
+                    backupRepository.importDataFromFile(target)
+                        .onSuccess { result ->
+                            _uiState.update {
+                                it.copy(
+                                    lanTransferMessage = "接收并导入成功：${result.booksImported} 本书，${result.bookmarksImported} 个书签"
+                                )
+                            }
+                        }
+                        .onFailure { e ->
+                            _uiState.update { it.copy(lanTransferMessage = "导入失败: ${e.message}") }
+                        }
+                }
+                .onFailure { e ->
+                    _uiState.update { it.copy(lanTransferMessage = "接收失败: ${e.message}") }
+                }
+            target.delete()
+        }
+    }
+
+    fun clearLanTransferMessage() {
+        _uiState.update { it.copy(lanTransferMessage = null) }
+    }
+
+    fun requestShelfExport(format: ShelfExportFormat) {
+        _uiState.update { it.copy(shelfExportFormat = format, isExporting = true, exportResult = null) }
+    }
+
+    fun onShelfExportReady(uri: Uri) {
+        val format = _uiState.value.shelfExportFormat ?: return
+        viewModelScope.launch {
+            runCatching {
+                val books = bookRepository.getAllBooks().first()
+                val categories = categoryRepository.getAllCategories().first()
+                val lists = readingListRepository.getAllLists().first()
+                val listsByBook = buildMap<Long, String> {
+                    lists.forEach { list ->
+                        readingListRepository.getBooksInList(list.id).first().forEach { entry ->
+                            put(entry.book.id, list.name)
+                        }
+                    }
+                }
+                val content = when (format) {
+                    ShelfExportFormat.CSV -> ShelfExporter.toCsv(books, categories, lists, listsByBook)
+                    ShelfExportFormat.JSON -> ShelfExporter.toJson(books, categories, lists, listsByBook)
+                }
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(content.toByteArray(Charsets.UTF_8))
+                }
+            }.onSuccess {
+                _uiState.update { it.copy(isExporting = false, shelfExportFormat = null, exportResult = "书架信息已导出") }
+            }.onFailure { e ->
+                _uiState.update {
+                    it.copy(isExporting = false, shelfExportFormat = null, exportResult = "导出失败: ${e.message}")
+                }
+            }
+        }
     }
 
     fun onImportReady(uri: Uri) {

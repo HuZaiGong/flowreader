@@ -22,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import android.content.Intent
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -34,6 +35,7 @@ import com.flowreader.app.core.designsystem.reader.text
 import com.flowreader.app.core.designsystem.token.FlowMotion
 import com.flowreader.app.core.util.ReaderBehavior
 import com.flowreader.app.core.util.ReaderCustomTheme
+import com.flowreader.app.util.ShareCardGenerator
 import com.flowreader.app.core.util.ReadingProgress
 import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.GestureAction
@@ -180,6 +182,10 @@ fun ReaderScreen(
                         currentPage = uiState.currentChapterIndex,
                         textColor = palette.text,
                         backgroundColor = palette.background,
+                        annotations = uiState.annotations.filter { it.chapterIndex == uiState.currentChapterIndex },
+                        onAddPdfAnnotation = { page, x0, y0, x1, y1 ->
+                            viewModel.addPdfAnnotation(page, x0, y0, x1, y1)
+                        },
                         onPageChange = { viewModel.goToChapter(it) }
                     )
                 } else if (settings.pageMode == PageMode.PAGED) {
@@ -327,6 +333,36 @@ fun ReaderScreen(
                 onDismiss = { viewModel.clearShareText() },
                 onShare = { intent ->
                     context.startActivity(intent)
+                    viewModel.clearShareText()
+                },
+                onShareCard = {
+                    val book = uiState.book ?: run { viewModel.clearShareText(); return@ShareProgressDialog }
+                    val progress = ReadingProgress.fraction(
+                        uiState.currentChapterIndex,
+                        chapterFraction,
+                        uiState.chapters.size
+                    )
+                    val percent = if (progress.isFinite()) (progress * 100).toInt() else 0
+                    val card = ShareCardGenerator.generate(
+                        cacheDir = context.cacheDir,
+                        bookTitle = book.title,
+                        chapterTitle = uiState.currentChapter?.title ?: "",
+                        progressPercent = percent,
+                        backgroundArgb = palette.backgroundArgb,
+                        textArgb = palette.textArgb,
+                        accentArgb = palette.textArgb
+                    )
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        card
+                    )
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "image/png"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(intent, "分享阅读卡片"))
                     viewModel.clearShareText()
                 }
             )

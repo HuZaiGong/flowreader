@@ -98,7 +98,6 @@ import com.flowreader.app.core.designsystem.token.FlowRadius
 import com.flowreader.app.core.designsystem.token.FlowSpacing
 import com.flowreader.app.core.util.FlowFormatters
 import com.flowreader.app.domain.model.Book
-import com.flowreader.app.domain.model.GlobalSearchResult
 import com.flowreader.app.domain.model.LibraryViewMode
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,6 +105,7 @@ import com.flowreader.app.domain.model.LibraryViewMode
 fun LibraryScreen(
     onBookClick: (Long) -> Unit,
     onContinueReading: (Long) -> Unit,
+    onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onWheelClick: () -> Unit,
     onNotesClick: () -> Unit,
@@ -124,7 +124,6 @@ fun LibraryScreen(
         uris.forEach { uri -> viewModel.importBook(uri) }
     }
 
-    var showSearchBar by remember { mutableStateOf(false) }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var batchAction by remember { mutableStateOf<BatchAction?>(null) }
 
@@ -158,7 +157,7 @@ fun LibraryScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         floatingActionButton = {
-            if (!showSearchBar && !uiState.selectionMode) {
+            if (!uiState.selectionMode) {
                 ExtendedFloatingActionButton(
                     onClick = { bookPickerLauncher.launch(IMPORT_MIME_TYPES) },
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -190,53 +189,10 @@ fun LibraryScreen(
                     }
                 )
 
-                showSearchBar -> SearchBar(
-                    query = uiState.searchQuery,
-                    onQueryChange = { viewModel.updateSearchQuery(it) },
-                    onSearch = { showSearchBar = false },
-                    active = true,
-                    onActiveChange = { showSearchBar = it },
-                    placeholder = { Text(stringResource(R.string.library_search_placeholder)) },
-                    leadingIcon = {
-                        IconButton(onClick = { showSearchBar = false }) {
-                            Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = stringResource(R.string.library_search_exit)
-                            )
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    if (uiState.isGlobalSearching) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
-                    if (uiState.globalSearchResults.isNotEmpty()) {
-                        Text(
-                            text = stringResource(R.string.library_fulltext_hits, uiState.globalSearchResults.size),
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(horizontal = FlowSpacing.lg, vertical = FlowSpacing.sm)
-                        )
-                        LazyColumn {
-                            items(
-                                uiState.globalSearchResults,
-                                key = { "${it.bookId}-${it.chapterIndex}-${it.matchedText.hashCode()}" }
-                            ) { result ->
-                                GlobalSearchResultItem(
-                                    result = result,
-                                    onClick = {
-                                        showSearchBar = false
-                                        onBookClick(result.bookId)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
                 else -> TopAppBar(
                     title = { Text(stringResource(R.string.library_title)) },
                     actions = {
-                        IconButton(onClick = { showSearchBar = true }) {
+                        IconButton(onClick = onSearchClick) {
                             Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
                         }
                         IconButton(onClick = { viewModel.setViewMode(uiState.viewMode.toggle()) }) {
@@ -658,28 +614,6 @@ private fun BatchMetadataDialog(onDismiss: () -> Unit, onConfirm: (String?, Stri
     )
 }
 
-@Composable
-private fun GlobalSearchResultItem(result: GlobalSearchResult, onClick: () -> Unit) {
-    val unknown = stringResource(R.string.library_unknown_book)
-    ListItem(
-        headlineContent = {
-            Text(result.bookTitle.ifBlank { unknown }, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        },
-        supportingContent = {
-            Text(
-                text = stringResource(
-                    R.string.library_search_context,
-                    result.chapterIndex + 1,
-                    result.chapterTitle
-                ) + "\n" + result.matchedText,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        leadingContent = { Icon(Icons.Default.Search, contentDescription = null) },
-        modifier = Modifier.clickable(onClick = onClick)
-    )
-}
 
 @Composable
 private fun RecentBookCard(book: Book, onClick: () -> Unit) {

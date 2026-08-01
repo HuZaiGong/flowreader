@@ -169,7 +169,8 @@ class FullTextSearch @Inject constructor(
 
     suspend fun searchAll(
         query: String,
-        maxResults: Int = 100
+        maxResults: Int = 100,
+        offset: Int = 0
     ): List<FtsSearchResult> = withContext(Dispatchers.IO) {
         ensureInitialized()
         if (query.isBlank()) return@withContext emptyList()
@@ -183,9 +184,9 @@ class FullTextSearch @Inject constructor(
                 FROM book_content_fts
                 WHERE book_content_fts MATCH ?
                 ORDER BY rank
-                LIMIT ?
+                LIMIT ? OFFSET ?
                 """.trimIndent(),
-                arrayOf(safeMatch, maxResults.toString())
+                arrayOf(safeMatch, maxResults.toString(), offset.toString())
             )
 
             cursor?.use {

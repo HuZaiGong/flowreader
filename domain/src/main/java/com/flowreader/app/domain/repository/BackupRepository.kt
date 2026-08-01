@@ -21,6 +21,10 @@ interface BackupRepository {
      */
     suspend fun importData(uri: Uri): Result<ImportResult>
 
+    /** LAN transfer variants (v55): same payload, straight to a file instead of a SAF URI. */
+    suspend fun exportDataToFile(file: java.io.File): Result<Unit>
+    suspend fun importDataFromFile(file: java.io.File): Result<ImportResult>
+
     /**
      * 导出单本书的阅读进度
      * @param bookId 书籍 ID

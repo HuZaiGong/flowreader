@@ -614,6 +614,26 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /** PDF region highlight (v55): the region is packed into start/end positions. */
+    fun addPdfAnnotation(page: Int, x0: Int, y0: Int, x1: Int, y1: Int) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val packedStart = com.flowreader.app.ui.screens.reader.components.PdfRegionCodec.pack(x0, y0)
+            val packedEnd = com.flowreader.app.ui.screens.reader.components.PdfRegionCodec.pack(x1, y1)
+            val annotation = Annotation(
+                bookId = bookId,
+                chapterIndex = page,
+                startPosition = packedStart,
+                endPosition = packedEnd,
+                selectedText = "PDF 标注",
+                color = AnnotationColor.YELLOW,
+                note = ""
+            )
+            val newId = annotationRepository.insertAnnotation(annotation)
+            _uiState.update { it.copy(annotations = it.annotations + annotation.copy(id = newId)) }
+        }
+    }
+
     fun deleteAnnotation(annotation: Annotation) {
         viewModelScope.launch {
             annotationRepository.deleteAnnotation(annotation)

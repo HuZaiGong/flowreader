@@ -1,5 +1,6 @@
 package com.flowreader.app.data.repository
 
+import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.GlobalSearchResult
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.ChapterRepository
@@ -35,7 +36,10 @@ class SearchRepositoryImpl @Inject constructor(
         hasBuiltIndex = true
     }
 
-    override suspend fun searchAll(query: String): List<GlobalSearchResult> {
+    override suspend fun searchAll(query: String): List<GlobalSearchResult> =
+        searchChapters(query, limit = 100, offset = 0)
+
+    override suspend fun searchChapters(query: String, limit: Int, offset: Int): List<GlobalSearchResult> {
         val books = bookRepository.getAllBooks().first()
         val bookIds = books.map { it.id }.toSet()
         fullTextSearch.initialize()
@@ -43,7 +47,7 @@ class SearchRepositoryImpl @Inject constructor(
             rebuildIndex()
         }
         val booksById = books.associateBy { it.id }
-        return fullTextSearch.searchAll(query).map { result ->
+        return fullTextSearch.searchAll(query, maxResults = limit, offset = offset).map { result ->
             GlobalSearchResult(
                 bookId = result.bookId,
                 bookTitle = booksById[result.bookId]?.title.orEmpty(),
@@ -53,4 +57,7 @@ class SearchRepositoryImpl @Inject constructor(
             )
         }
     }
+
+    override suspend fun searchBooks(query: String): List<Book> =
+        bookRepository.searchBooks(query).first()
 }

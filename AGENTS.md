@@ -27,9 +27,11 @@ Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`
 - `di/AppModule.kt` contains `DatabaseModule` DAO providers and `RepositoryModule` Hilt `@Binds` entries. Add bindings there for new repos.
 
 ## Navigation And Theme
-- Routes live in sealed class `Screen` in `ui/Navigation.kt`: `library`, `stats`, `settings`, `wheel`, `book_detail/{bookId}`, `reader/{bookId}?chapterIndex={chapterIndex}`.
+- Routes live in sealed class `Screen` in `ui/Navigation.kt`: `library`, `stats`, `settings`, `wheel`, `search?query={query}`, `book_detail/{bookId}`, `reader/{bookId}?chapterIndex={chapterIndex}`.
 - `Screen.Reader.createRoute(bookId, chapterIndex = -1)` omits `chapterIndex` when resuming; non-negative values jump directly to a chapter.
-- Bottom tabs are only Library, Stats, and Settings; the wheel is a secondary destination opened from the library top-bar overflow (demoted in v52).
+- Bottom tabs are only Library, Stats, and Settings; the wheel is a secondary destination opened from the library top-bar overflow (demoted in v52). Since v55 the navigation is adaptive: width >= 600dp swaps the bottom bar for a navigation rail (hand-rolled, because `NavigationSuiteScaffold` needs m3 1.4 which needs Compose 1.9+).
+- The library search icon navigates to the standalone `SearchScreen` (history + books/chapters sections + paged FTS results); the shelf itself no longer embeds global search.
+- Reader settings support custom text/background colors (`ReadingSettings.customTextColorArgb`/`customBackgroundColorArgb`, DataStore-backed): `:core` `ReaderCustomTheme.resolve()` guards the pair with WCAG AA and falls back to the palette side that restores contrast. No Room migration involved — reading settings never lived in Room.
 - App theme is `AppThemeMode` (LIGHT/DARK/FOLLOW_SYSTEM) plus `ColorSource` (BRAND default, DYNAMIC opt-in). It is applied once in `FlowReaderNavHost` via `:core`'s `FlowTheme`; do not add per-screen theme wrappers.
 - Reader colors are the 12 `ReaderPalette`s in `:core`, selected by `ReadingSettings.palette` / `nightPalette`. Contrast for all 12 is asserted against WCAG AA in `ReaderPaletteContrastTest`.
 - `SettingsScreen` displays the app version from `BuildConfig.VERSION_NAME`.

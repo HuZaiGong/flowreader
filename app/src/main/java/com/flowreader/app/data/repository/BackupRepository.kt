@@ -43,90 +43,112 @@ class BackupRepositoryImpl @Inject constructor(
 ) : BackupRepository {
     override suspend fun exportData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val json = JSONObject()
-
-            val books = bookDao.getAllBooks().first()
-            val booksArray = JSONArray()
-            books.forEach { book ->
-                booksArray.put(book.toJson())
-            }
-            json.put("books", booksArray)
-
-            val categories = categoryDao.getAllCategories().first()
-            val categoriesArray = JSONArray()
-            categories.forEach { category ->
-                categoriesArray.put(category.toJson())
-            }
-            json.put("categories", categoriesArray)
-
-            val allBookmarks = bookmarkDao.getAllBookmarks().first()
-            val bookmarksArray = JSONArray()
-            allBookmarks.forEach { bookmark ->
-                bookmarksArray.put(bookmark.toJson())
-            }
-            json.put("bookmarks", bookmarksArray)
-
-            val allAnnotations = annotationDao.getAllAnnotations().first()
-            val annotationsArray = JSONArray()
-            allAnnotations.forEach { annotation ->
-                annotationsArray.put(annotation.toJson())
-            }
-            json.put("annotations", annotationsArray)
-
+            val json = buildBackupJson()
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 OutputStreamWriter(outputStream).use { writer ->
-                    writer.write(json.toString(2))
+                    writer.write(json)
                 }
             }
-
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    override suspend fun exportDataToFile(file: java.io.File): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            java.io.FileWriter(file).use { writer ->
+                writer.write(buildBackupJson())
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun buildBackupJson(): String {
+        val json = JSONObject()
+        val books = bookDao.getAllBooks().first()
+        val booksArray = JSONArray()
+        books.forEach { book -> booksArray.put(book.toJson()) }
+        json.put("books", booksArray)
+
+        val categories = categoryDao.getAllCategories().first()
+        val categoriesArray = JSONArray()
+        categories.forEach { category -> categoriesArray.put(category.toJson()) }
+        json.put("categories", categoriesArray)
+
+        val allBookmarks = bookmarkDao.getAllBookmarks().first()
+        val bookmarksArray = JSONArray()
+        allBookmarks.forEach { bookmark -> bookmarksArray.put(bookmark.toJson()) }
+        json.put("bookmarks", bookmarksArray)
+
+        val allAnnotations = annotationDao.getAllAnnotations().first()
+        val annotationsArray = JSONArray()
+        allAnnotations.forEach { annotation -> annotationsArray.put(annotation.toJson()) }
+        json.put("annotations", annotationsArray)
+        return json.toString(2)
+    }
+
     override suspend fun importData(uri: Uri): Result<ImportResult> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                BufferedReader(InputStreamReader(inputStream)).use { reader ->
-                    val json = JSONObject(reader.readText())
-
-                    var booksImported = 0
-                    var bookmarksImported = 0
-                    var annotationsImported = 0
-
-                    database.withTransaction {
-                        val booksArray = json.optJSONArray("books") ?: JSONArray()
-                        for (i in 0 until booksArray.length()) {
-                            val bookJson = booksArray.getJSONObject(i)
-                            val book = BookEntity.fromJson(bookJson)
-                            bookDao.insertBook(book)
-                            booksImported++
-                        }
-
-                        val bookmarksArray = json.optJSONArray("bookmarks") ?: JSONArray()
-                        for (i in 0 until bookmarksArray.length()) {
-                            val bookmarkJson = bookmarksArray.getJSONObject(i)
-                            val bookmark = BookmarkEntity.fromJson(bookmarkJson)
-                            bookmarkDao.insertBookmark(bookmark)
-                            bookmarksImported++
-                        }
-
-                        val annotationsArray = json.optJSONArray("annotations") ?: JSONArray()
-                        for (i in 0 until annotationsArray.length()) {
-                            val annotationJson = annotationsArray.getJSONObject(i)
-                            val annotation = AnnotationEntity.fromJson(annotationJson)
-                            annotationDao.insertAnnotation(annotation)
-                            annotationsImported++
-                        }
-                    }
-
-                    Result.success(ImportResult(booksImported, bookmarksImported, annotationsImported))
-                }
+                val json = JSONObject(BufferedReader(InputStreamReader(inputStream)).readText())
+                applyBackupJson(json)
             } ?: Result.failure(Exception("无法打开文件"))
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    override suspend fun importDataFromFile(file: java.io.File): Result<ImportResult> = withContext(Dispatchers.IO) {
+        try {
+            if (!file.exists() || file.length() > MAX_BACKUP_BYTES) {
+                Result.failure(Exception("备份文件缺失或超过 ${MAX_BACKUP_BYTES / 1024 / 1024}MB 上限"))
+            } else {
+                val json = JSONObject(java.io.FileReader(file).readText())
+                applyBackupJson(json)
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun applyBackupJson(json: JSONObject): Result<ImportResult> {
+        var booksImported = 0
+        var bookmarksImported = 0
+        var annotationsImported = 0
+
+        database.withTransaction {
+            val booksArray = json.optJSONArray("books") ?: JSONArray()
+            for (i in 0 until booksArray.length()) {
+                val bookJson = booksArray.getJSONObject(i)
+                val book = BookEntity.fromJson(bookJson)
+                bookDao.insertBook(book)
+                booksImported++
+            }
+
+            val bookmarksArray = json.optJSONArray("bookmarks") ?: JSONArray()
+            for (i in 0 until bookmarksArray.length()) {
+                val bookmarkJson = bookmarksArray.getJSONObject(i)
+                val bookmark = BookmarkEntity.fromJson(bookmarkJson)
+                bookmarkDao.insertBookmark(bookmark)
+                bookmarksImported++
+            }
+
+            val annotationsArray = json.optJSONArray("annotations") ?: JSONArray()
+            for (i in 0 until annotationsArray.length()) {
+                val annotationJson = annotationsArray.getJSONObject(i)
+                val annotation = AnnotationEntity.fromJson(annotationJson)
+                annotationDao.insertAnnotation(annotation)
+                annotationsImported++
+            }
+        }
+        return Result.success(ImportResult(booksImported, bookmarksImported, annotationsImported))
+    }
+
+    private companion object {
+        const val MAX_BACKUP_BYTES = 200L * 1024 * 1024
     }
 
     override suspend fun exportReadingProgress(bookId: Long): Result<String> = withContext(Dispatchers.IO) {
