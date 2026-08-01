@@ -41,6 +41,7 @@ import com.flowreader.app.ui.screens.reader.components.AnnotationsDialog
 import com.flowreader.app.ui.screens.reader.components.BookmarksDialog
 import com.flowreader.app.ui.screens.reader.components.ChapterListDialog
 import com.flowreader.app.ui.screens.reader.components.ComicReader
+import com.flowreader.app.ui.screens.reader.components.PagedReader
 import com.flowreader.app.ui.screens.reader.components.PdfViewer
 import com.flowreader.app.ui.screens.reader.components.ReaderContent
 import com.flowreader.app.ui.screens.reader.components.ReaderControls
@@ -64,6 +65,7 @@ fun ReaderScreen(
     val contentScrollState = rememberScrollState()
 
     LaunchedEffect(uiState.scrollRequestVersion) {
+        if (settings.pageMode == PageMode.PAGED) return@LaunchedEffect
         val target = uiState.currentPosition.coerceAtLeast(0)
         if (settings.pageMode == PageMode.SLIDE) {
             contentScrollState.animateScrollTo(target)
@@ -120,9 +122,16 @@ fun ReaderScreen(
 
     val fontFamily = rememberReaderFontFamily(settings)
 
-    // Derived so scroll updates repaint only the control layer, never the body.
-    val chapterFraction by remember {
-        derivedStateOf { ReadingProgress.scrollFraction(contentScrollState.value, contentScrollState.maxValue) }
+    // Derived so scroll updates repaint only the control layer, never the body. In PAGED mode
+    // the page fraction comes from the ViewModel instead of the (unused) scroll state.
+    val chapterFraction: Float by remember(settings.pageMode) {
+        derivedStateOf {
+            if (settings.pageMode == PageMode.PAGED) {
+                viewModel.currentChapterFraction
+            } else {
+                ReadingProgress.scrollFraction(contentScrollState.value, contentScrollState.maxValue)
+            }
+        }
     }
 
     Box(
@@ -166,6 +175,28 @@ fun ReaderScreen(
                         textColor = palette.text,
                         backgroundColor = palette.background,
                         onPageChange = { viewModel.goToChapter(it) }
+                    )
+                } else if (settings.pageMode == PageMode.PAGED) {
+                    PagedReader(
+                        chapter = chapter,
+                        chapterIndex = uiState.currentChapterIndex,
+                        settings = settings,
+                        palette = palette,
+                        fontFamily = fontFamily,
+                        annotations = uiState.annotations,
+                        currentPosition = uiState.currentPosition,
+                        onPageChanged = { page, fraction -> viewModel.updatePosition(page, fraction) },
+                        onMiddleTap = { viewModel.toggleControls() },
+                        onDoubleTap = { dispatchGesture(settings.gestureSettings.doubleTapAction) },
+                        onHorizontalDrag = { drag ->
+                            dispatchGesture(ReaderBehavior.swipeAction(drag, settings))
+                        },
+                        onHighlightSelection = { text, start, end ->
+                            viewModel.addAnnotation(text, start, end)
+                        },
+                        onBookmarkSelection = { text, start, end ->
+                            viewModel.addBookmark(text.ifBlank { "选中文本书签" }, start)
+                        }
                     )
                 } else {
                     ReaderContent(

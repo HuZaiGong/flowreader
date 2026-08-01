@@ -204,7 +204,7 @@ private enum class DragSide { START, END }
  * offsets, converted back to raw chapter offsets through [ParagraphContent.rawRange].
  */
 @Composable
-private fun ReaderParagraph(
+internal fun ReaderParagraph(
     paragraph: String,
     paragraphStart: Int,
     annotations: List<Annotation>,

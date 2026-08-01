@@ -105,6 +105,10 @@ class ReaderViewModel @Inject constructor(
     private var chapterFraction: Float = 0f
     private val chapterPositions = mutableMapOf<Int, Int>()
 
+    /** Latest fraction through the open chapter; the controls layer reads it for the slider. */
+    val currentChapterFraction: Float
+        get() = chapterFraction
+
     private val positionUpdateIntervalMs = 250L
     private val predictionUpdateIntervalMs = 1_500L
 

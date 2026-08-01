@@ -63,12 +63,13 @@ enum class ReaderPaletteId(val displayName: String, val isDark: Boolean) {
 }
 
 /**
- * Page-turn behaviour. Only the two modes the renderer actually implements are exposed:
- * [SLIDE] animates the chapter swap and the scroll reset, [NONE] jumps instantly.
+ * Page-turn behaviour. [SLIDE] animates the chapter swap and the scroll reset, [NONE] jumps
+ * instantly, [PAGED] renders the chapter as measured pages swiped horizontally.
  * The pre-v52 `SIMULATION` / `CURL` / `SLIDE_OVER` values were never rendered and are gone.
  */
 enum class PageMode(val displayName: String) {
     SLIDE("滑动"),
+    PAGED("分页"),
     NONE("无动画");
 
     companion object {
