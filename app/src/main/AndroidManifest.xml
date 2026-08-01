@@ -50,6 +50,13 @@
         </activity>
 
         <provider
+            android:name="com.flowreader.app.provider.FlowReaderContentProvider"
+            android:authorities="com.flowreader.app.provider"
+            android:exported="true"
+            android:enabled="true"
+            android:multiprocess="false" />
+
+        <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
             android:exported="false"

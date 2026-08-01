@@ -38,6 +38,38 @@ tasks.register("verifyKotlinStyle") {
     }
 }
 
+tasks.register("performanceBaseline") {
+    group = "verification"
+    description = "Reports APK sizes against the stored baseline"
+    dependsOn(":app:assembleDebug", ":app:assembleRelease")
+    doLast {
+        val sizes = mapOf(
+            "debug" to file("app/build/outputs/apk/debug/app-debug.apk"),
+            "release" to file("app/build/outputs/apk/release/app-release.apk")
+        ).mapValues { (_, f) -> if (f.exists()) f.length() / 1024 else 0L }
+
+        println("APK size baseline: debug=${sizes["debug"]}KB release=${sizes["release"]}KB")
+
+        val baselineFile = file("baseline/apk-size.properties")
+        val baseline = java.util.Properties().apply {
+            if (baselineFile.exists()) load(baselineFile.inputStream())
+        }
+        sizes.forEach { (name, kb) ->
+            val previous = baseline.getProperty("$name.kb")?.toLongOrNull()
+            if (previous != null && kb > previous) {
+                println("PERF-WARNING: $name APK grew ${previous}KB -> ${kb}KB (${kb - previous}KB)")
+            }
+        }
+        baselineFile.parentFile.mkdirs()
+        baselineFile.outputStream().use { out ->
+            java.util.Properties().apply {
+                sizes.forEach { (name, kb) -> setProperty("$name.kb", kb.toString()) }
+                store(out, "FlowReader APK size baseline (updated by ./gradlew performanceBaseline)")
+            }
+        }
+    }
+}
+
 tasks.register("coverageSummary") {
     group = "verification"
     description = "Reports JVM test breadth for Repository, ViewModel, domain and :core targets and enforces a 40% file target."

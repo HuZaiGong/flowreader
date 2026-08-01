@@ -57,6 +57,6 @@ Lcoil/compose/AsyncImageKt;
 Lcoil/request/ImageRequest$Builder;
 
 # Hot methods: application + activity entry points
-Lcom/flowreader/app/MainActivity;->onCreate(Landroid/os/Bundle;)V
-Lcom/flowreader/app/MainActivity;->onStart()V
-Landroidx/activity/ComponentActivity;->setContent(Lkotlin/jvm/functions/Function2;)V
+HSPLcom/flowreader/app/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/flowreader/app/MainActivity;->onStart()V
+HSPLandroidx/activity/ComponentActivity;->setContent(Lkotlin/jvm/functions/Function2;)V

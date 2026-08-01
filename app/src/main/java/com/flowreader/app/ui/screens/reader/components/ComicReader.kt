@@ -85,10 +85,11 @@ fun ComicReader(
                 itemsIndexed(
                     items = chapters,
                     key = { _, chapter -> chapter.id.takeIf { it > 0L } ?: chapter.index }
-                ) { _, chapter ->
+                ) { index, chapter ->
                     ComicPage(
                         path = chapter.comicImagePath(),
                         tint = palette.text,
+                        contentDescription = "漫画第 ${index + 1} 页",
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight()
@@ -104,6 +105,7 @@ fun ComicReader(
             ComicPage(
                 path = chapter?.comicImagePath().orEmpty(),
                 tint = palette.text,
+                contentDescription = "漫画第 ${currentChapterIndex + 1} 页",
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -111,12 +113,12 @@ fun ComicReader(
 }
 
 @Composable
-private fun ComicPage(path: String, tint: Color, modifier: Modifier = Modifier) {
+private fun ComicPage(path: String, tint: Color, contentDescription: String, modifier: Modifier = Modifier) {
     val file = remember(path) { File(path) }
     if (file.isFile) {
         AsyncImage(
             model = file,
-            contentDescription = null,
+            contentDescription = contentDescription,
             modifier = modifier.padding(vertical = 1.dp),
             contentScale = ContentScale.Fit
         )

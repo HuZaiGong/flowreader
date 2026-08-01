@@ -33,3 +33,13 @@ jobs:
 
       - name: Assemble debug APK
         run: ./gradlew assembleDebug
+
+      - name: Performance baseline (APK sizes)
+        run: ./gradlew performanceBaseline
+
+      - name: Summarize performance
+        shell: bash
+        run: |
+          SIZE_KB=$(find app/build/outputs/apk/release -name '*.apk' -printf '%s' | head -1)
+          echo "## Performance baseline" >> "$GITHUB_STEP_SUMMARY"
+          echo "Release APK size: $((SIZE_KB / 1024))KB" >> "$GITHUB_STEP_SUMMARY"

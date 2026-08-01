@@ -22,6 +22,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import android.content.Intent
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -146,6 +148,13 @@ fun ReaderScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(palette.background)
+            // TalkBack custom action: body double-tap toggles the control bar.
+            .semantics {
+                onClick(label = "切换阅读控制栏") {
+                    viewModel.toggleControls()
+                    true
+                }
+            }
     ) {
         FlowStateHost(
             isLoading = uiState.isLoading,

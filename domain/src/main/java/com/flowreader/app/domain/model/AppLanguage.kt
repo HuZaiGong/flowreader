@@ -13,7 +13,12 @@ enum class AppLanguage(val tag: String?, val displayName: String) {
     CHINESE("zh-CN", "简体中文"),
     ENGLISH("en", "English"),
     JAPANESE("ja", "日本語"),
-    KOREAN("ko", "한국어");
+    KOREAN("ko", "한국어"),
+    FRENCH("fr", "Français"),
+    GERMAN("de", "Deutsch"),
+    SPANISH("es", "Español"),
+    PORTUGUESE("pt", "Português"),
+    RUSSIAN("ru", "Русский");
 
     companion object {
         fun fromStoredName(raw: String?): AppLanguage = entries.firstOrNull { it.name == raw } ?: FOLLOW_SYSTEM
