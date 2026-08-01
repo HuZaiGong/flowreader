@@ -9,7 +9,6 @@ import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
-import com.flowreader.app.core.util.ReadingProgress
 import com.flowreader.app.domain.model.ReadingSettings
 import com.flowreader.app.domain.repository.AnnotationRepository
 import com.flowreader.app.domain.repository.BookRepository
@@ -17,6 +16,8 @@ import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingStatsRepository
 import com.flowreader.app.domain.repository.SettingsRepository
+import com.flowreader.feature.reader.ReaderProgressEngine
+import com.flowreader.feature.reader.ReaderSessionTracker
 import com.flowreader.app.util.CacheManager
 import com.flowreader.app.util.FullTextSearch
 import com.flowreader.app.util.FtsSearchResult
@@ -80,6 +81,10 @@ class ReaderViewModel @Inject constructor(
     private val ttsManager: TtsManager
 ) : ViewModel() {
 
+    private val progressEngine = ReaderProgressEngine()
+    private val sessionTracker = ReaderSessionTracker()
+    private val ttsCoordinator = ReaderTtsCoordinator(ttsManager)
+
     private val bookId: Long = savedStateHandle.get<Long>("bookId") ?: 0L
     private val initialChapterIndex: Int = savedStateHandle.get<Int>("chapterIndex") ?: -1
 
@@ -93,20 +98,13 @@ class ReaderViewModel @Inject constructor(
     private var predictionJob: Job? = null
     private val progressDebounceMs = 3000L
 
-    private var sessionStartTime: Long = 0
-    private var sessionReadPages: Int = 0
-    private var sessionReadChars: Int = 0
     private var lastPositionUpdateTime: Long = 0
     private var lastUiPositionUpdateTime: Long = 0
     private var lastPredictionUpdateTime: Long = 0
     private var lastWidgetProgressPercent: Int = -1
-    private var lastPosition: Int = 0
-    private var lastSessionInteractionTime: Long = 0
     private var chapterFraction: Float = 0f
     private val chapterPositions = mutableMapOf<Int, Int>()
 
-    private val sessionPauseThresholdMs = 5 * 60 * 1000L
-    private val defaultDailyGoalMinutes = 30
     private val positionUpdateIntervalMs = 250L
     private val predictionUpdateIntervalMs = 1_500L
 
@@ -160,20 +158,20 @@ class ReaderViewModel @Inject constructor(
         eyeProtectionJob?.cancel()
         predictionJob?.cancel()
         periodicStatsSaveJob?.cancel()
-        ttsManager.shutdown()
+        ttsCoordinator.shutdown()
         saveProgressImmediately()
         saveReadingStats()
     }
 
     private fun saveReadingStats() {
-        val sessionTime = (System.currentTimeMillis() - sessionStartTime) / 1000
-        if (sessionTime > 0 && sessionReadPages > 0) {
+        val (pages, seconds) = sessionTracker.takeSnapshotAndReset()
+        if (seconds > 0 && pages > 0) {
             viewModelScope.launch {
                 try {
                     readingStatsRepository.updateTodayStats(
                         bookId = bookId,
-                        readPages = sessionReadPages,
-                        readTimeSeconds = sessionTime
+                        readPages = pages,
+                        readTimeSeconds = seconds
                     )
                     loadTodayStats()
                 } catch (e: Exception) {
@@ -181,16 +179,13 @@ class ReaderViewModel @Inject constructor(
                 }
             }
         }
-        sessionStartTime = System.currentTimeMillis()
-        sessionReadPages = 0
-        sessionReadChars = 0
     }
 
     private fun saveProgressImmediately() {
         val state = _uiState.value
         if (state.chapters.isNotEmpty()) {
             val position = chapterPositions[state.currentChapterIndex] ?: state.currentPosition
-            val progress = calculateProgress(state, chapterFraction)
+            val progress = progressEngine.fraction(state.currentChapterIndex, chapterFraction, state.chapters.size)
             viewModelScope.launch {
                 bookRepository.updateReadingProgress(
                     bookId,
@@ -254,9 +249,8 @@ class ReaderViewModel @Inject constructor(
                         if (meta.content.isNotEmpty()) meta else meta.copy(content = chapterRepository.getChapterContent(bookId, currentChapterIndex) ?: "")
                     }
 
-                    sessionStartTime = System.currentTimeMillis()
-                    lastPositionUpdateTime = sessionStartTime
-                    lastSessionInteractionTime = sessionStartTime
+                    sessionTracker.startSession()
+                    lastPositionUpdateTime = System.currentTimeMillis()
 
                     _uiState.update {
                         it.copy(
@@ -336,7 +330,7 @@ class ReaderViewModel @Inject constructor(
     fun setCurrentComicPage(index: Int) {
         val state = _uiState.value
         if (state.book?.format != BookFormat.COMIC || index !in state.chapters.indices || index == state.currentChapterIndex) return
-        val progress = ReadingProgress.fraction(index, 0f, state.chapters.size)
+        val progress = progressEngine.fraction(index, 0f, state.chapters.size)
         chapterFraction = 0f
         _uiState.update {
             it.copy(
@@ -354,7 +348,7 @@ class ReaderViewModel @Inject constructor(
 
         val previousState = _uiState.value
         chapterPositions[previousState.currentChapterIndex] = previousState.currentPosition
-        ttsManager.stop()
+        ttsCoordinator.stop()
         saveReadingStats()
 
         viewModelScope.launch {
@@ -375,7 +369,7 @@ class ReaderViewModel @Inject constructor(
             val restoredPosition = (positionOverride ?: chapterPositions[index] ?: if (index == state.book?.currentChapter) state.book.currentPosition else 0)
                 .coerceAtLeast(0)
             chapterFraction = 0f
-            val progress = ReadingProgress.fraction(index, 0f, state.chapters.size)
+            val progress = progressEngine.fraction(index, 0f, state.chapters.size)
 
             bookRepository.updateReadingProgress(bookId, index, restoredPosition, progress)
 
@@ -414,55 +408,23 @@ class ReaderViewModel @Inject constructor(
         val now = System.currentTimeMillis()
         chapterPositions[state.currentChapterIndex] = position
 
-        val movedEnough = abs(position - lastPosition) >= 200
+        val movedEnough = abs(position - sessionTracker.lastPosition) >= 200
         val waitedEnough = now - lastPositionUpdateTime >= positionUpdateIntervalMs
         if (lastPositionUpdateTime > 0 && !movedEnough && !waitedEnough) return
 
-        if (lastSessionInteractionTime > 0 && now - lastSessionInteractionTime > sessionPauseThresholdMs) {
+        if (sessionTracker.recordInteraction(position)) {
             saveReadingStats()
-            sessionStartTime = now
-            lastPosition = position
         }
-        lastSessionInteractionTime = now
-
-        val positionDelta = if (lastPositionUpdateTime > 0) (position - lastPosition).coerceAtLeast(0) else 0
-
-        if (lastPositionUpdateTime > 0) {
-            val timeDelta = now - lastPositionUpdateTime
-
-            if (timeDelta > 0 && positionDelta > 0) {
-                val charsPerSecond = positionDelta.toFloat() / (timeDelta / 1000f)
-                val charsPerMinute = charsPerSecond * 60
-
-                val currentSpeed = state.readingSpeed
-                val alpha = 0.3f
-                val newSpeed = if (currentSpeed > 0) {
-                    alpha * charsPerMinute + (1 - alpha) * currentSpeed
-                } else {
-                    charsPerMinute
-                }
-
-                _uiState.update { it.copy(readingSpeed = newSpeed) }
-
-                val currentChapter = state.currentChapter
-                val charsPerPage = estimateCharsPerPage(state.readingSettings)
-                val readableDelta = currentChapter?.content
-                    ?.substring(lastPosition.coerceIn(0, currentChapter.content.length), position.coerceIn(0, currentChapter.content.length))
-                    ?.count { !it.isWhitespace() }
-                    ?: positionDelta
-                sessionReadChars += readableDelta
-                val completedPages = sessionReadChars / charsPerPage
-                if (completedPages > 0) {
-                    sessionReadPages += completedPages
-                    sessionReadChars %= charsPerPage
-                }
-            }
-        }
+        sessionTracker.recordProgress(
+            position = position,
+            content = state.currentChapter?.content,
+            charsPerPage = progressEngine.estimateCharsPerPage(state.readingSettings.fontSize, state.readingSettings.lineSpacing)
+        )
+        _uiState.update { it.copy(readingSpeed = sessionTracker.readingSpeed) }
 
         lastPositionUpdateTime = now
-        lastPosition = position
 
-        val progress = calculateProgress(state, chapterFraction)
+        val progress = progressEngine.fraction(state.currentChapterIndex, chapterFraction, state.chapters.size)
 
         if (now - lastUiPositionUpdateTime >= positionUpdateIntervalMs) {
             lastUiPositionUpdateTime = now
@@ -487,40 +449,24 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun calculateProgress(state: ReaderUiState, chapterScrollFraction: Float): Float =
-        ReadingProgress.fraction(state.currentChapterIndex, chapterScrollFraction, state.chapters.size)
-
-    private fun estimateCharsPerPage(settings: ReadingSettings): Int {
-        val fontFactor = 18f / settings.fontSize.coerceAtLeast(12)
-        val lineFactor = 1.5f / settings.lineSpacing.coerceAtLeast(1f)
-        return (900 * fontFactor * lineFactor).roundToInt().coerceIn(350, 1600)
-    }
-
     private fun calculateReadingPrediction() {
         predictionJob?.cancel()
         predictionJob = viewModelScope.launch {
             val state = _uiState.value
 
-            var remainingChars = 0
-            for (i in state.currentChapterIndex until state.chapters.size) {
-                val chapter = state.chapters.getOrNull(i) ?: continue
-                if (i == state.currentChapterIndex) {
-                    remainingChars += (chapter.content.length - state.currentPosition).coerceAtLeast(0)
-                } else {
-                    remainingChars += chapter.content.length
-                }
-            }
-
-            val speed = state.readingSpeed.coerceAtLeast(100f)
-            val estimatedMinutes = (remainingChars / speed).roundToInt()
-            val sessionTime = (System.currentTimeMillis() - sessionStartTime) / 1000 / 60
-            val suggestedBreakMinutes = if (sessionTime >= 45) 15 else if (sessionTime >= 30) 10 else 0
+            val estimatedMinutes = progressEngine.remainingMinutes(
+                chapters = state.chapters,
+                currentIndex = state.currentChapterIndex,
+                currentPosition = state.currentPosition,
+                speed = sessionTracker.readingSpeed
+            )
+            val sessionTime = sessionTracker.elapsedSeconds / 60
 
             _uiState.update {
                 it.copy(
                     estimatedTimeRemaining = estimatedMinutes.toLong(),
                     sessionReadTime = sessionTime,
-                    suggestedBreakTime = suggestedBreakMinutes.toLong()
+                    suggestedBreakTime = progressEngine.suggestedBreakMinutes(sessionTime)
                 )
             }
         }
@@ -627,7 +573,7 @@ class ReaderViewModel @Inject constructor(
     }
 
     fun stopTts() {
-        ttsManager.stop()
+        ttsCoordinator.stop()
         _uiState.update { it.copy(isTtsPlaying = false) }
     }
 
@@ -726,7 +672,7 @@ class ReaderViewModel @Inject constructor(
     fun goToProgress(fraction: Float) {
         val state = _uiState.value
         if (state.chapters.isEmpty()) return
-        goToChapter(ReadingProgress.chapterAt(fraction, state.chapters.size))
+        goToChapter(progressEngine.chapterAt(fraction, state.chapters.size))
     }
 
     fun shareProgress() {
@@ -734,7 +680,7 @@ class ReaderViewModel @Inject constructor(
         val book = state.book ?: return
         val chapter = state.currentChapter ?: return
 
-        val progress = (calculateProgress(state, chapterFraction) * 100).roundToInt()
+        val progress = (progressEngine.fraction(state.currentChapterIndex, chapterFraction, state.chapters.size) * 100).roundToInt()
 
         val shareText = "📚 正在阅读《${book.title}》\n" +
                 "第 ${state.currentChapterIndex + 1} 章：${chapter.title}\n" +
