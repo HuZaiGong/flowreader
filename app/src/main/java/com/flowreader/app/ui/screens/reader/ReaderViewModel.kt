@@ -62,15 +62,7 @@ data class ReaderUiState(
     val suggestedBreakTime: Long = 0,
     val isTtsPlaying: Boolean = false,
     val isImmersiveMode: Boolean = false,
-    val scrollRequestVersion: Long = 0L,
-    val paragraphSelection: ParagraphSelection? = null
-)
-
-/** The paragraph a long press landed on, with the character range the highlight will cover. */
-data class ParagraphSelection(
-    val text: String,
-    val startPosition: Int,
-    val endPosition: Int
+    val scrollRequestVersion: Long = 0L
 )
 
 @HiltViewModel
@@ -735,26 +727,6 @@ class ReaderViewModel @Inject constructor(
         val state = _uiState.value
         if (state.chapters.isEmpty()) return
         goToChapter(ReadingProgress.chapterAt(fraction, state.chapters.size))
-    }
-
-    fun selectParagraph(text: String, start: Int, end: Int) {
-        _uiState.update { it.copy(paragraphSelection = ParagraphSelection(text, start, end)) }
-    }
-
-    fun clearParagraphSelection() {
-        _uiState.update { it.copy(paragraphSelection = null) }
-    }
-
-    fun highlightSelectedParagraph(color: AnnotationColor) {
-        val selection = _uiState.value.paragraphSelection ?: return
-        addAnnotation(selection.text, selection.startPosition, selection.endPosition, color)
-        clearParagraphSelection()
-    }
-
-    fun bookmarkSelectedParagraph(note: String) {
-        val selection = _uiState.value.paragraphSelection ?: return
-        addBookmark(note, selection.startPosition)
-        clearParagraphSelection()
     }
 
     fun shareProgress() {

@@ -1,8 +1,12 @@
 package com.flowreader.app.ui.screens.reader.components
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -20,22 +24,31 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.flowreader.app.core.designsystem.reader.ReaderMetrics
@@ -50,6 +63,8 @@ import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.model.ReadingSettings
 import java.io.File
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * The reader body.
@@ -57,6 +72,11 @@ import java.io.File
  * Every style here comes from `:core`'s `ReaderTypography`, so the font family, the imported
  * custom font, the line height, the paragraph gap and the first-line indent all take effect —
  * before v52 the renderer hard-coded `bodyLarge` and dropped all four settings on the floor.
+ *
+ * Since v54 long-pressing a paragraph opens an in-house text selection engine
+ * ([ReaderParagraph]) with its own handles and the floating [ReaderSelectionBar]; the selected
+ * range can be turned into a highlight, a bookmark or a copy. The platform `SelectionContainer`
+ * was deliberately not used: its selection state API is `internal` in Compose 1.7.x.
  */
 @Composable
 fun ReaderContent(
@@ -68,7 +88,8 @@ fun ReaderContent(
     onTap: (Offset, Size) -> Unit,
     onDoubleTap: () -> Unit,
     onHorizontalDrag: (Float) -> Unit,
-    onParagraphLongPress: (String, Int, Int) -> Unit,
+    onHighlightSelection: (String, Int, Int) -> Unit,
+    onBookmarkSelection: (String, Int, Int) -> Unit,
     onPositionChanged: (Int) -> Unit,
     annotations: List<Annotation> = emptyList(),
     modifier: Modifier = Modifier
@@ -150,18 +171,16 @@ fun ReaderContent(
                                 val paraAnnotations = annotations.filter {
                                     it.startPosition >= paraStart && it.endPosition <= paraEnd
                                 }
-                                val text = buildParagraph(paraTrimmed, paraStart, paraAnnotations, indentSp > 0f)
-
-                                Text(
-                                    text = text,
-                                    style = bodyStyle,
-                                    modifier = Modifier
-                                        .padding(bottom = paragraphGap)
-                                        .pointerInput(paraStart, paraEnd) {
-                                            detectTapGestures(
-                                                onLongPress = { onParagraphLongPress(paraTrimmed, paraStart, paraEnd) }
-                                            )
-                                        }
+                                ReaderParagraph(
+                                    paragraph = paraTrimmed,
+                                    paragraphStart = paraStart,
+                                    annotations = paraAnnotations,
+                                    indent = indentSp > 0f,
+                                    bodyStyle = bodyStyle,
+                                    paragraphGap = paragraphGap,
+                                    palette = palette,
+                                    onHighlightSelection = onHighlightSelection,
+                                    onBookmarkSelection = onBookmarkSelection
                                 )
                             }
                         }
@@ -173,6 +192,204 @@ fun ReaderContent(
             }
         }
     }
+}
+
+private enum class DragSide { START, END }
+
+/**
+ * One selectable paragraph: long-press selects a word, dragging extends the range, the two
+ * handles adjust either bound, and [ReaderSelectionBar] offers highlight / copy / bookmark.
+ *
+ * All gesture math runs on the public [TextLayoutResult] API; the selection range is display
+ * offsets, converted back to raw chapter offsets through [ParagraphContent.rawRange].
+ */
+@Composable
+private fun ReaderParagraph(
+    paragraph: String,
+    paragraphStart: Int,
+    annotations: List<Annotation>,
+    indent: Boolean,
+    bodyStyle: TextStyle,
+    paragraphGap: Dp,
+    palette: ReaderPalette,
+    onHighlightSelection: (String, Int, Int) -> Unit,
+    onBookmarkSelection: (String, Int, Int) -> Unit
+) {
+    val content = remember(paragraph, paragraphStart, annotations, indent) {
+        buildParagraphContent(paragraph, paragraphStart, annotations, indent)
+    }
+    val selectionState = remember(paragraphStart) { mutableStateOf<TextRange?>(null) }
+    val layoutState = remember(paragraphStart) { mutableStateOf<TextLayoutResult?>(null) }
+    val coordinatesState = remember(paragraphStart) { mutableStateOf<LayoutCoordinates?>(null) }
+    val clipboard = LocalClipboardManager.current
+    val viewConfiguration = LocalViewConfiguration.current
+
+    val selectionColor = palette.text.copy(alpha = 0.28f)
+    val handleColor = palette.text.copy(alpha = 0.85f)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val handleRadius = with(density) { 6.dp.toPx() }
+    val handleTouchRadius = with(density) { 28.dp.toPx() }
+
+    fun extendFromLongPress(position: Offset) {
+        val layout = layoutState.value ?: return
+        val offset = layout.getOffsetForPosition(position).coerceIn(0, layout.layoutInput.text.length)
+        if (selectionState.value == null) {
+            selectionState.value = layout.getWordBoundary(offset)
+        } else {
+            val current = selectionState.value!!
+            selectionState.value = if (offset < (current.min + current.max) / 2) {
+                TextRange(offset, current.end)
+            } else {
+                TextRange(current.start, offset)
+            }
+        }
+    }
+
+    fun dragHandle(side: DragSide, position: Offset) {
+        val layout = layoutState.value ?: return
+        val current = selectionState.value ?: return
+        val offset = layout.getOffsetForPosition(position).coerceIn(0, layout.layoutInput.text.length)
+        selectionState.value = when (side) {
+            DragSide.START -> TextRange(min(offset, current.end), current.end)
+            DragSide.END -> TextRange(current.start, max(offset, current.start))
+        }
+    }
+
+    fun handlePositions(layout: TextLayoutResult, range: TextRange): Pair<Offset, Offset>? {
+        if (range.collapsed) return null
+        val startBox = layout.getBoundingBox(range.start)
+        val endBox = layout.getBoundingBox(range.end - 1)
+        return Offset(startBox.left, startBox.top) to Offset(endBox.right, endBox.bottom)
+    }
+
+    fun selectionRects(layout: TextLayoutResult, range: TextRange): List<Rect> {
+        if (range.collapsed) return emptyList()
+        val firstLine = layout.getLineForOffset(range.start)
+        val lastLine = layout.getLineForOffset((range.end - 1).coerceAtLeast(range.start))
+        return buildList {
+            for (line in firstLine..lastLine) {
+                val lineStart = layout.getLineStart(line)
+                val lineEnd = layout.getLineEnd(line)
+                val segStart = range.start.coerceAtLeast(lineStart)
+                val segEnd = range.end.coerceAtMost(lineEnd)
+                if (segEnd <= segStart) continue
+                val left = layout.getBoundingBox(segStart).left
+                val right = layout.getBoundingBox(segEnd - 1).right
+                add(Rect(left, layout.getLineTop(line), right, layout.getLineBottom(line)))
+            }
+        }
+    }
+
+    Text(
+        text = content.annotatedString,
+        style = bodyStyle,
+        onTextLayout = { layoutState.value = it },
+        modifier = Modifier
+            .padding(bottom = paragraphGap)
+            .onGloballyPositioned { coordinatesState.value = it }
+            .drawWithContent {
+                drawContent()
+                val layout = layoutState.value
+                val range = selectionState.value
+                if (layout != null && range != null && !range.collapsed) {
+                    selectionRects(layout, range).forEach { rect ->
+                        drawRect(selectionColor, topLeft = rect.topLeft, size = rect.size)
+                    }
+                    handlePositions(layout, range)?.let { (start, end) ->
+                        drawHandle(start, handleColor, handleRadius)
+                        drawHandle(end, handleColor, handleRadius)
+                    }
+                }
+            }
+            .pointerInput(layoutState.value, paragraphStart) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val layout = layoutState.value
+                    val selection = selectionState.value
+                    val handles = if (layout != null && selection != null) handlePositions(layout, selection) else null
+
+                    val nearStart = handles != null && (down.position - handles.first).getDistance() <= handleTouchRadius
+                    val nearEnd = handles != null && (down.position - handles.second).getDistance() <= handleTouchRadius
+
+                    if (nearStart || nearEnd) {
+                        down.consume()
+                        val side = if (nearStart) DragSide.START else DragSide.END
+                        drag(down.id) { change ->
+                            change.consume()
+                            dragHandle(side, change.position)
+                        }
+                        return@awaitEachGesture
+                    }
+
+                    val longPress = awaitLongPressOrCancellation(down.id)
+                    if (longPress != null) {
+                        longPress.consume()
+                        extendFromLongPress(longPress.position)
+                        drag(down.id) { change ->
+                            change.consume()
+                            extendFromLongPress(change.position)
+                        }
+                    }
+                }
+            }
+            .pointerInput(paragraphStart) {
+                detectTapGestures(
+                    onTap = { selectionState.value = null },
+                    onDoubleTap = { position ->
+                        val layout = layoutState.value ?: return@detectTapGestures
+                        val offset = layout.getOffsetForPosition(position)
+                        selectionState.value = layout.getWordBoundary(offset)
+                    }
+                )
+            }
+    )
+
+    val selection = selectionState.value
+    val layout = layoutState.value
+    val coordinates = coordinatesState.value
+    if (selection != null && layout != null && coordinates != null && !selection.collapsed) {
+        val displayText = layout.layoutInput.text
+        val startBox = layout.getBoundingBox(selection.start)
+        val endBox = layout.getBoundingBox(selection.end - 1)
+
+        ReaderSelectionBar(
+            windowTopLeft = coordinates.localToWindow(startBox.topLeft),
+            windowBottomRight = coordinates.localToWindow(endBox.bottomRight),
+            palette = palette,
+            onHighlight = {
+                val range = content.rawRange(selection.start, selection.end)
+                if (range != null && !range.isEmpty()) {
+                    val text = paragraph.substring(
+                        (range.first - paragraphStart).coerceIn(0, paragraph.length),
+                        (range.last - paragraphStart).coerceIn(0, paragraph.length)
+                    )
+                    onHighlightSelection(text, range.first, range.last)
+                }
+                selectionState.value = null
+            },
+            onCopy = {
+                clipboard.setText(AnnotatedString(displayText.substring(selection.start, selection.end)))
+                selectionState.value = null
+            },
+            onBookmark = {
+                val range = content.rawRange(selection.start, selection.end)
+                if (range != null && !range.isEmpty()) {
+                    val text = paragraph.substring(
+                        (range.first - paragraphStart).coerceIn(0, paragraph.length),
+                        (range.last - paragraphStart).coerceIn(0, paragraph.length)
+                    )
+                    onBookmarkSelection(text, range.first, range.last)
+                }
+                selectionState.value = null
+            },
+            onDismiss = { selectionState.value = null }
+        )
+    }
+}
+
+private fun DrawScope.drawHandle(center: Offset, color: Color, radius: Float) {
+    drawCircle(color = color, radius = radius, center = center)
+    drawCircle(color = Color.White.copy(alpha = 0.9f), radius = radius * 0.45f, center = center)
 }
 
 @Composable
@@ -202,95 +419,6 @@ private fun ReaderImage(path: String, tint: Color) {
                 contentDescription = "插图缺失",
                 tint = tint.copy(alpha = 0.3f)
             )
-        }
-    }
-}
-
-/**
- * Applies stored highlights and inline markdown emphasis to one paragraph, prefixing the
- * two-character CJK indent when it is enabled.
- */
-private fun buildParagraph(
-    paragraph: String,
-    paragraphStart: Int,
-    annotations: List<Annotation>,
-    indent: Boolean
-): AnnotatedString {
-    val prefix = if (indent) "　　" else ""
-    if (annotations.isEmpty()) {
-        return buildAnnotatedString {
-            append(prefix)
-            append(buildFormattedText(paragraph))
-        }
-    }
-    return buildAnnotatedString {
-        append(prefix)
-        var lastEnd = 0
-        annotations.sortedBy { it.startPosition }.forEach { annotation ->
-            val relStart = (annotation.startPosition - paragraphStart).coerceIn(0, paragraph.length)
-            val relEnd = (annotation.endPosition - paragraphStart).coerceIn(relStart, paragraph.length)
-            if (relStart > lastEnd) {
-                append(paragraph.substring(lastEnd, relStart))
-            }
-            withStyle(SpanStyle(background = Color(annotation.color.colorValue).copy(alpha = 0.4f))) {
-                append(paragraph.substring(relStart, relEnd))
-            }
-            lastEnd = relEnd
-        }
-        if (lastEnd < paragraph.length) {
-            append(paragraph.substring(lastEnd))
-        }
-    }
-}
-
-private fun buildFormattedText(text: String): AnnotatedString {
-    return buildAnnotatedString {
-        var i = 0
-        while (i < text.length) {
-            val boldStart = text.indexOf("**", i)
-            val italicStart = text.indexOf("*", i)
-
-            val nextMarker = when {
-                boldStart >= 0 && italicStart >= 0 -> minOf(boldStart, italicStart)
-                boldStart >= 0 -> boldStart
-                italicStart >= 0 -> italicStart
-                else -> -1
-            }
-
-            if (nextMarker < 0) {
-                append(text.substring(i))
-                break
-            }
-
-            if (nextMarker > i) {
-                append(text.substring(i, nextMarker))
-            }
-
-            if (boldStart >= 0 && boldStart == nextMarker) {
-                val boldEnd = text.indexOf("**", boldStart + 2)
-                if (boldEnd >= 0) {
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append(text.substring(boldStart + 2, boldEnd))
-                    }
-                    i = boldEnd + 2
-                } else {
-                    append("**")
-                    i = boldStart + 2
-                }
-            } else if (italicStart >= 0 && italicStart == nextMarker) {
-                val italicEnd = text.indexOf("*", italicStart + 1)
-                if (italicEnd >= 0 && (italicEnd > italicStart + 1) && !text.startsWith("*", italicEnd + 1)) {
-                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                        append(text.substring(italicStart + 1, italicEnd))
-                    }
-                    i = italicEnd + 1
-                } else {
-                    append("*")
-                    i = italicStart + 1
-                }
-            } else {
-                i = nextMarker + 1
-            }
         }
     }
 }

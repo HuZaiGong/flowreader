@@ -41,7 +41,6 @@ import com.flowreader.app.ui.screens.reader.components.AnnotationsDialog
 import com.flowreader.app.ui.screens.reader.components.BookmarksDialog
 import com.flowreader.app.ui.screens.reader.components.ChapterListDialog
 import com.flowreader.app.ui.screens.reader.components.ComicReader
-import com.flowreader.app.ui.screens.reader.components.ParagraphActionSheet
 import com.flowreader.app.ui.screens.reader.components.PdfViewer
 import com.flowreader.app.ui.screens.reader.components.ReaderContent
 import com.flowreader.app.ui.screens.reader.components.ReaderControls
@@ -183,12 +182,11 @@ fun ReaderScreen(
                         onHorizontalDrag = { drag ->
                             dispatchGesture(ReaderBehavior.swipeAction(drag, settings))
                         },
-                        onParagraphLongPress = { text, start, end ->
-                            when (settings.gestureSettings.longPressAction) {
-                                GestureAction.NONE -> Unit
-                                GestureAction.ADD_BOOKMARK -> viewModel.selectParagraph(text, start, end)
-                                else -> dispatchGesture(settings.gestureSettings.longPressAction)
-                            }
+                        onHighlightSelection = { text, start, end ->
+                            viewModel.addAnnotation(text, start, end)
+                        },
+                        onBookmarkSelection = { text, start, end ->
+                            viewModel.addBookmark(text.ifBlank { "选中文本书签" }, start)
                         },
                         onPositionChanged = { position ->
                             viewModel.updatePosition(position, chapterFraction)
@@ -259,15 +257,6 @@ fun ReaderScreen(
                 settings = settings,
                 onSettingsChange = { viewModel.updateReadingSettings(it) },
                 onDismiss = { viewModel.showSettings(false) }
-            )
-        }
-
-        uiState.paragraphSelection?.let { selection ->
-            ParagraphActionSheet(
-                paragraph = selection.text,
-                onHighlight = { viewModel.highlightSelectedParagraph(it) },
-                onBookmark = { viewModel.bookmarkSelectedParagraph(it) },
-                onDismiss = { viewModel.clearParagraphSelection() }
             )
         }
 
