@@ -33,6 +33,7 @@ import com.flowreader.app.core.designsystem.reader.rememberReaderFontFamily
 import com.flowreader.app.core.designsystem.reader.text
 import com.flowreader.app.core.designsystem.token.FlowMotion
 import com.flowreader.app.core.util.ReaderBehavior
+import com.flowreader.app.core.util.ReaderCustomTheme
 import com.flowreader.app.core.util.ReadingProgress
 import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.GestureAction
@@ -86,9 +87,14 @@ fun ReaderScreen(
         }
     }
 
-    val palette = remember(settings.palette, settings.nightPalette, settings.autoNightMode, isNightWindow) {
+    val palette = remember(settings.palette, settings.nightPalette, settings.autoNightMode, isNightWindow,
+        settings.customTextColorArgb, settings.customBackgroundColorArgb) {
         val id = if (settings.autoNightMode && isNightWindow) settings.nightPalette else settings.palette
-        ReaderPalettes.of(id)
+        ReaderCustomTheme.resolve(
+            ReaderPalettes.of(id),
+            settings.customTextColorArgb,
+            settings.customBackgroundColorArgb
+        )
     }
 
     DisposableEffect(activity, view, uiState.isImmersiveMode) {

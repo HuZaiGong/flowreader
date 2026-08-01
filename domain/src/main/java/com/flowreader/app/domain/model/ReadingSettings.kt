@@ -142,6 +142,8 @@ data class ReadingSettings(
     val eyeProtectionIntervalMinutes: Int = 20,
     val autoNightMode: Boolean = false,
     val tapZoneRatio: Float = 0.3f,
+    val customTextColorArgb: Long? = null,
+    val customBackgroundColorArgb: Long? = null,
     val gestureSettings: GestureSettings = GestureSettings()
 ) {
     companion object {

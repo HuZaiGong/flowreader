@@ -143,6 +143,11 @@ fun ReaderSettingsSheet(
                 )
             }
 
+            CustomThemeEditor(
+                settings = settings,
+                onSettingsChange = onSettingsChange
+            )
+
             SectionTitle("翻页")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
                 PageMode.entries.forEach { mode ->
@@ -170,8 +175,7 @@ fun ReaderSettingsSheet(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PaletteGrid(ids: List<ReaderPaletteId>, selected: ReaderPaletteId, onSelect: (ReaderPaletteId) -> Unit) {
-    FlowRow(
+private fun PaletteGrid(ids: List<ReaderPaletteId>, selected: ReaderPaletteId, onSelect: (ReaderPaletteId) -> Unit) {    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
         modifier = Modifier.fillMaxWidth()
@@ -202,6 +206,98 @@ private fun PaletteGrid(ids: List<ReaderPaletteId>, selected: ReaderPaletteId, o
         }
     }
 }
+
+/**
+ * Custom reader colors (v55): user-picked background/text colors override the active palette;
+ * the contrast fallback happens in `:core` `ReaderCustomTheme`.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun CustomThemeEditor(settings: ReadingSettings, onSettingsChange: (ReadingSettings) -> Unit) {
+    SectionTitle("自定义主题")
+    Text(
+        text = "自定义背景与文字色会覆盖所选色板；若对比度不达标会自动回退到可读配色。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    LabelledValue("背景色", formatArgb(settings.customBackgroundColorArgb))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
+        BACKGROUND_PRESETS.forEach { (name, argb) ->
+            ColorSwatch(
+                name = name,
+                argb = argb,
+                selected = settings.customBackgroundColorArgb == argb,
+                onClick = {
+                    onSettingsChange(settings.copy(customBackgroundColorArgb = if (settings.customBackgroundColorArgb == argb) null else argb))
+                }
+            )
+        }
+    }
+
+    LabelledValue("文字色", formatArgb(settings.customTextColorArgb))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
+        TEXT_PRESETS.forEach { (name, argb) ->
+            ColorSwatch(
+                name = name,
+                argb = argb,
+                selected = settings.customTextColorArgb == argb,
+                onClick = {
+                    onSettingsChange(settings.copy(customTextColorArgb = if (settings.customTextColorArgb == argb) null else argb))
+                }
+            )
+        }
+    }
+
+    if (settings.customTextColorArgb != null || settings.customBackgroundColorArgb != null) {
+        androidx.compose.material3.TextButton(
+            onClick = { onSettingsChange(settings.copy(customTextColorArgb = null, customBackgroundColorArgb = null)) }
+        ) {
+            Text("恢复色板默认")
+        }
+    }
+}
+
+@Composable
+private fun ColorSwatch(name: String, argb: Long, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(RoundedCornerShape(FlowRadius.md))
+            .background(androidx.compose.ui.graphics.Color(argb))
+            .border(
+                width = if (selected) 3.dp else 1.dp,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                shape = RoundedCornerShape(FlowRadius.md)
+            )
+            .clickable { onClick() }
+            .semantics { contentDescription = "自定义主题色 $name" }
+    )
+}
+
+private fun formatArgb(argb: Long?): String = argb?.let { "#%08X".format(it) } ?: "跟随色板"
+
+private val BACKGROUND_PRESETS = listOf(
+    "纯白" to 0xFFFFFFFFL,
+    "米黄" to 0xFFF5EFE0L,
+    "护眼绿" to 0xFFCCE8CFL,
+    "晨雾" to 0xFFE9EEF2L,
+    "冷灰" to 0xFFDDE1E4L,
+    "夜黑" to 0xFF121212L,
+    "墨蓝" to 0xFF101822L,
+    "纯黑" to 0xFF000000L
+)
+
+private val TEXT_PRESETS = listOf(
+    "近黑" to 0xFF1A1A1AL,
+    "深灰" to 0xFF3A3226L,
+    "墨蓝" to 0xFF22282CL,
+    "深棕" to 0xFF33302AL,
+    "白色" to 0xFFD7D7D7L,
+    "浅灰" to 0xFF9A9A9AL,
+    "米白" to 0xFFDCCFC0L,
+    "青灰" to 0xFFC6D3E0L
+)
 
 @Composable
 private fun SectionTitle(title: String) {

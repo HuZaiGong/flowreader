@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.flowreader.app.domain.model.AppLanguage
@@ -17,6 +18,7 @@ import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
 import com.flowreader.app.domain.model.GestureAction
 import com.flowreader.app.domain.model.GestureSettings
+import com.flowreader.app.domain.model.LibraryViewMode
 import com.flowreader.app.domain.model.PageMode
 import com.flowreader.app.domain.model.ReaderFontFamily
 import com.flowreader.app.domain.model.ReaderPaletteId
@@ -74,6 +76,9 @@ class SettingsRepositoryImpl @Inject constructor(
         val GESTURE_LEFT_EDGE_WIDTH = intPreferencesKey("gesture_left_edge_width")
         val GESTURE_RIGHT_EDGE_WIDTH = intPreferencesKey("gesture_right_edge_width")
         val CUSTOM_FONT_PATH = stringPreferencesKey("custom_font_path")
+        val LIBRARY_VIEW_MODE = stringPreferencesKey("library_view_mode")
+        val CUSTOM_TEXT_COLOR = longPreferencesKey("reader_custom_text_color")
+        val CUSTOM_BACKGROUND_COLOR = longPreferencesKey("reader_custom_background_color")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
@@ -113,6 +118,8 @@ class SettingsRepositoryImpl @Inject constructor(
             eyeProtectionIntervalMinutes = preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] ?: 20,
             autoNightMode = preferences[PreferencesKeys.AUTO_NIGHT_MODE] ?: false,
             tapZoneRatio = (preferences[PreferencesKeys.TAP_ZONE_RATIO] ?: 0.3f).coerceIn(0.1f, 0.45f),
+            customTextColorArgb = preferences[PreferencesKeys.CUSTOM_TEXT_COLOR],
+            customBackgroundColorArgb = preferences[PreferencesKeys.CUSTOM_BACKGROUND_COLOR],
             gestureSettings = readGestureSettings(preferences)
         )
     }
@@ -171,6 +178,18 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.EYE_PROTECTION_INTERVAL_MINUTES] = settings.eyeProtectionIntervalMinutes
             preferences[PreferencesKeys.AUTO_NIGHT_MODE] = settings.autoNightMode
             preferences[PreferencesKeys.TAP_ZONE_RATIO] = settings.tapZoneRatio
+            val customTextColor = settings.customTextColorArgb
+            if (customTextColor != null) {
+                preferences[PreferencesKeys.CUSTOM_TEXT_COLOR] = customTextColor
+            } else {
+                preferences.remove(PreferencesKeys.CUSTOM_TEXT_COLOR)
+            }
+            val customBackgroundColor = settings.customBackgroundColorArgb
+            if (customBackgroundColor != null) {
+                preferences[PreferencesKeys.CUSTOM_BACKGROUND_COLOR] = customBackgroundColor
+            } else {
+                preferences.remove(PreferencesKeys.CUSTOM_BACKGROUND_COLOR)
+            }
             writeGestureSettings(preferences, settings.gestureSettings)
             val customFontPath = settings.customFontPath
             if (customFontPath != null) {
@@ -199,6 +218,19 @@ class SettingsRepositoryImpl @Inject constructor(
             preferences[PreferencesKeys.READING_REMINDER_ENABLED] = enabled
             preferences[PreferencesKeys.READING_REMINDER_HOUR] = hour
             preferences[PreferencesKeys.READING_REMINDER_MINUTE] = minute
+        }
+    }
+
+    override fun getLibraryViewMode(): Flow<LibraryViewMode> = context.dataStore.data
+        .retry(3) { it is IOException }
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { preferences -> LibraryViewMode.fromStoredName(preferences[PreferencesKeys.LIBRARY_VIEW_MODE]) }
+
+    override suspend fun setLibraryViewMode(mode: LibraryViewMode) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.LIBRARY_VIEW_MODE] = mode.name
         }
     }
 

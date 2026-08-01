@@ -20,6 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,7 +43,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderZip
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
@@ -92,6 +99,7 @@ import com.flowreader.app.core.designsystem.token.FlowSpacing
 import com.flowreader.app.core.util.FlowFormatters
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.GlobalSearchResult
+import com.flowreader.app.domain.model.LibraryViewMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,6 +115,7 @@ fun LibraryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    val gridState = rememberLazyGridState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     val bookPickerLauncher = rememberLauncherForActivityResult(
@@ -230,6 +239,19 @@ fun LibraryScreen(
                         IconButton(onClick = { showSearchBar = true }) {
                             Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
                         }
+                        IconButton(onClick = { viewModel.setViewMode(uiState.viewMode.toggle()) }) {
+                            if (uiState.viewMode == LibraryViewMode.GRID) {
+                                Icon(
+                                    Icons.Default.ViewList,
+                                    contentDescription = stringResource(R.string.library_view_list)
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.GridView,
+                                    contentDescription = stringResource(R.string.library_view_grid)
+                                )
+                            }
+                        }
                         Box {
                             IconButton(onClick = { showOverflowMenu = true }) {
                                 Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
@@ -272,18 +294,33 @@ fun LibraryScreen(
             loadingContent = { BookShelfSkeleton() }
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pullToRefresh(
-                            isRefreshing = isRefreshing,
-                            state = pullToRefreshState,
-                            onRefresh = { viewModel.refreshBooks() }
-                        ),
-                    contentPadding = PaddingValues(FlowSpacing.lg),
-                    verticalArrangement = Arrangement.spacedBy(FlowSpacing.lg)
-                ) {
+                if (uiState.viewMode == LibraryViewMode.GRID) {
+                    LibraryGrid(
+                        uiState = uiState,
+                        gridState = gridState,
+                        isRefreshing = isRefreshing,
+                        pullToRefreshState = pullToRefreshState,
+                        onRefresh = { viewModel.refreshBooks() },
+                        onContinueReading = onContinueReading,
+                        onBookClick = onBookClick,
+                        onToggleSelection = { viewModel.toggleSelection(it) },
+                        onDeleteBook = { viewModel.deleteBook(it) },
+                        onSelectCategory = { viewModel.selectCategory(it) }
+                    )
+                }
+                if (uiState.viewMode == LibraryViewMode.LIST) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pullToRefresh(
+                                isRefreshing = isRefreshing,
+                                state = pullToRefreshState,
+                                onRefresh = { viewModel.refreshBooks() }
+                            ),
+                        contentPadding = PaddingValues(FlowSpacing.lg),
+                        verticalArrangement = Arrangement.spacedBy(FlowSpacing.lg)
+                    ) {
                     if (uiState.recentlyRead.isNotEmpty() && !uiState.selectionMode) {
                         item(key = "recent_label") {
                             Text(
@@ -338,17 +375,18 @@ fun LibraryScreen(
                         }
                     }
 
-                    items(uiState.books, key = { it.id }) { book ->
-                        BookListItem(
-                            book = book,
-                            selectionMode = uiState.selectionMode,
-                            selected = book.id in uiState.selectedBookIds,
-                            onClick = {
-                                if (uiState.selectionMode) viewModel.toggleSelection(book.id) else onBookClick(book.id)
-                            },
-                            onLongClick = { viewModel.toggleSelection(book.id) },
-                            onDelete = { viewModel.deleteBook(book.id) }
-                        )
+                        items(uiState.books, key = { it.id }) { book ->
+                            BookListItem(
+                                book = book,
+                                selectionMode = uiState.selectionMode,
+                                selected = book.id in uiState.selectedBookIds,
+                                onClick = {
+                                    if (uiState.selectionMode) viewModel.toggleSelection(book.id) else onBookClick(book.id)
+                                },
+                                onLongClick = { viewModel.toggleSelection(book.id) },
+                                onDelete = { viewModel.deleteBook(book.id) }
+                            )
+                        }
                     }
                 }
 
@@ -798,3 +836,264 @@ private fun BookListItem(
         )
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun LibraryGrid(
+    uiState: com.flowreader.app.ui.screens.library.LibraryUiState,
+    gridState: androidx.compose.foundation.lazy.grid.LazyGridState,
+    isRefreshing: Boolean,
+    pullToRefreshState: androidx.compose.material3.pulltorefresh.PullToRefreshState,
+    onRefresh: () -> Unit,
+    onContinueReading: (Long) -> Unit,
+    onBookClick: (Long) -> Unit,
+    onToggleSelection: (Long) -> Unit,
+    onDeleteBook: (Long) -> Unit,
+    onSelectCategory: (Long?) -> Unit
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(minSize = 150.dp),
+        state = gridState,
+        modifier = Modifier
+            .fillMaxSize()
+            .pullToRefresh(
+                isRefreshing = isRefreshing,
+                state = pullToRefreshState,
+                onRefresh = onRefresh
+            ),
+        contentPadding = PaddingValues(FlowSpacing.lg),
+        horizontalArrangement = Arrangement.spacedBy(FlowSpacing.md),
+        verticalArrangement = Arrangement.spacedBy(FlowSpacing.md)
+    ) {
+        if (!uiState.selectionMode) {
+            uiState.recentlyRead.firstOrNull()?.let { recent ->
+                item(key = "continue_big", span = { GridItemSpan(maxLineSpan) }) {
+                    ContinueReadingBigCard(
+                        book = recent,
+                        onClick = { onContinueReading(recent.id) }
+                    )
+                }
+            }
+        }
+
+        if (uiState.categories.isNotEmpty()) {
+            item(key = "grid_category_filters", span = { GridItemSpan(maxLineSpan) }) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
+                    item(key = "all_categories_grid") {
+                        FilterChip(
+                            selected = uiState.selectedCategoryId == null,
+                            onClick = { onSelectCategory(null) },
+                            label = { Text(stringResource(R.string.library_filter_all)) }
+                        )
+                    }
+                    items(uiState.categories, key = { it.id }) { category ->
+                        FilterChip(
+                            selected = uiState.selectedCategoryId == category.id,
+                            onClick = { onSelectCategory(category.id) },
+                            label = { Text(category.name) }
+                        )
+                    }
+                }
+            }
+        }
+
+        if (uiState.books.isEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(
+                    text = stringResource(R.string.library_empty_title),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = FlowSpacing.xl),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+
+        gridItems(uiState.books, key = { it.id }) { book ->
+            BookGridCard(
+                book = book,
+                selectionMode = uiState.selectionMode,
+                selected = book.id in uiState.selectedBookIds,
+                onClick = {
+                    if (uiState.selectionMode) onToggleSelection(book.id) else onBookClick(book.id)
+                },
+                onLongClick = { onToggleSelection(book.id) },
+                onDelete = { onDeleteBook(book.id) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContinueReadingBigCard(book: Book, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(FlowRadius.md)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(FlowSpacing.md),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            BookCover(
+                title = book.title,
+                author = book.author,
+                coverPath = book.coverPath,
+                modifier = Modifier.size(84.dp, 120.dp)
+            )
+            Spacer(modifier = Modifier.width(FlowSpacing.md))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.library_section_continue),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(FlowSpacing.xs))
+                Text(
+                    text = book.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(FlowSpacing.sm))
+                if (book.readingProgress > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        LinearProgressIndicator(
+                            progress = { book.readingProgress },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(4.dp)
+                        )
+                        Spacer(modifier = Modifier.width(FlowSpacing.sm))
+                        Text(
+                            text = FlowFormatters.percent(book.readingProgress),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                } else {
+                    Text(
+                        text = stringResource(R.string.library_continue_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun BookGridCard(
+    book: Book,
+    selectionMode: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        shape = RoundedCornerShape(FlowRadius.sm),
+        colors = if (selected) {
+            CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        } else {
+            CardDefaults.cardColors()
+        }
+    ) {
+        Box {
+            BookCover(
+                title = book.title,
+                author = book.author,
+                coverPath = book.coverPath,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(190.dp),
+                shape = RoundedCornerShape(topStart = FlowRadius.sm, topEnd = FlowRadius.sm)
+            )
+            if (selectionMode) {
+                Checkbox(
+                    checked = selected,
+                    onCheckedChange = { onClick() },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(FlowSpacing.xs)
+                )
+            }
+        }
+        Column(modifier = Modifier.padding(FlowSpacing.sm)) {
+            Text(
+                text = book.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(FlowSpacing.xs))
+            if (book.readingProgress > 0) {
+                LinearProgressIndicator(
+                    progress = { book.readingProgress },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(FlowSpacing.xs))
+                Text(
+                    text = FlowFormatters.percent(book.readingProgress),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else if (!selectionMode) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = book.author,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.library_book_actions, book.title)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.library_delete_title)) },
+            text = { Text(stringResource(R.string.library_delete_message, book.title)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDelete()
+                        showDeleteDialog = false
+                    }
+                ) {
+                    Text(stringResource(R.string.action_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            }
+        )
+    }
+}
+
+private fun LibraryViewMode.toggle(): LibraryViewMode =
+    if (this == LibraryViewMode.GRID) LibraryViewMode.LIST else LibraryViewMode.GRID

@@ -25,6 +25,9 @@
     <string name="library_fulltext_hits">全文命中 (%1$d)</string>
     <string name="library_unknown_book">未知书籍</string>
     <string name="library_search_context">第 %1$d 章 · %2$s</string>
+    <string name="library_view_grid">网格视图</string>
+    <string name="library_view_list">列表视图</string>
+    <string name="library_continue_hint">翻开上次读到的位置，继续阅读</string>
     <string name="library_import">导入书籍</string>
     <string name="library_import_archive">从 ZIP 批量导入</string>
     <string name="library_opds">OPDS 局域网目录</string>

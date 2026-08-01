@@ -7,12 +7,14 @@ import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.Category
 import com.flowreader.app.domain.model.GlobalSearchResult
+import com.flowreader.app.domain.model.LibraryViewMode
 import com.flowreader.app.domain.model.ReadingList
 import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.CategoryRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingListRepository
 import com.flowreader.app.domain.repository.SearchRepository
+import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.util.BookParser
 import com.flowreader.app.util.ZipImporter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,7 +57,8 @@ data class LibraryUiState(
     val sortOrder: SortOrder = SortOrder.ADDED_TIME,
     val globalSearchResults: List<GlobalSearchResult> = emptyList(),
     val isGlobalSearching: Boolean = false,
-    val selectedBookIds: Set<Long> = emptySet()
+    val selectedBookIds: Set<Long> = emptySet(),
+    val viewMode: LibraryViewMode = LibraryViewMode.LIST
 ) {
     val selectionMode: Boolean get() = selectedBookIds.isNotEmpty()
 }
@@ -68,8 +71,17 @@ class LibraryViewModel @Inject constructor(
     private val readingListRepository: ReadingListRepository,
     private val bookParser: BookParser,
     private val zipImporter: ZipImporter,
-    private val searchRepository: SearchRepository
+    private val searchRepository: SearchRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
+
+    init {
+        viewModelScope.launch {
+            settingsRepository.getLibraryViewMode().collect { mode ->
+                _uiState.update { it.copy(viewMode = mode) }
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
@@ -156,6 +168,13 @@ class LibraryViewModel @Inject constructor(
                     )
                 }
             }
+        }
+    }
+
+    fun setViewMode(mode: LibraryViewMode) {
+        _uiState.update { it.copy(viewMode = mode) }
+        viewModelScope.launch {
+            settingsRepository.setLibraryViewMode(mode)
         }
     }
 

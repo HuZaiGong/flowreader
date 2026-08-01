@@ -6,6 +6,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -14,13 +17,17 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -74,6 +81,9 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
 
 private val bottomNavItems = listOf(Screen.Library, Screen.Stats, Screen.Settings)
 
+/** Material guidance: 600dp is the compact/medium breakpoint (rail instead of bottom bar). */
+private const val MEDIUM_MIN_WIDTH_DP = 600
+
 @Composable
 fun FlowReaderNavHost(viewModel: AppShellViewModel = hiltViewModel()) {
     val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
@@ -86,14 +96,19 @@ fun FlowReaderNavHost(viewModel: AppShellViewModel = hiltViewModel()) {
         currentDestination?.hierarchy?.any { it.route == screen.route } == true
     }
 
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+
     FlowLocaleProvider(languageTag = appSettings.language.tag) {
         FlowTheme(themeMode = appSettings.themeMode, colorSource = appSettings.colorSource) {
-            Scaffold(
-                bottomBar = {
+            if (screenWidthDp >= MEDIUM_MIN_WIDTH_DP) {
+                // Medium / expanded (v55): a navigation rail keeps the reading surface wide.
+                Row(modifier = Modifier.fillMaxSize()) {
                     if (showBottomBar) {
-                        NavigationBar {
+                        NavigationRail(
+                            modifier = Modifier
+                        ) {
                             bottomNavItems.forEach { screen ->
-                                NavigationBarItem(
+                                NavigationRailItem(
                                     icon = { screen.icon?.let { Icon(it, contentDescription = null) } },
                                     label = { Text(stringResource(screen.titleRes)) },
                                     selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
@@ -110,107 +125,141 @@ fun FlowReaderNavHost(viewModel: AppShellViewModel = hiltViewModel()) {
                             }
                         }
                     }
+                    Box(modifier = Modifier.weight(1f)) {
+                        FlowNavHost(navController)
+                    }
                 }
-            ) { paddingValues ->
-                NavHost(
-                    navController = navController,
-                    startDestination = Screen.Library.route,
-                    modifier = Modifier.padding(paddingValues),
-                    enterTransition = {
-                        fadeIn(animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard)) +
-                            slideInHorizontally(
-                                animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard),
-                                initialOffsetX = { it / 24 }
-                            )
-                    },
-                    exitTransition = {
-                        fadeOut(animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard)) +
-                            slideOutHorizontally(
-                                animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard),
-                                targetOffsetX = { -it / 24 }
-                            )
-                    }
-                ) {
-                    composable(Screen.Library.route) {
-                        LibraryScreen(
-                            onBookClick = { bookId ->
-                                navController.navigate(Screen.BookDetail.createRoute(bookId))
-                            },
-                            onContinueReading = { bookId ->
-                                navController.navigate(Screen.Reader.createRoute(bookId))
-                            },
-                            onSettingsClick = { navController.navigate(Screen.Settings.route) },
-                            onWheelClick = { navController.navigate(Screen.Wheel.route) },
-                            onNotesClick = { navController.navigate(Screen.Notes.route) },
-                            onReadingListsClick = { navController.navigate(Screen.ReadingLists.route) },
-                            onOpdsClick = { navController.navigate(Screen.Opds.route) }
-                        )
-                    }
-
-                    composable(Screen.Stats.route) {
-                        StatsScreen()
-                    }
-
-                    composable(Screen.Wheel.route) {
-                        WheelScreen(onBackClick = { navController.popBackStack() })
-                    }
-
-                    composable(Screen.Notes.route) {
-                        NotesScreen(
-                            onBackClick = { navController.popBackStack() },
-                            onOpenPassage = { bookId, chapterIndex ->
-                                navController.navigate(Screen.Reader.createRoute(bookId, chapterIndex))
+            } else {
+                Scaffold(
+                    bottomBar = {
+                        if (showBottomBar) {
+                            NavigationBar {
+                                bottomNavItems.forEach { screen ->
+                                    NavigationBarItem(
+                                        icon = { screen.icon?.let { Icon(it, contentDescription = null) } },
+                                        label = { Text(stringResource(screen.titleRes)) },
+                                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                                        onClick = {
+                                            navController.navigate(screen.route) {
+                                                popUpTo(navController.graph.findStartDestination().id) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
+                                        }
+                                    )
+                                }
                             }
-                        )
+                        }
                     }
-
-                    composable(Screen.ReadingLists.route) {
-                        ReadingListsScreen(
-                            onBackClick = { navController.popBackStack() },
-                            onOpenBook = { bookId ->
-                                navController.navigate(Screen.BookDetail.createRoute(bookId))
-                            }
-                        )
-                    }
-
-                    composable(Screen.Opds.route) {
-                        OpdsScreen(onBackClick = { navController.popBackStack() })
-                    }
-
-                    composable(
-                        route = Screen.BookDetail.route,
-                        arguments = listOf(
-                            navArgument("bookId") { type = NavType.LongType }
-                        )
-                    ) { backStackEntry ->
-                        val bookId = backStackEntry.arguments?.getLong("bookId") ?: 0L
-                        BookDetailScreen(
-                            bookId = bookId,
-                            onBackClick = { navController.popBackStack() },
-                            onReadClick = { id, chapterIndex ->
-                                navController.navigate(Screen.Reader.createRoute(id, chapterIndex))
-                            }
-                        )
-                    }
-
-                    composable(
-                        route = Screen.Reader.route,
-                        arguments = listOf(
-                            navArgument("bookId") { type = NavType.LongType },
-                            navArgument("chapterIndex") {
-                                type = NavType.IntType
-                                defaultValue = -1
-                            }
-                        )
-                    ) {
-                        ReaderScreen(onBackClick = { navController.popBackStack() })
-                    }
-
-                    composable(Screen.Settings.route) {
-                        SettingsScreen()
+                ) { paddingValues ->
+                    Box(modifier = Modifier.padding(paddingValues)) {
+                        FlowNavHost(navController)
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun FlowNavHost(navController: androidx.navigation.NavHostController) {
+    NavHost(
+        navController = navController,
+        startDestination = Screen.Library.route,
+        enterTransition = {
+            fadeIn(animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard)) +
+                slideInHorizontally(
+                    animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard),
+                    initialOffsetX = { it / 24 }
+                )
+        },
+        exitTransition = {
+            fadeOut(animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard)) +
+                slideOutHorizontally(
+                    animationSpec = tween(FlowMotion.STANDARD_MS, easing = FlowMotion.standard),
+                    targetOffsetX = { -it / 24 }
+                )
+        }
+    ) {
+        composable(Screen.Library.route) {
+            LibraryScreen(
+                onBookClick = { bookId ->
+                    navController.navigate(Screen.BookDetail.createRoute(bookId))
+                },
+                onContinueReading = { bookId ->
+                    navController.navigate(Screen.Reader.createRoute(bookId))
+                },
+                onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                onWheelClick = { navController.navigate(Screen.Wheel.route) },
+                onNotesClick = { navController.navigate(Screen.Notes.route) },
+                onReadingListsClick = { navController.navigate(Screen.ReadingLists.route) },
+                onOpdsClick = { navController.navigate(Screen.Opds.route) }
+            )
+        }
+
+        composable(Screen.Stats.route) {
+            StatsScreen()
+        }
+
+        composable(Screen.Wheel.route) {
+            WheelScreen(onBackClick = { navController.popBackStack() })
+        }
+
+        composable(Screen.Notes.route) {
+            NotesScreen(
+                onBackClick = { navController.popBackStack() },
+                onOpenPassage = { bookId, chapterIndex ->
+                    navController.navigate(Screen.Reader.createRoute(bookId, chapterIndex))
+                }
+            )
+        }
+
+        composable(Screen.ReadingLists.route) {
+            ReadingListsScreen(
+                onBackClick = { navController.popBackStack() },
+                onOpenBook = { bookId ->
+                    navController.navigate(Screen.BookDetail.createRoute(bookId))
+                }
+            )
+        }
+
+        composable(Screen.Opds.route) {
+            OpdsScreen(onBackClick = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.BookDetail.route,
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val bookId = backStackEntry.arguments?.getLong("bookId") ?: 0L
+            BookDetailScreen(
+                bookId = bookId,
+                onBackClick = { navController.popBackStack() },
+                onReadClick = { id, chapterIndex ->
+                    navController.navigate(Screen.Reader.createRoute(id, chapterIndex))
+                }
+            )
+        }
+
+        composable(
+            route = Screen.Reader.route,
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.LongType },
+                navArgument("chapterIndex") {
+                    type = NavType.IntType
+                    defaultValue = -1
+                }
+            )
+        ) {
+            ReaderScreen(onBackClick = { navController.popBackStack() })
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen()
         }
     }
 }
