@@ -1,6 +1,7 @@
 package com.flowreader.app.util
 
 import android.content.Context
+import com.flowreader.app.domain.model.BookFormat
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,6 +10,7 @@ import org.jsoup.nodes.Element
 import org.jsoup.parser.Parser
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -168,7 +170,7 @@ class OpdsClient @Inject constructor(
                 val code = connection.responseCode
                 if (code !in 300..399) {
                     if (code !in 200..299) throw IllegalStateException("请求失败: HTTP $code")
-                    val text = connection.inputStream.bufferedReader().use { reader -> reader.readText() }
+                    val text = connection.inputStream.readUtf8Capped(MAX_FEED_BYTES)
                     return current to text
                 }
                 val location = connection.getHeaderField("Location")
@@ -202,6 +204,7 @@ class OpdsClient @Inject constructor(
         private const val TIMEOUT_MS = 10_000
         private const val MAX_REDIRECTS = 3
         private const val BUFFER_SIZE = 8192
+        private const val MAX_FEED_BYTES = 2L * 1024 * 1024
         private const val MAX_DOWNLOAD_BYTES = 200L * 1024 * 1024
 
         private val ACQUISITION_RELS = listOf(
@@ -230,7 +233,7 @@ class OpdsClient @Inject constructor(
             }
 
             val acquisition = links.firstOrNull { link ->
-                ACQUISITION_RELS.any { link.rel.startsWith(it) }
+                ACQUISITION_RELS.any { link.rel.startsWith(it) } && isSupportedAcquisition(link)
             }
             val navigation = links.firstOrNull { it.type.contains("application/atom+xml") }
 
@@ -243,5 +246,39 @@ class OpdsClient @Inject constructor(
                 navigationUrl = navigation?.href?.let { OpdsAddress.resolve(feedUrl, it) }
             )
         }
+
+        private fun isSupportedAcquisition(link: OpdsLink): Boolean {
+            val type = link.type.lowercase()
+            if (SUPPORTED_ACQUISITION_TYPES.any { type.contains(it) }) return true
+            return BookParser.detectFormatStatic(link.href.substringBefore('?')) != BookFormat.UNKNOWN
+        }
+
+        private val SUPPORTED_ACQUISITION_TYPES = listOf(
+            "application/epub+zip",
+            "text/plain",
+            "text/markdown",
+            "application/pdf",
+            "application/x-fictionbook+xml",
+            "application/x-mobipocket-ebook",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "application/zip",
+            "application/vnd.comicbook+zip"
+        )
     }
+}
+
+private fun InputStream.readUtf8Capped(limit: Long): String {
+    var total = 0L
+    val output = java.io.ByteArrayOutputStream()
+    val buffer = ByteArray(8192)
+    while (true) {
+        val read = read(buffer)
+        if (read <= 0) break
+        total += read
+        if (total > limit) throw IllegalStateException("OPDS 目录超过 2MB 上限")
+        output.write(buffer, 0, read)
+    }
+    return output.toString(Charsets.UTF_8.name())
 }

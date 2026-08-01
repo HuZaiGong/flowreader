@@ -149,13 +149,16 @@ fun ReaderScreen(
                         currentChapterIndex = uiState.currentChapterIndex,
                         settings = settings,
                         palette = palette,
-                        scrollState = contentScrollState,
                         onTap = { offset, size ->
                             dispatchGesture(ReaderBehavior.tapAction(offset.x, size.width, settings))
                         },
                         onHorizontalDrag = { drag -> dispatchGesture(ReaderBehavior.swipeAction(drag, settings)) },
                         onPageVisible = { index -> viewModel.setCurrentComicPage(index) },
-                        onPositionChanged = { position -> viewModel.updatePosition(position, chapterFraction) }
+                        onPositionChanged = { position ->
+                            val total = uiState.chapters.size
+                            val fraction = if (total > 1) position.toFloat() / (total - 1) else 0f
+                            viewModel.updatePosition(position, fraction)
+                        }
                     )
                 } else if (book != null && book.format == BookFormat.PDF) {
                     PdfViewer(

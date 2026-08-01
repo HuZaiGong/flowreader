@@ -115,6 +115,22 @@ class OpdsFeedParsingTest {
     }
 
     @Test
+    fun unsupportedAcquisitionTypesAreNotDownloadable() {
+        val feed = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <entry>
+                <title>Installer</title>
+                <link rel="http://opds-spec.org/acquisition" href="/get/app.apk" type="application/vnd.android.package-archive"/>
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val entry = OpdsClient.parseFeed(feed, feedUrl).entries.single()
+
+        assertNull(entry.acquisitionUrl)
+    }
+
+    @Test
     fun untitledEntriesAreDropped() {
         val feed = OpdsClient.parseFeed(
             """<feed xmlns="http://www.w3.org/2005/Atom"><entry><id>1</id></entry></feed>""",

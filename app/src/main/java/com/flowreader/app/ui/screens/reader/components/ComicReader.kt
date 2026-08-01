@@ -1,23 +1,23 @@
 package com.flowreader.app.ui.screens.reader.components
 
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,7 +41,6 @@ fun ComicReader(
     currentChapterIndex: Int,
     settings: ReadingSettings,
     palette: ReaderPalette,
-    scrollState: ScrollState,
     onTap: (Offset, Size) -> Unit,
     onHorizontalDrag: (Float) -> Unit,
     onPageVisible: (Int) -> Unit,
@@ -50,9 +49,7 @@ fun ComicReader(
 ) {
     val verticalStitch = settings.pageMode == PageMode.NONE
 
-    LaunchedEffect(scrollState.value, verticalStitch) {
-        if (verticalStitch) onPositionChanged(scrollState.value)
-    }
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = currentChapterIndex.coerceAtLeast(0))
 
     Box(
         modifier = modifier
@@ -73,13 +70,22 @@ fun ComicReader(
             }
     ) {
         if (verticalStitch) {
-            Column(
+            LaunchedEffect(listState, verticalStitch) {
+                snapshotFlow { listState.firstVisibleItemIndex }
+                    .collect { index ->
+                        onPageVisible(index)
+                        onPositionChanged(index)
+                    }
+            }
+            LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                    .fillMaxSize(),
+                state = listState
             ) {
-                chapters.forEachIndexed { index, chapter ->
+                itemsIndexed(
+                    items = chapters,
+                    key = { _, chapter -> chapter.id.takeIf { it > 0L } ?: chapter.index }
+                ) { _, chapter ->
                     ComicPage(
                         path = chapter.comicImagePath(),
                         tint = palette.text,
@@ -87,9 +93,6 @@ fun ComicReader(
                             .fillMaxWidth()
                             .wrapContentHeight()
                     )
-                    if (index == currentChapterIndex) {
-                        LaunchedEffect(index) { onPageVisible(index) }
-                    }
                 }
             }
         } else {
