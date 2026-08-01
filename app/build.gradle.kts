@@ -108,6 +108,9 @@ dependencies {
     // Image loading
     implementation("io.coil-kt:coil-compose:2.7.0")
 
+    // Baseline Profile runtime installer (profile rules live in src/main/baseline-prof.txt)
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
+
     // JSoup for HTML parsing
     implementation("org.jsoup:jsoup:1.18.3")
 

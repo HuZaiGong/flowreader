@@ -17,13 +17,19 @@ class CacheManager @Inject constructor(
 ) : ComponentCallbacks2 {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private val maxBooks: Int
-    private val maxChaptersPerBook: Int
+
+    /**
+     * Dynamic chapter-cache capacity: starts from the memory recommendation and adapts to the
+     * observed hit rate — high hit rate grows the cache (up to [MAX_CHAPTERS_PER_BOOK]), low
+     * hit rate shrinks it (down to [MIN_CHAPTERS_PER_BOOK]). Written under [chapterCache] lock.
+     */
+    private var maxBooks: Int
+    private var maxChaptersPerBook: Int
 
     init {
         val recommended = memoryManager.getRecommendedCacheSize()
         maxBooks = recommended.coerceIn(1, 5)
-        maxChaptersPerBook = (recommended + 2).coerceIn(3, 7)
+        maxChaptersPerBook = (recommended + 2).coerceIn(MIN_CHAPTERS_PER_BOOK, MAX_CHAPTERS_PER_BOOK)
     }
 
     private val chapterCache = object : LinkedHashMap<Long, MutableMap<Int, String>>(32, 0.75f, true) {
@@ -42,6 +48,8 @@ class CacheManager @Inject constructor(
     private val coverCache = ConcurrentHashMap<String, CoverCacheEntry>()
 
     private val memoryUsage = AtomicInteger(0)
+    private val bookUsage = ConcurrentHashMap<Long, AtomicInteger>()
+    private val accessWindow = AtomicInteger(0)
 
     data class BookCacheEntry(
         val chapters: List<ChapterMeta>,
@@ -64,12 +72,25 @@ class CacheManager @Inject constructor(
     companion object {
         private const val MAX_COVERS = 20
         private const val CACHE_EXPIRY_MS = 30 * 60 * 1000L
+        private const val MIN_CHAPTERS_PER_BOOK = 2
+        private const val MAX_CHAPTERS_PER_BOOK = 12
+        private const val ADAPT_WINDOW = 50
+        private const val ADAPT_GROW_HIT_RATE = 0.6f
+        private const val ADAPT_SHRINK_HIT_RATE = 0.3f
     }
 
     fun getChapterContent(bookId: Long, chapterIndex: Int): String? {
-        return synchronized(chapterCache) {
+        val content = synchronized(chapterCache) {
             chapterCache[bookId]?.get(chapterIndex)
         }
+        if (content != null) {
+            recordCacheHit()
+            bookUsage.getOrPut(bookId) { AtomicInteger(0) }.incrementAndGet()
+        } else {
+            recordCacheMiss()
+        }
+        maybeAdaptCapacity()
+        return content
     }
 
     fun putChapterContent(bookId: Long, chapterIndex: Int, content: String) {
@@ -115,6 +136,7 @@ class CacheManager @Inject constructor(
     private fun evictBook(bookId: Long) {
         chapterCache.remove(bookId)
         bookMetadataCache.remove(bookId)
+        bookUsage.remove(bookId)
     }
 
     fun clearAll() {
@@ -134,9 +156,10 @@ class CacheManager @Inject constructor(
             }
             ComponentCallbacks2.TRIM_MEMORY_MODERATE -> {
                 synchronized(chapterCache) {
-                    val keys = chapterCache.keys.toList()
-                    val toRemove = keys.drop(1)
-                    toRemove.forEach { evictBook(it) }
+                    // Evict the least-used books first, keeping the hottest one in memory.
+                    val ranked = chapterCache.keys
+                        .sortedBy { bookId -> bookUsage[bookId]?.get() ?: 0 }
+                    ranked.dropLast(1).forEach { evictBook(it) }
                 }
             }
             ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
@@ -175,7 +198,8 @@ class CacheManager @Inject constructor(
             booksInMemory = bookCount,
             chaptersInMemory = chapterCount,
             coversCached = coverCache.size,
-            estimatedMemory = memoryUsage.get()
+            estimatedMemory = memoryUsage.get(),
+            chaptersCapacity = synchronized(chapterCache) { maxChaptersPerBook }
         )
     }
 
@@ -209,6 +233,18 @@ class CacheManager @Inject constructor(
     fun recordCacheHit() = cacheHits.incrementAndGet()
     fun recordCacheMiss() = cacheMisses.incrementAndGet()
 
+    /** Samples the hit rate every [ADAPT_WINDOW] accesses and tunes the chapter capacity. */
+    private fun maybeAdaptCapacity() {
+        if (accessWindow.incrementAndGet() % ADAPT_WINDOW != 0) return
+        val hitRate = getCacheHitRate()
+        synchronized(chapterCache) {
+            when {
+                hitRate >= ADAPT_GROW_HIT_RATE && maxChaptersPerBook < MAX_CHAPTERS_PER_BOOK -> maxChaptersPerBook++
+                hitRate <= ADAPT_SHRINK_HIT_RATE && maxChaptersPerBook > MIN_CHAPTERS_PER_BOOK -> maxChaptersPerBook--
+            }
+        }
+    }
+
     fun getCacheHitRate(): Float {
         val hits = cacheHits.get()
         val total = hits + cacheMisses.get()
@@ -219,7 +255,8 @@ class CacheManager @Inject constructor(
         val booksInMemory: Int,
         val chaptersInMemory: Int,
         val coversCached: Int,
-        val estimatedMemory: Int
+        val estimatedMemory: Int,
+        val chaptersCapacity: Int
     )
 }
 

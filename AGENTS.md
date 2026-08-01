@@ -7,7 +7,7 @@ Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`
 - `./gradlew assembleRelease` builds the minified/shrunk release APK; release intentionally uses the debug signing config in `app/build.gradle.kts`.
 - `./gradlew testDebugUnitTest` runs the JVM unit tests. Current focused test files include `app/src/test/java/com/flowreader/app/util/BookParserTest.kt` and domain model tests under `domain/src/test/java/`.
 - `./gradlew testDebugUnitTest --tests com.flowreader.app.util.BookParserTest` runs the existing focused test class.
-- `./gradlew verifyKotlinStyle` runs ktlint for non-app modules plus the lightweight whitespace gate.
+- `./gradlew verifyKotlinStyle` runs ktlint for non-app modules plus the lightweight whitespace gate. ktlint enforces a 140-char line cap and single-line signatures when they fit — check new feature module code against it.
 - `./gradlew coverageSummary` enforces the 40% test breadth target across app/core/feature/domain (55.8% as of v52).
 - `./gradlew clean` is available when generated/KSP state looks stale.
 - CI is in `.github/workflows/ci.yml`; do not claim checks ran unless you ran a Gradle task or inspected CI results.
@@ -35,14 +35,14 @@ Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`
 - `SettingsScreen` displays the app version from `BuildConfig.VERSION_NAME`.
 
 ## Room And Data
-- `AppDatabase` is version `6`, has 6 entities/DAOs, and `exportSchema = true`.
+- `AppDatabase` is version `7`, has 8 entities, and `exportSchema = true`.
 - Room has explicit `MIGRATION_4_5` adding `books.tags` and `MIGRATION_5_6` adding the bookmark `(bookId, chapterIndex, position)` index; do not use `fallbackToDestructiveMigration()`.
 - `BackupRepositoryImpl.importData()` uses `database.withTransaction`; keep backup import atomic.
-- `ChapterRepositoryImpl` routes chapter metadata/content through `CacheManager`; avoid adding a second chapter-content cache.
+- `ChapterRepositoryImpl` routes chapter metadata/content through `CacheManager`; avoid adding a second chapter-content cache. `CacheManager` adapts its per-book chapter capacity (2-12) to the hit rate sampled every 50 accesses and evicts least-used books on moderate trims.
 - Code uses built-in `kotlin.Result` where needed; the old custom `AppException`/`Result` wrapper is gone.
 
 ## Reader Gotchas
-- `ReaderViewModel` reads `bookId` and optional `chapterIndex` from `SavedStateHandle`; validate `bookId > 0` before DB work.
+- `ReaderViewModel` reads `bookId` and optional `chapterIndex` from `SavedStateHandle`; validate `bookId > 0` before DB work. Since v54 its progress math lives in `ReaderProgressEngine` (feature:reader), session timing/EMA speed in `ReaderSessionTracker` (injectable clock for tests), and TTS speak-from-position in `ReaderTtsCoordinator`.
 - `goToChapter()` must load chapter content before setting `currentChapter`; setting metadata-only chapters causes blank reader content.
 - Reading progress saves are debounced by 3 seconds in `debouncedSaveProgress()`.
 - Reading stats are auto-saved every 30 seconds, on chapter change, and in `onCleared()`; page counts come from real chapter-character deltas, unfinished page characters carry across scroll updates, and pauses over 5 minutes split a new session.
@@ -50,15 +50,15 @@ Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`
 - Eye protection reminder interval is persisted in `ReadingSettings.eyeProtectionIntervalMinutes` and exposed as 15/20/30/45/60 minute chips in `ReaderSettingsSheet`.
 - Every reader preference is written through the single `ReaderViewModel.updateReadingSettings(ReadingSettings)`; per-field mutators were removed in v52.
 - Reader text styles must come from `:core` (`readerBodyStyle`, `paragraphSpacing`, `ReaderMetrics`). Hard-coding `bodyLarge` is what made font/custom-font/paragraph-spacing settings inert before v52.
-- `PageMode` is `SLIDE` + `NONE` only, and both are actually rendered (`SLIDE` animates the chapter scroll, `NONE` jumps). Never add a mode ahead of its implementation.
+- `PageMode` is `SLIDE` / `PAGED` / `NONE`, and all three are actually rendered: `SLIDE` animates the chapter scroll, `PAGED` renders measured pages in a `HorizontalPager` (tap left/right third flips one page, `ChapterPaginator` splits oversized paragraphs on raw offsets so highlight/bookmark ranges survive re-pagination), `NONE` jumps. Never add a mode ahead of its implementation.
 - Tap zones, swipes, double tap and long press are resolved by `ReaderBehavior` in `:core` from `GestureSettings`; auto night mode is driven by a one-minute ticker, not a single composition-time `Calendar` read.
 - Reader scroll position is remembered per chapter in `ReaderViewModel.chapterPositions`; keep `ReaderScreen` scroll restoration aligned with `uiState.currentPosition`.
 - `FullTextSearch` is injected into `ReaderViewModel`; chapters are indexed after book load and `SearchDialog` navigates to matching chapters.
 - `TtsManager` wraps Android `TextToSpeech` and exposes `StateFlow<TtsState>`; `ReaderViewModel` observes it for button state, speaks from `currentPosition`, and calls `shutdown()` in `onCleared()`.
-- Reading progress Widget uses DataStore keys `widget_book_title` and `widget_progress_percent`, updated from `ReaderViewModel.updateWidgetSnapshot()`.
+- Reading progress Widget uses DataStore keys `widget_book_title` and `widget_progress_percent`, updated from `ReaderViewModel.updateWidgetSnapshot()`; the widget provider updates via `goAsync()` (never `runBlocking`).
 - `ReadingSettings.autoNightMode` is time-based in `ReaderScreen` (19:00-07:00 dark); it does not change the global app theme.
 - Reader font selection uses `ReaderFontFamily` with 4 resolvable faces in `domain/model/ReadingSettings.kt`; imported `.ttf/.otf` files win over the built-in face and fall back silently when unreadable.
-- Bookmark entry points are active in `ReaderControls`; long-pressing a paragraph opens `ParagraphActionSheet`, which highlights exactly that paragraph, copies it, or adds a bookmark note. The v51 `HighlightMenu` that asked the user to type the highlight text is gone.
+- Native text selection (v54): long-pressing a paragraph opens the in-house selection engine in `ReaderContent` (`ReaderParagraph` + `ReaderSelectionBar`), with drag-extend and draggable handles; the action bar highlights / copies / bookmarks the exact range. `ReaderTextMapping` maps display offsets back to raw chapter offsets (pure, tested). Do NOT reach for the platform `SelectionContainer` hoisted selection overload — it is `internal` through Compose 1.9.x; the engine deliberately uses only public `TextLayoutResult` APIs.
 - Bookmark repository normalizes text, validates positive IDs, stores via `addBookmark()`, and bookmarks are sorted by chapter/position for stable navigation.
 
 ## Compose/UI Gotchas
@@ -68,3 +68,5 @@ Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`
 - `WheelScreen` isolates `error` and `result` with `derivedStateOf` so 60 FPS `rotationAngle` updates do not recompose unrelated UI.
 - Library filtering combines category chips, search query, and sort order in `LibraryViewModel`; keep `selectedCategoryId` reflected in `LibraryUiState` for UI chips.
 - Global search uses `SearchRepository.rebuildIndex()` + `FullTextSearch.searchAll()` from the library search bar; results must include source book title.
+- `BookParser` caps reads: 16MB per EPUB chapter, 24MB per embedded image, 128MB for TXT/MD/FB2/MOBI whole files; oversized entries are skipped or fail with a clear message.
+- Startup: `androidx.profileinstaller` is wired and `app/src/main/baseline-prof.txt` carries the hand-written cold-start profile; keep profile rules in sync when startup-path classes are renamed.

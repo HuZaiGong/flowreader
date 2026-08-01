@@ -1,6 +1,6 @@
 # FlowReader 长期规划书
 
-> 版本: v54.0.0 | 更新: 2026-07
+> 版本: v55.0.0 | 更新: 2026-08
 
 ---
 
@@ -17,7 +17,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 ---
 
-## 二、现状评估 (v53.0.0)
+## 二、现状评估 (v54.0.0)
 
 ### 已完成的核心能力
 
@@ -40,10 +40,10 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 ### 已知技术债务
 
-- `:feature:library` 与 `:feature:reader` 仍是迁移边界，业务 UI 尚主要留在 `:app`
-- `ReaderViewModel` 仍偏大，需在 v54 拆分设置映射、进度计算与 TTS 协调
+- `:feature:library` 与 `:feature:reader` 仍是迁移边界，业务 UI 尚主要留在 `:app`（v54 起阅读器纯逻辑已迁入 `:feature:reader`）
 - `SavedStateHandle` 取出的 bookId 默认 0L，各 ViewModel 需各自校验
 - Room DB version 7，已有 4→5、5→6、6→7 显式迁移，无 destructive migration 兜底
+- 分页模式进度以"页号"为位置语义，与滚动模式像素语义并存；切换模式后进度按章内比例近似恢复
 
 ---
 
@@ -128,12 +128,12 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 ### v54 — 阅读器重塑与性能
 
 - [x] **图片/漫画阅读**：支持 JPG / PNG / WebP 单图导入；ZIP / CBZ 图片包作为一整部漫画，`SLIDE` 左右切页，`NONE` 上下拼接滚动
-- [ ] **原生文本选中**：`SelectionContainer` + 自定义 `TextToolbar`，选中即高亮，替代 v52 的段落级操作面板
-- [ ] **`ReaderViewModel` 拆分**：设置映射、进度计算、TTS 协调抽成可单测的独立类（当前约 780 行）
-- [ ] **分页翻页模式**：真正的 `PAGED` 实现（涉及文本分页测量），届时再扩充 `PageMode`
-- [ ] **大型书籍性能优化**：100MB+ EPUB 的解析和渲染优化，虚拟列表（仅渲染可见章节）
-- [ ] **启动速度优化**：Baseline Profile + 启动延迟加载
-- [ ] **缓存策略优化**：根据使用频率动态调整缓存容量
+- [x] **原生文本选中**：自研选中引擎（平台 `SelectionContainer` 的 hoisted 选中 API 在 Compose 1.7.x 为 internal，故基于公开 `TextLayoutResult` 实现）：长按选词、拖拽扩选、双端手柄，浮动栏支持高亮/复制/书签；显示文本→原始章节偏移的纯函数映射保证标注范围精确
+- [x] **`ReaderViewModel` 拆分**：`ReaderProgressEngine`、`ReaderSessionTracker`（可注入时钟）、`ReaderTtsCoordinator` 抽入 `:feature:reader`，ViewModel 由 785 行降至约 640 行，全部引擎类有 JVM 单测
+- [x] **分页翻页模式**：真正的 `PAGED` 实现——`ChapterPaginator` 用真实 `TextMeasurer` 测量分页，`HorizontalPager` 横向翻页，点击左右 1/3 翻一页，进度按页折算；超大段落按原始偏移切分，标注不漂移
+- [x] **大型书籍性能优化**：漫画纵拼改 `LazyColumn` 虚拟化；EPUB 单章读取 16MB、单图 24MB、TXT/MD/FB2/MOBI 整档 128MB 上限；超大章节继续分块入库
+- [x] **启动速度优化**：`profileinstaller` + 手写 `baseline-prof.txt`（冷启动路径：Application/主题/书架/阅读器/Room/DataStore/Coil）
+- [x] **缓存策略优化**：命中率每 50 次采样，高命中扩容量（最高 12 章/书）、低命中收缩（最低 2）；`TRIM_MEMORY_MODERATE` 按使用频率驱逐冷门书
 
 ### v55 — 书架门面、自适应与分享
 

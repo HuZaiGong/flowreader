@@ -4,7 +4,25 @@
 
 ---
 
+## [v54.1.0] - 2026-08
+> 阅读器重塑第一阶段：原生文本选中、真正的分页翻页、ViewModel 拆分与启动/缓存性能。
+
+### 阅读体验
+- **原生文本选中（v54.2）**：长按段落进入选中态——按词选中、拖拽扩选、两端手柄可微调；浮动操作栏支持「高亮 / 复制 / 书签」，替代 v52 的段落级操作面板。显示文本→原始章节偏移的纯函数映射（`ReaderTextMapping`）保证标注、书签与用户所见完全一致，含 6 项 JVM 单测。
+- **分页翻页模式（v54.4）**：`PageMode` 新增真实 `PAGED`——`ChapterPaginator` 用真实排版测量把章节切成横向页，`HorizontalPager` 翻页，左右 1/3 点击翻一页；进度、进度条、Widget 均按页折算；章节跳转落在记忆页。分页参数全部来自 `:core` 排版纯函数，字号/行距/字体改动即重新分页。
+- 漫画纵向拼接改为 `LazyColumn` 虚拟列表（v54.1），整本漫画不再一次组合全部页，进度按当前可见页折算。
+
+### 工程
+- **`ReaderViewModel` 拆分（v54.3）**：785 → 约 640 行。进度计算（`ReaderProgressEngine`）、会话跟踪（`ReaderSessionTracker`，可注入时钟）、TTS 协调（`ReaderTtsCoordinator`）全部可单测，`feature:reader` 新增 22 项单测。
+- **启动速度（v54.5）**：接入 `profileinstaller` 与手写 `baseline-prof.txt`（Application/主题/书架/阅读器/Room/DataStore/Coil 冷启动路径）。
+- **缓存策略（v54.5）**：章节缓存容量随命中率动态调节（2–12 章/书），内存回收按使用频率驱逐冷门书；命中/未命中统计此前从未被调用，现正式接线。
+- **大书内存防护（v54.5）**：EPUB 单章 16MB、单图 24MB、TXT/MD/FB2/MOBI 整档 128MB 上限，超限条目跳过或明确报错。
+- **OPDS 加固（v54.1）**：目录读取 2MB 上限；acquisition 链接过滤不支持的 MIME（不再把 APK 暴露为可下载书籍）。
+- **Widget 修复（v54.1）**：阅读进度 Widget 改用 `goAsync()`，移除广播回调中的 `runBlocking`。
+- 测试广度 67.2%（39/58 文件），全部门禁（assembleDebug / testDebugUnitTest / verifyKotlinStyle / coverageSummary）通过。
+
 ## [v54.0.0] - 2026-07
+
 > 阅读器重塑启动：先补齐图片/漫画阅读入口，让图像内容走独立渲染路径，不再伪装成普通文本章节。
 
 ### 图片/漫画阅读

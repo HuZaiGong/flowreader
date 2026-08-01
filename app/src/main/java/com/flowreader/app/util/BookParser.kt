@@ -52,6 +52,15 @@ class BookParser @Inject constructor(
     // when Room read the content back for the reader screen.
     private val maxChapterChars = 8_000
 
+    /** Single EPUB XHTML entry cap; a pathological 100MB+ book must not blow up memory. */
+    private val maxChapterReadBytes = 16L * 1024 * 1024
+
+    /** Single embedded image cap; oversized art is skipped instead of loaded. */
+    private val maxSingleImageBytes = 24L * 1024 * 1024
+
+    /** Whole-document cap for TXT / Markdown / FB2 / MOBI single-file formats. */
+    private val maxWholeFileBytes = 128L * 1024 * 1024
+
     suspend fun parseBook(uri: Uri): Result<BookParseResult> = withContext(Dispatchers.IO) {
         try {
             val inputStream = context.contentResolver.openInputStream(uri)
@@ -286,7 +295,7 @@ class BookParser @Inject constructor(
                         val entryPath = if (opfBaseDir.isNotEmpty()) "$opfBaseDir/$href" else href
                         val imageEntry = zip.getEntry(entryPath)
                         if (imageEntry != null) {
-                            val imageBytes = zip.getInputStream(imageEntry).readBytes()
+                            val imageBytes = readCappedBytes(zip.getInputStream(imageEntry), maxSingleImageBytes) ?: return@forEach
                             val fileName = "img_${href.replace("/", "_").replace("\\", "_")}"
                             val imageFile = File(imageDir, fileName)
                             FileOutputStream(imageFile).use { it.write(imageBytes) }
@@ -298,7 +307,7 @@ class BookParser @Inject constructor(
                 var chapterIndex = 0
                 for (href in spineRefs) {
                     val entry = zip.getEntry(href) ?: continue
-                    val htmlText = zip.getInputStream(entry).bufferedReader().readText()
+                    val htmlText = readCappedText(zip.getInputStream(entry), maxChapterReadBytes) ?: continue
                     val htmlDoc = Jsoup.parse(htmlText)
                     htmlDoc.outputSettings().syntax(org.jsoup.nodes.Document.OutputSettings.Syntax.xml)
                     htmlDoc.select("script, style, nav").remove()
@@ -498,7 +507,7 @@ class BookParser @Inject constructor(
 
     private fun parseTxtStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
-            val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
+            val text = inputStream.readCappedTextNotNull(maxWholeFileBytes)
 
             val title = fileName.removeSuffix(".txt")
             val chapters = mutableListOf<Chapter>()
@@ -754,6 +763,33 @@ class BookParser @Inject constructor(
             endPosition = index + 1
         )
 
+    /**
+     * Reads the whole stream into memory up to [limit] bytes; null when the stream is larger
+     * (the caller then skips the entry or fails the parse with a clear message).
+     */
+    private fun readCappedBytes(stream: InputStream, limit: Long): ByteArray? {
+        val output = ByteArrayOutputStream()
+        val buffer = ByteArray(bufferSize)
+        var total = 0L
+        while (true) {
+            val read = stream.read(buffer)
+            if (read <= 0) break
+            total += read
+            if (total > limit) return null
+            output.write(buffer, 0, read)
+        }
+        return output.toByteArray()
+    }
+
+    private fun readCappedText(stream: InputStream, limit: Long): String? =
+        readCappedBytes(stream, limit)?.toString(Charsets.UTF_8)
+
+    private fun InputStream.readCappedTextNotNull(limit: Long): String =
+        readCappedText(this, limit) ?: throw IllegalStateException("文件过大：超过 ${limit / 1024 / 1024}MB 上限")
+
+    private fun InputStream.readCappedBytesNotNull(limit: Long): ByteArray =
+        readCappedBytes(this, limit) ?: throw IllegalStateException("文件过大：超过 ${limit / 1024 / 1024}MB 上限")
+
     private fun copyCapped(source: InputStream, target: File, limit: Long): Long {
         var total = 0L
         val buffer = ByteArray(bufferSize)
@@ -840,7 +876,12 @@ class BookParser @Inject constructor(
     private fun parseFb2Stream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
             val xml = inputStream.use { stream ->
-                if (fileName.endsWith(".zip", ignoreCase = true)) readFirstZipEntryText(stream) else stream.readBytes().decodeXml()
+                if (fileName.endsWith(".zip", ignoreCase = true)) {
+                    readFirstZipEntryText(stream)
+                } else {
+                    readCappedBytes(stream, maxWholeFileBytes)?.decodeXml()
+                        ?: return Result.failure(Exception("文件过大：FB2 超过 ${maxWholeFileBytes / 1024 / 1024}MB 上限"))
+                }
             } ?: return Result.failure(Exception("无法读取 FB2 内容"))
 
             Fb2Parser.parse(xml).map { book ->
@@ -878,7 +919,7 @@ class BookParser @Inject constructor(
     /** MOBI / PRC / AZW (v53), read-only. DRM-protected files are declined, never decrypted. */
     private fun parseMobiStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
-            val bytes = inputStream.use { it.readBytes() }
+            val bytes = inputStream.use { it.readCappedBytesNotNull(maxWholeFileBytes) }
             MobiParser.parse(bytes).map { book ->
                 val fallbackTitle = fileName.substringBeforeLast('.')
                 val document = Jsoup.parse(book.html)
@@ -916,7 +957,7 @@ class BookParser @Inject constructor(
             var entry = zip.nextEntry
             while (entry != null) {
                 if (!entry.isDirectory && entry.name.endsWith(".fb2", ignoreCase = true)) {
-                    return zip.readBytes().decodeXml()
+                    return readCappedBytes(zip, maxWholeFileBytes)?.decodeXml()
                 }
                 zip.closeEntry()
                 entry = zip.nextEntry
@@ -935,7 +976,7 @@ class BookParser @Inject constructor(
 
     private fun parseMarkdownStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
-            val text = inputStream.bufferedReader(Charsets.UTF_8).readText()
+            val text = inputStream.readCappedTextNotNull(maxWholeFileBytes)
 
             val title = fileName.removeSuffix(".md")
             val chapters = mutableListOf<Chapter>()

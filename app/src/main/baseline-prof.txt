@@ -1,0 +1,62 @@
+# Hand-written baseline profile: classes touched on the cold-start path
+# (application, theme, library shelf, reader open and Room/DataStore bootstrap).
+# Class-level rules are robust against method renames; method rules pin hot methods.
+#
+# Format: "L<package/Class>;" for classes, "L<package/Class;-><name>(<sig>)<return>;" for methods.
+# Rules are merged with any profile generated on-device later; this file keeps
+# cold start fast even before a generated profile exists.
+
+# App shell
+Lcom/flowreader/app/FlowReaderApplication;
+Lcom/flowreader/app/MainActivity;
+Lcom/flowreader/app/ui/NavigationKt;
+Lcom/flowreader/app/ui/NavigationKt$FlowReaderNavHost;
+
+# Compose theme + design system
+Lcom/flowreader/app/core/designsystem/theme/FlowTheme;
+Lcom/flowreader/app/core/designsystem/token/FlowTokens;
+Lcom/flowreader/app/core/designsystem/component/FlowScaffoldKt;
+Lcom/flowreader/app/core/designsystem/component/FlowTopBarKt;
+Lcom/flowreader/app/core/designsystem/component/FlowStateHostKt;
+Lcom/flowreader/app/core/designsystem/component/BookCoverKt;
+Lcom/flowreader/app/core/designsystem/reader/ReaderTypographyKt;
+Lcom/flowreader/app/core/designsystem/reader/ReaderPaletteKt;
+
+# Library shelf
+Lcom/flowreader/app/ui/screens/library/LibraryScreenKt;
+Lcom/flowreader/app/ui/screens/library/LibraryViewModel;
+
+# Reader open path
+Lcom/flowreader/app/ui/screens/reader/ReaderScreenKt;
+Lcom/flowreader/app/ui/screens/reader/ReaderViewModel;
+Lcom/flowreader/app/ui/screens/reader/components/ReaderContentKt;
+Lcom/flowreader/app/ui/screens/reader/components/ReaderControlsKt;
+Lcom/flowreader/app/ui/screens/reader/components/ReaderTextMappingKt;
+Lcom/flowreader/app/ui/screens/reader/ReaderTtsCoordinator;
+
+# Data layer bootstrap
+Lcom/flowreader/app/data/local/AppDatabase;
+Lcom/flowreader/app/data/local/dao/BookDao;
+Lcom/flowreader/app/data/local/dao/ChapterDao;
+Lcom/flowreader/app/data/repository/BookRepositoryImpl;
+Lcom/flowreader/app/data/repository/ChapterRepositoryImpl;
+Lcom/flowreader/app/data/repository/SettingsRepositoryImpl;
+Lcom/flowreader/app/util/CacheManager;
+Lcom/flowreader/app/util/BookLoader;
+Lcom/flowreader/app/util/TtsManager;
+
+# Core AndroidX hot paths
+Landroidx/compose/runtime/ComposerImpl;
+Landroidx/compose/ui/platform/AndroidComposeView;
+Landroidx/activity/ComponentActivity;
+Landroidx/room/Room;
+Landroidx/room/RoomDatabase;
+Landroidx/datastore/core/DataStore;
+Landroidx/datastore/preferences/core/PreferencesKt;
+Lcoil/compose/AsyncImageKt;
+Lcoil/request/ImageRequest$Builder;
+
+# Hot methods: application + activity entry points
+Lcom/flowreader/app/MainActivity;->onCreate(Landroid/os/Bundle;)V
+Lcom/flowreader/app/MainActivity;->onStart()V
+Landroidx/activity/ComponentActivity;->setContent(Lkotlin/jvm/functions/Function2;)V
