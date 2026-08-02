@@ -36,8 +36,10 @@ class ReadingStatsRepositoryImplTest {
 
     @Test
     fun getReadingReport_findsMostReadBook() = runTest {
+        // Date must sit inside the 7-day window regardless of when CI runs.
+        val recentDate = java.time.LocalDate.now().minusDays(1).toString()
         coEvery { statsDao.getAllStats() } returns listOf(
-            ReadingStatsEntity(bookId = 9L, date = "2026-07-26", readPages = 8, readTimeSeconds = 300)
+            ReadingStatsEntity(bookId = 9L, date = recentDate, readPages = 8, readTimeSeconds = 300)
         )
         coEvery { bookDao.getBookById(9L) } returns BookEntity(id = 9L, title = "Book", author = "Author", filePath = "")
 

@@ -4,6 +4,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
+    id("io.github.takahirom.roborazzi") version "1.40.0"
 }
 
 android {
@@ -51,6 +52,11 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
     packaging {
         resources {
@@ -122,6 +128,12 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi-compose:1.40.0")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
     testImplementation("io.mockk:mockk:1.13.16")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("androidx.room:room-testing:2.6.1")
