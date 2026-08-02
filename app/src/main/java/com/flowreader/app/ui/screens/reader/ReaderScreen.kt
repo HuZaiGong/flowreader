@@ -101,6 +101,21 @@ fun ReaderScreen(
         )
     }
 
+    // v52 cleared this dead setting: keepScreenOn was persisted but never applied.
+    DisposableEffect(activity, settings.keepScreenOn) {
+        val window = activity?.window
+        if (window != null) {
+            if (settings.keepScreenOn) {
+                window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+        onDispose {
+            window?.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
     DisposableEffect(activity, view, uiState.isImmersiveMode) {
         val window = activity?.window
         if (window != null) {

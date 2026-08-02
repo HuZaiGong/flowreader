@@ -233,15 +233,13 @@ internal fun ReaderParagraph(
     fun extendFromLongPress(position: Offset) {
         val layout = layoutState.value ?: return
         val offset = layout.getOffsetForPosition(position).coerceIn(0, layout.layoutInput.text.length)
-        if (selectionState.value == null) {
-            selectionState.value = layout.getWordBoundary(offset)
+        val current = selectionState.value
+        selectionState.value = if (current == null) {
+            layout.getWordBoundary(offset)
+        } else if (offset < (current.min + current.max) / 2) {
+            TextRange(offset, current.end)
         } else {
-            val current = selectionState.value!!
-            selectionState.value = if (offset < (current.min + current.max) / 2) {
-                TextRange(offset, current.end)
-            } else {
-                TextRange(current.start, offset)
-            }
+            TextRange(current.start, offset)
         }
     }
 

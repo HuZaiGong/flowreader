@@ -93,7 +93,9 @@ class BackupRepositoryImpl @Inject constructor(
     override suspend fun importData(uri: Uri): Result<ImportResult> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
-                val json = JSONObject(BufferedReader(InputStreamReader(inputStream)).readText())
+                val text = readCapped(inputStream, MAX_BACKUP_BYTES)
+                    ?: return@use Result.failure(Exception("备份文件超过 ${MAX_BACKUP_BYTES / 1024 / 1024}MB 上限"))
+                val json = JSONObject(text)
                 applyBackupJson(json)
             } ?: Result.failure(Exception("无法打开文件"))
         } catch (e: Exception) {
@@ -112,6 +114,20 @@ class BackupRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    private fun readCapped(stream: java.io.InputStream, limit: Long): String? {
+        val output = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        var total = 0L
+        while (true) {
+            val read = stream.read(buffer)
+            if (read <= 0) break
+            total += read
+            if (total > limit) return null
+            output.write(buffer, 0, read)
+        }
+        return output.toString(Charsets.UTF_8)
     }
 
     private suspend fun applyBackupJson(json: JSONObject): Result<ImportResult> {

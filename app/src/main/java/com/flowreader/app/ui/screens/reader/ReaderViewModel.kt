@@ -26,6 +26,8 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.abs
@@ -163,8 +165,21 @@ class ReaderViewModel @Inject constructor(
         predictionJob?.cancel()
         periodicStatsSaveJob?.cancel()
         ttsCoordinator.shutdown()
-        saveProgressImmediately()
-        saveReadingStats()
+        // viewModelScope is already cancelled here, so a plain launch would never run and the
+        // final progress/stats would be lost on exit. Use an independent scope for the flush.
+        val flushScope = CoroutineScope(Dispatchers.IO)
+        val state = _uiState.value
+        if (state.chapters.isNotEmpty()) {
+            val position = chapterPositions[state.currentChapterIndex] ?: state.currentPosition
+            val progress = progressEngine.fraction(state.currentChapterIndex, chapterFraction, state.chapters.size)
+            flushScope.launch {
+                bookRepository.updateReadingProgress(bookId, state.currentChapterIndex, position, progress)
+                val (pages, seconds) = sessionTracker.takeSnapshotAndReset()
+                if (seconds > 0 && pages > 0) {
+                    readingStatsRepository.updateTodayStats(bookId, pages, seconds)
+                }
+            }
+        }
     }
 
     private fun saveReadingStats() {
@@ -181,22 +196,6 @@ class ReaderViewModel @Inject constructor(
                 } catch (e: Exception) {
                     android.util.Log.e("ReaderViewModel", "Failed to save reading stats", e)
                 }
-            }
-        }
-    }
-
-    private fun saveProgressImmediately() {
-        val state = _uiState.value
-        if (state.chapters.isNotEmpty()) {
-            val position = chapterPositions[state.currentChapterIndex] ?: state.currentPosition
-            val progress = progressEngine.fraction(state.currentChapterIndex, chapterFraction, state.chapters.size)
-            viewModelScope.launch {
-                bookRepository.updateReadingProgress(
-                    bookId,
-                    state.currentChapterIndex,
-                    position,
-                    progress
-                )
             }
         }
     }

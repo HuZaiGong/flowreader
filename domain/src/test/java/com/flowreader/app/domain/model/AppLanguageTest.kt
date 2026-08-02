@@ -34,7 +34,7 @@ class AppLanguageTest {
     fun everyTagMatchesAShippedResourceQualifier() {
         // values/ (zh) plus values-en, values-ja, values-ko. Adding an entry here without the
         // matching folder gives the user a language that silently renders as Chinese.
-        val shipped = setOf("zh-CN", "en", "ja", "ko")
+        val shipped = setOf("zh-CN", "en", "ja", "ko", "fr", "de", "es", "pt", "ru")
         AppLanguage.entries.mapNotNull { it.tag }.forEach { tag ->
             assertTrue("no resource folder for $tag", tag in shipped)
         }
