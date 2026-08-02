@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
 import com.flowreader.app.core.designsystem.component.BookCover
 import com.flowreader.app.core.designsystem.component.BookShelfSkeleton
@@ -60,10 +62,14 @@ class LibraryShelfScreenshotTest {
     @Test
     fun librarySkeletonDark() {
         captureRoboImage(filePath = "src/test/snapshots/library_skeleton_dark.png") {
-            FlowTheme(themeMode = AppThemeMode.DARK, colorSource = ColorSource.BRAND) {
-                MaterialTheme {
-                    Box(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
-                        BookShelfSkeleton()
+            // BookShelfSkeleton only freezes its shimmer in inspection mode; without this the
+            // capture would land on a random shimmer frame and the golden would never be stable.
+            CompositionLocalProvider(LocalInspectionMode provides true) {
+                FlowTheme(themeMode = AppThemeMode.DARK, colorSource = ColorSource.BRAND) {
+                    MaterialTheme {
+                        Box(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
+                            BookShelfSkeleton()
+                        }
                     }
                 }
             }
