@@ -91,7 +91,10 @@ private val bottomNavItems = listOf(Screen.Library, Screen.Stats, Screen.Setting
 private const val MEDIUM_MIN_WIDTH_DP = 600
 
 @Composable
-fun FlowReaderNavHost(viewModel: AppShellViewModel = hiltViewModel()) {
+fun FlowReaderNavHost(
+    initialImportUri: android.net.Uri? = null,
+    viewModel: AppShellViewModel = hiltViewModel()
+) {
     val appSettings by viewModel.appSettings.collectAsStateWithLifecycle()
 
     val navController = rememberNavController()
@@ -132,7 +135,7 @@ fun FlowReaderNavHost(viewModel: AppShellViewModel = hiltViewModel()) {
                         }
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        FlowNavHost(navController)
+                        FlowNavHost(navController, initialImportUri)
                     }
                 }
             } else {
@@ -161,7 +164,7 @@ fun FlowReaderNavHost(viewModel: AppShellViewModel = hiltViewModel()) {
                     }
                 ) { paddingValues ->
                     Box(modifier = Modifier.padding(paddingValues)) {
-                        FlowNavHost(navController)
+                        FlowNavHost(navController, initialImportUri)
                     }
                 }
             }
@@ -170,7 +173,10 @@ fun FlowReaderNavHost(viewModel: AppShellViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun FlowNavHost(navController: androidx.navigation.NavHostController) {
+private fun FlowNavHost(
+    navController: androidx.navigation.NavHostController,
+    initialImportUri: android.net.Uri? = null
+) {
     NavHost(
         navController = navController,
         startDestination = Screen.Library.route,
@@ -191,6 +197,7 @@ private fun FlowNavHost(navController: androidx.navigation.NavHostController) {
     ) {
         composable(Screen.Library.route) {
             LibraryScreen(
+                initialImportUri = initialImportUri,
                 onSearchClick = { navController.navigate(Screen.Search.createRoute()) },
                 onBookClick = { bookId ->
                     navController.navigate(Screen.BookDetail.createRoute(bookId))

@@ -103,6 +103,7 @@ import com.flowreader.app.domain.model.LibraryViewMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
+    initialImportUri: android.net.Uri? = null,
     onBookClick: (Long) -> Unit,
     onContinueReading: (Long) -> Unit,
     onSearchClick: () -> Unit,
@@ -142,6 +143,14 @@ fun LibraryScreen(
                 duration = SnackbarDuration.Long
             )
             viewModel.clearError()
+        }
+    }
+
+    // v56 audit: an "open with FlowReader" share is imported exactly once per intent.
+    LaunchedEffect(initialImportUri) {
+        val uri = initialImportUri
+        if (uri != null) {
+            viewModel.importBook(uri)
         }
     }
 

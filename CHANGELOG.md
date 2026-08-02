@@ -4,6 +4,22 @@
 
 ---
 
+## [v56.4.0] - 2026-08
+> 安全审计第二轮（v56.3 收尾后的全量复查）。
+
+### 修复
+- **「用 FlowReader 打开」不再静默失败**：MainActivity 的 `ACTION_VIEW` intent-filter（epub/text）此前无任何处理——其他应用分享的文件会丢失。现在按 URI 走受限导入管线（解析上限/zip-slip 防护全数生效），intent 消费一次即清空，配置变更不会重复导入。
+- **FTS 索引重建竞态**：并发搜索可能交错执行 `deleteAllContent`/`indexChapter` 导致索引不一致；`SearchRepositoryImpl` 用 Mutex 串行化重建。
+- **LAN 服务只绑局域网接口**：不再绑定 `0.0.0.0`，蜂窝网等非局域网接口无法访问；令牌防护不变。
+
+### 复查结论（未发现新问题）
+- 无危险 API/硬编码密钥；无 WebView；`!!` 仅剩 ContentProvider 的标准 `context!!`（onCreate 保证非空）。
+- OPDS：目录地址、重定向每一跳、acquisition 下载均单独校验局域网；目录 2MB / 下载 200MB 上限。
+- ZIP：路径穿越（`..`/绝对路径/`__MACOSX`）拒绝、条目数与单条目上限。
+- 备份导入：SAF 与 LAN 路径均 200MB 上限、事务原子写入；导出/导入不含可执行内容。
+- FTS 查询转义、HTML 导出转义；Android 备份仅含 settings（DB 不外传）。
+- ContentProvider 只读、无文件路径/正文；FileProvider 路径白名单。
+
 ## [v56.3.0] - 2026-08
 > 全面漏洞与死代码清理（v54-v56 收尾审计）。
 

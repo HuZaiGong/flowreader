@@ -7,6 +7,8 @@ import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.SearchRepository
 import com.flowreader.app.util.FullTextSearch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -18,6 +20,9 @@ class SearchRepositoryImpl @Inject constructor(
 ) : SearchRepository {
     private var indexedBookIds: Set<Long> = emptySet()
     private var hasBuiltIndex = false
+
+    /** Concurrent searches must not interleave deleteAllContent()/indexChapter(). */
+    private val indexMutex = Mutex()
 
     override suspend fun rebuildIndex() {
         fullTextSearch.initialize()
@@ -42,9 +47,11 @@ class SearchRepositoryImpl @Inject constructor(
     override suspend fun searchChapters(query: String, limit: Int, offset: Int): List<GlobalSearchResult> {
         val books = bookRepository.getAllBooks().first()
         val bookIds = books.map { it.id }.toSet()
-        fullTextSearch.initialize()
-        if (!hasBuiltIndex || bookIds != indexedBookIds) {
-            rebuildIndex()
+        indexMutex.withLock {
+            fullTextSearch.initialize()
+            if (!hasBuiltIndex || bookIds != indexedBookIds) {
+                rebuildIndex()
+            }
         }
         val booksById = books.associateBy { it.id }
         return fullTextSearch.searchAll(query, maxResults = limit, offset = offset).map { result ->

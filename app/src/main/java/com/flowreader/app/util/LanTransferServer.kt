@@ -42,16 +42,18 @@ class LanTransferServer(private val file: File) {
     fun start(): String? {
         if (active) return url
         val bytes = file.readBytesOrNull() ?: return null
+        val ip = localIpv4Address() ?: return null
         token = TOKEN_CHARS.generateToken(16)
 
         return try {
+            // Bind the discovered LAN interface only — a cellular/other-interface peer cannot
+            // reach the server even with the token.
             val socket = ServerSocket()
             socket.reuseAddress = true
-            socket.bind(InetSocketAddress("0.0.0.0", 0))
+            socket.bind(InetSocketAddress(ip, 0))
             serverSocket = socket
             active = true
             val port = socket.localPort
-            val ip = localIpv4Address() ?: return null
             url = "http://$ip:$port/backup/$token"
             executor.execute { serve(socket, bytes) }
             url
