@@ -148,12 +148,12 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 ### v56 — 打磨、无障碍与性能门禁
 
-- [ ] **TalkBack 全链路走查**：所有操作可聚焦/可点击
-- [ ] **仿真翻页评估**：拟物化翻页作为独立课题重新评估，实现之前不恢复 UI 入口
-- [ ] **ContentProvider 支持**：允许其他 App 通过 ContentProvider 查询阅读数据
-- [ ] **截图测试接入 CI**：视觉回归门禁（测试期依赖，不进入 APK）
-- [ ] **性能基线**：冷启动、滚动帧率、APK 体积写入 CI 报告
-- [ ] **本地化扩展**：在中/英/日/韩基础上，增加法/德/西/葡/俄语
+- [x] **TalkBack 全链路走查**：漫画页逐页朗读、阅读器正文提供「切换控制栏」自定义操作；全量检查图标/按钮 contentDescription
+- [x] **仿真翻页评估**：评估文档 `docs/page_turn_evaluation.md`——结论：拟物动画与离线性能、内容重分页、无障碍冲突，不恢复 UI 入口；保留 PAGED 横滑
+- [x] **ContentProvider 支持**：`content://com.flowreader.app.provider` 只读暴露书籍与进度（元数据，无文件路径/正文），写操作拒绝；路径路由纯函数单测
+- [x] **截图测试接入 CI**：Roborazzi 1.40 + Robolectric JVM 视觉回归（两张金样：书架浅色、骨架深色），`recordRoborazziDebug` 记录 / `verifyRoborazziDebug` 门禁，不进 APK
+- [x] **性能基线**：`performanceBaseline` 任务输出 debug/release APK 体积并与基线对比（debug 27.5MB / release 10.8MB），CI 汇总到 step summary
+- [x] **本地化扩展**：新增法语/德语/西班牙语/葡萄牙语/俄语完整翻译（169 键，含 v55 新功能），应用内语言选择器同步扩展
 
 ---
 

@@ -4,7 +4,23 @@
 
 ---
 
-## [v55.0.0] - 2026-08
+## [v56.0.0] - 2026-08
+> 打磨、无障碍与性能门禁：让应用对所有用户可读、对 CI 可测。
+
+### 无障碍（TalkBack 走查）
+- 漫画阅读逐页播报「漫画第 N 页」；阅读器正文新增「切换阅读控制栏」TalkBack 自定义操作；全量核对图标/按钮 contentDescription。
+
+### 开放与生态
+- **ContentProvider**：`content://com.flowreader.app.provider` 只读暴露书籍元数据与阅读进度（不含文件路径与正文），写操作一律拒绝；Hilt EntryPoint 获取数据库，路径路由纯函数可 JVM 单测。
+- **本地化扩展**：新增法语 / 德语 / 西班牙语 / 葡萄牙语 / 俄语完整字符串集（169 键，覆盖 v55 全部新功能），应用内语言选择器同步新增五项。
+
+### 工程门禁
+- **截图测试接入 CI**：Roborazzi 1.40 + Robolectric（JVM，无需模拟器）——两张金样入库（书架浅色封面卡、深色骨架屏），`recordRoborazziDebug` 记录新金样，CI 用 `verifyRoborazziDebug` 做视觉回归门禁；截图测试不进 APK。
+- **性能基线**：新增 `performanceBaseline` 任务，输出 debug/release APK 体积并与已入库基线对比（debug 27.5MB / release 10.8MB），CI 汇总到 step summary。
+- **仿真翻页评估**：`docs/page_turn_evaluation.md` 完成评估——拟物化翻页与性能目标、内容重分页、无障碍冲突，暂不实现、不恢复 UI 入口。
+- 修复一个日期敏感单测（硬编码 2026-07-26 窗口，随日历推进开始失败）。
+
+
 > 书架门面、自适应与分享：让书架更像书架，让阅读更可分享，并完成离线局域网传输。
 
 ### 书架

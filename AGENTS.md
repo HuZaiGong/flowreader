@@ -8,6 +8,8 @@ Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`
 - `./gradlew testDebugUnitTest` runs the JVM unit tests. Current focused test files include `app/src/test/java/com/flowreader/app/util/BookParserTest.kt` and domain model tests under `domain/src/test/java/`.
 - `./gradlew testDebugUnitTest --tests com.flowreader.app.util.BookParserTest` runs the existing focused test class.
 - `./gradlew verifyKotlinStyle` runs ktlint for non-app modules plus the lightweight whitespace gate. ktlint enforces a 140-char line cap and single-line signatures when they fit — check new feature module code against it.
+- Screenshot regression gate: `./gradlew recordRoborazziDebug` records goldens under `app/src/test/snapshots/`, `verifyRoborazziDebug` gates CI (Roborazzi 1.40 + Robolectric on JVM, `@GraphicsMode(NATIVE)`; capture API is `captureRoboImage(filePath = "src/test/snapshots/<name>.png") { content }` — `RoborazziRule` no longer exists in 1.40).
+- `./gradlew performanceBaseline` reports debug/release APK sizes vs `baseline/apk-size.properties` and is part of CI. ktlint enforces a 140-char line cap and single-line signatures when they fit — check new feature module code against it.
 - `./gradlew coverageSummary` enforces the 40% test breadth target across app/core/feature/domain (55.8% as of v52).
 - `./gradlew clean` is available when generated/KSP state looks stale.
 - CI is in `.github/workflows/ci.yml`; do not claim checks ran unless you ran a Gradle task or inspected CI results.
