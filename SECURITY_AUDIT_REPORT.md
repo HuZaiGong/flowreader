@@ -8,23 +8,24 @@
 
 ## 执行摘要
 
-FlowReader 项目在 v56.3/v56.4 经过两轮安全审计后，整体安全态势良好。项目遵循离线优先原则，无账号系统、无分析、无网络同步，大大减少了攻击面。主要发现 **1 个高危漏洞**（令牌生成逻辑错误）、**2 个中危问题**（ContentProvider 性能风险、FileProvider 权限过宽）和 **4 个低危/信息级建议**。
+FlowReader 项目在 v56.3/v56.4 经过两轮安全审计后，整体安全态势良好。项目遵循离线优先原则，无账号系统、无分析、无网络同步，大大减少了攻击面。本轮发现 **2 个中危问题**（ContentProvider 阻塞 Binder 线程、FileProvider 授权面过宽）、**1 个潜伏正确性缺陷**（令牌生成索引上限）和 **4 个低危/信息级建议**。
+
+**未发现可被远端或第三方应用实际利用的活跃漏洞。**
 
 ### 风险评级分布
-- 🔴 **高危 (High)**: 1 项
-- 🟠 **中危 (Medium)**: 2 项  
-- 🟡 **低危 (Low)**: 2 项
+- 🔴 **高危 (High)**: 0 项
+- 🟠 **中危 (Medium)**: 2 项
+- 🟡 **低危 (Low)**: 3 项（含 1 项潜伏缺陷，初评 High 后复核下调）
 - ℹ️ **信息 (Info)**: 2 项
 
 ---
 
-## 🔴 高危漏洞 (Critical/High)
+## 🟡 潜伏正确性缺陷 (Latent, not exploitable today)
 
-### CVE-LOCAL-001: LAN 传输令牌生成算法错误
+### CVE-LOCAL-001: LAN 传输令牌生成算法缺陷
 
-**严重程度**: High  
-**文件**: `app/src/main/java/com/flowreader/app/util/LanTransferServer.kt:141-146`  
-**CVSS 评分**: 7.5 (High)
+**严重程度**: Low（潜伏缺陷；初评 High / CVSS 7.5，复核后下调——见下方「影响」）
+**文件**: `app/src/main/java/com/flowreader/app/util/LanTransferServer.kt:141-146`
 
 #### 漏洞描述
 `LanTransferServer.generateToken()` 的随机数生成逻辑存在错误：
@@ -47,8 +48,10 @@ private fun String.generateToken(length: Int): String {
 3. 如果扩展 `TOKEN_CHARS` 到 Base64（64字符）但保持 16 字符令牌，只使用前 16 个字符，安全性降低
 
 #### 影响
-- **当前版本**: 无实际影响（偶然正确）
-- **潜在影响**: 令牌熵减少导致暴力破解风险 或 运行时崩溃
+- **当前版本**: 无实际影响，无可利用路径。两个常量恰好相等，令牌仍是完整的 16^16 熵。
+  因此本条按潜伏缺陷（Low）归档，而非活跃漏洞——修复动机是消除对巧合的依赖，不是止损。
+- **潜在影响**: 一旦有人调整令牌长度或扩充字符集，即退化为熵减少（可暴力破解）或运行时崩溃，
+  且熵减少的那一侧是静默的，不会有任何报错提示。
 
 #### 修复方案
 
@@ -201,25 +204,29 @@ override fun query(...): Cursor? {
 grep -r "fileprovider\|FileProvider.getUriForFile" app/src/main/java
 ```
 
+审查结果：全仓 `getUriForFile()` 只有 **一个** 调用点，即 `ReaderScreen.kt:379` 的
+「分享阅读卡片」。`opds/`、`covers/` 与 LAN 备份 JSON 都**不经过** FileProvider——
+分别是进程内导入、Coil 按路径读取、以及 `LanTransferServer` 自己的令牌校验 socket；
+标注导出（`NotesViewModel.exportVisible`）只把文本放进 UI state，不落盘。
+所以正确做法不是「收窄成几个子目录」，而是只保留一个。
+
 **第二步：限制路径**
 ```xml
 <!-- app/src/main/res/xml/file_paths.xml -->
 <paths>
-    <!-- 只暴露 OPDS 下载目录 -->
-    <cache-path name="opds_downloads" path="opds/" />
-    
-    <!-- 备份导出文件 -->
-    <cache-path name="backup_exports" path="backup_exports/" />
-    
-    <!-- 书籍封面（如果需要分享） -->
-    <files-path name="book_covers" path="covers/" />
-    
-    <!-- 移除 external-path 和根路径，除非确实需要 -->
+    <!-- 唯一分享路径；须与 ShareCardGenerator.SHARE_CARD_DIR 一致 -->
+    <cache-path name="share_cards" path="share_cards/" />
 </paths>
 ```
 
-**第三步：代码审查**
-确保所有 `FileProvider.getUriForFile()` 调用都使用这些限定的路径名称，并且文件创建在对应子目录中。
+**第三步：代码审查（本轮的关键一步）**
+收窄路径必须与写入位置同步修改，否则会引入运行时崩溃。`ShareCardGenerator` 原先把 PNG
+写在 cache **根目录**，若只改 XML 不改代码，分享时 `getUriForFile()` 会抛
+`IllegalArgumentException: Failed to find configured root`。已同步改为写入
+`cacheDir/share_cards/`，并在两侧互加注释指向对方，避免后续再次漂移。
+
+> 单元测试无法捕获这类回归：`getUriForFile()` 需要真实的 Android 运行时与 manifest 中
+> 注册的 provider。这条路径依赖人工验证或仪器化测试。
 
 ---
 
@@ -467,9 +474,9 @@ intent.removeExtra(Intent.EXTRA_STREAM)
 
 | 编号 | 问题 | 优先级 | 工作量 | 修复时间估算 |
 |------|------|--------|--------|------------|
-| CVE-LOCAL-001 | 令牌生成逻辑错误 | 🔴 P0 | 5 分钟 | 立即 |
 | MED-001 | ContentProvider runBlocking | 🟠 P1 | 30 分钟 | 本周内 |
-| MED-002 | FileProvider 权限过宽 | 🟠 P1 | 15 分钟 | 本周内 |
+| MED-002 | FileProvider 权限过宽 | 🟠 P1 | 15 分钟（含同步改写入目录） | 本周内 |
+| CVE-LOCAL-001 | 令牌生成索引上限（潜伏，当前不可利用） | 🟡 P2 | 5 分钟 | 顺带修复 |
 | LOW-001 | 备份规则审查 | 🟡 P2 | 10 分钟 | 下版本 |
 | LOW-002 | FTS 数据库清理 | 🟡 P3 | 20 分钟 或 不修复 | 下版本或 N/A |
 | INFO-001 | 数据库加密 | ℹ️ P4 | N/A | 未来需要时 |

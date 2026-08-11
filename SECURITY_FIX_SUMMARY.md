@@ -8,15 +8,21 @@
 
 ## 修复的漏洞
 
-### 🔴 [已修复] CVE-LOCAL-001: LAN 传输令牌生成算法错误
+### 🟡 [已修复] CVE-LOCAL-001: LAN 传输令牌生成算法缺陷（潜伏，非活跃）
 
-**严重程度**: High → **已解决**  
-**CVSS 评分**: 7.5  
+**严重程度**: Low（潜伏缺陷）→ **已解决**
+
+> 定级说明：初评为 High/CVSS 7.5，复核后下调。`TOKEN_CHARS` 是 16 个 hex 字符，
+> 调用点又恰好是 `generateToken(16)`，两个常量相等使错误的索引上限碰巧算出正确结果，
+> **现有令牌的 16^16 熵并未受损，无可利用路径**。这是等待被触发的正确性缺陷，
+> 而不是已上线的漏洞。
 
 #### 问题
-令牌生成使用了错误的随机数范围 `random.nextInt(length)` 而不是 `random.nextInt(charset.length)`，导致：
-- 潜在的熵减少风险
-- 不同令牌长度时可能数组越界崩溃
+令牌生成使用了错误的随机数范围 `random.nextInt(length)`（目标长度）而不是
+`random.nextInt(charset.length)`（字符集长度）。当前二者相等所以结果正确，但熵的正确性
+依赖于这个巧合：
+- 令牌长度调高到 > 16 → `StringIndexOutOfBoundsException` 崩溃
+- 令牌长度调低到 < 16 → 静默退化为只用字符集前 N 个字符，无任何报错
 
 #### 修复
 **文件**: `app/src/main/java/com/flowreader/app/util/LanTransferServer.kt:141-146`
@@ -108,29 +114,36 @@ FileProvider 暴露整个目录树 (`path="."`)，违反最小权限原则：
 ```
 
 #### 修复
-**文件**: `app/src/main/res/xml/file_paths.xml`
+**文件**: `app/src/main/res/xml/file_paths.xml`、`app/src/main/java/com/flowreader/app/util/ShareCardGenerator.kt`
+
+全仓审计 `getUriForFile()` 调用点后确认：整个应用只有 **一个** 消费方——`ReaderScreen` 的「分享阅读卡片」。因此只需授权一个子目录：
 
 ```xml
-<!-- 修复后：仅暴露实际使用的子目录 -->
+<!-- 修复后：只授权唯一真实存在的分享路径 -->
 <paths>
-    <!-- OPDS client downloads (OpdsClient.download) -->
-    <cache-path name="opds_downloads" path="opds/" />
-
-    <!-- Backup export for LAN transfer (LanTransferServer) -->
-    <cache-path name="backup_exports" path="backup_exports/" />
-
-    <!-- Annotation exports (markdown/HTML/text) -->
-    <cache-path name="annotation_exports" path="annotation_exports/" />
-
-    <!-- Book cover sharing (if needed in future) -->
-    <files-path name="covers" path="covers/" />
+    <!-- Reader share cards; must match ShareCardGenerator.SHARE_CARD_DIR -->
+    <cache-path name="share_cards" path="share_cards/" />
 </paths>
 ```
 
+`ShareCardGenerator` 此前把 PNG 写在 cache **根目录**，因此收窄路径后必须同步改写入位置，否则分享时 `getUriForFile()` 会抛 `IllegalArgumentException`：
+
+```diff
+- val file = File(cacheDir, "share_card_${'$'}{System.currentTimeMillis()}.png")
++ val shareDir = File(cacheDir, SHARE_CARD_DIR).apply { mkdirs() }
++ val file = File(shareDir, "share_card_${'$'}{System.currentTimeMillis()}.png")
+```
+
+其余三棵目录树没有任何 FileProvider 消费方，直接删除而非收窄：
+- `covers/`（filesDir）— 由 Coil 在进程内按文件路径读取，从不经 FileProvider 分享。
+- `opds/`（cacheDir）— `OpdsClient.download` 的落地目录，随后在进程内导入。
+- LAN 备份 JSON — 位于 cache 根目录，由 `LanTransferServer` 自己的令牌校验 socket 提供，不走 FileProvider。
+- 标注导出 — `NotesViewModel.exportVisible` 只把文本放进 UI state，根本不落盘。
+
 #### 优势
-- 最小权限：仅暴露业务需要的子目录
-- 防御路径遍历：即使代码有漏洞，攻击范围受限
-- 审计友好：明确哪些路径是合法分享的
+- 最小权限：授权面从三棵完整目录树缩到一个子目录
+- 消除死配置：不再声明没有消费方的路径，避免后续代码误以为「这里可以分享」
+- 审计友好：配置与唯一调用点一一对应，且两侧互相注释指向
 
 #### 验证
 - ✅ 配置文件语法正确
@@ -222,13 +235,14 @@ FileProvider 暴露整个目录树 (`path="."`)，违反最小权限原则：
 | `app/src/test/java/com/flowreader/app/util/LanTransferServerTest.kt` | ➕ 新增 | 安全回归测试 |
 | `data/src/main/java/com/flowreader/app/data/local/dao/BookDao.kt` | ➕ 新增 | 同步查询方法 |
 | `app/src/main/java/com/flowreader/app/provider/FlowReaderContentProvider.kt` | 🔧 修复 | 移除 runBlocking |
-| `app/src/main/res/xml/file_paths.xml` | 🔧 修复 | 限制 FileProvider 路径 |
+| `app/src/main/res/xml/file_paths.xml` | 🔧 修复 | 收窄至唯一分享子目录 |
+| `app/src/main/java/com/flowreader/app/util/ShareCardGenerator.kt` | 🔧 修复 | 改写入 `share_cards/`，与收窄后的路径对齐 |
 | `app/src/main/res/xml/backup_rules.xml` | 📝 文档 | 添加安全注释 |
 | `app/src/main/res/xml/data_extraction_rules.xml` | 📝 文档 | 添加安全注释 |
 | `SECURITY_AUDIT_REPORT.md` | ➕ 新增 | 完整审计报告 |
 | `SECURITY_FIX_SUMMARY.md` | ➕ 新增 | 本文档 |
 
-**总计**: 7 个文件修复，2 个文件新增，9 个文件变更
+**总计**: 8 个文件修复，2 个文件新增，10 个文件变更
 
 ---
 
@@ -237,9 +251,9 @@ FileProvider 暴露整个目录树 (`path="."`)，违反最小权限原则：
 ### 推荐版本号: v56.4.1
 
 **理由**:
-- 包含 1 个高危漏洞修复（令牌生成）
-- 包含 2 个中危问题修复（ContentProvider, FileProvider）
-- 向后兼容，无破坏性变更
+- 包含 2 个中危问题修复（ContentProvider Binder 阻塞、FileProvider 授权面）
+- 包含 1 个潜伏正确性缺陷修复（令牌生成索引上限）与 1 个低危文档补充
+- 无破坏性变更；`ShareCardGenerator` 的写入目录变更对用户不可见（分享卡片是一次性缓存产物）
 - 符合语义化版本 PATCH 级别（bug 修复）
 
 ### CHANGELOG.md 条目建议
@@ -249,9 +263,9 @@ FileProvider 暴露整个目录树 (`path="."`)，违反最小权限原则：
 > 安全修复版本（基于 v56.4.0 审计发现）
 
 ### 修复
-- **令牌生成算法错误**：LanTransferServer 的随机令牌生成使用了错误的索引范围，已修复并添加回归测试
+- **令牌生成的潜伏缺陷**：LanTransferServer 用目标长度而非字符集长度作索引上限；当前两者恰好都是 16，熵未受损，但改长度即会越界或静默降熵。已修正并添加回归测试
 - **ContentProvider 性能优化**：移除 runBlocking，改用 Room 同步查询避免阻塞 Binder 线程
-- **FileProvider 权限收紧**：限制共享路径从根目录收窄至实际使用的子目录（opds/backup_exports/annotation_exports）
+- **FileProvider 权限收紧**：三棵完整目录树收至唯一真实分享路径 `share_cards/`，`ShareCardGenerator` 同步改写入该子目录
 - **备份规则文档化**：为 Android 备份配置添加安全注释，明确当前范围和未来注意事项
 
 ### 测试
@@ -264,7 +278,7 @@ FileProvider 暴露整个目录树 (`path="."`)，违反最小权限原则：
 ## 后续建议
 
 ### 短期（v57）
-1. ✅ 已完成所有高危和中危修复
+1. ✅ 已完成全部中危修复及潜伏缺陷加固
 2. 考虑添加 Dependabot 或 Renovate 进行依赖监控
 3. 在 CI 中添加静态安全扫描工具（如 Android Lint security 检查）
 
