@@ -8,6 +8,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -139,7 +141,7 @@ fun FlowReaderNavHost(
                     }
                 }
             } else {
-                Scaffold(
+                FlowShellScaffold(
                     bottomBar = {
                         if (showBottomBar) {
                             NavigationBar {
@@ -162,12 +164,47 @@ fun FlowReaderNavHost(
                             }
                         }
                     }
-                ) { paddingValues ->
-                    Box(modifier = Modifier.padding(paddingValues)) {
-                        FlowNavHost(navController, initialImportUri)
-                    }
+                ) {
+                    FlowNavHost(navController, initialImportUri)
                 }
             }
+        }
+    }
+}
+
+/**
+ * Compact-layout shell: bottom navigation plus the nav-host content.
+ *
+ * The window-inset contract lives here, and it is the fix for issue #6. Every screen below
+ * carries its own `Scaffold` + `TopAppBar`, and a `TopAppBar` already applies the status-bar
+ * inset itself. With the default [ScaffoldDefaults.contentWindowInsets] this shell padded the
+ * status bar away *and* left the inset unconsumed, so each screen's `TopAppBar` applied it a
+ * second time: one extra status-bar band of blank space above every title, and the same
+ * doubling on the navigation bar, which is what truncated content at the bottom.
+ *
+ * Zero insets here plus [consumeWindowInsets] means each inset is applied exactly once, by the
+ * screen — and app bars draw under the transparent status bar, which is what `enableEdgeToEdge()`
+ * in `MainActivity` was always for. [consumeWindowInsets] is still required for the bottom: the
+ * padding the shell spends there is the measured `NavigationBar` height, which already contains
+ * the navigation-bar inset, so screens must not add it again.
+ *
+ * Guarded by `ShellWindowInsetsTest`; keep the two in sync.
+ */
+@Composable
+internal fun FlowShellScaffold(
+    bottomBar: @Composable () -> Unit,
+    content: @Composable () -> Unit
+) {
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        bottomBar = bottomBar
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .padding(paddingValues)
+                .consumeWindowInsets(paddingValues)
+        ) {
+            content()
         }
     }
 }

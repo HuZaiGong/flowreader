@@ -4,6 +4,21 @@
 
 ---
 
+## [v56.4.2] - 2026-08-11
+> 修复 issue #6：每个界面顶部空出一条空白带、内容被截断。
+
+### 修复
+- **窗口 inset 被重复应用两次**（issue #6「安卓版本界面UI异常：每个界面的顶部UI都很宽，导致内容被截断」）。`Navigation.kt` 的外层 shell `Scaffold` 使用默认的 `ScaffoldDefaults.contentWindowInsets`，并把 `paddingValues` 以 `Modifier.padding()` 交给内容——但 padding 只是**应用**inset，并不**消费**它。于是下层 9 个界面各自的 `Scaffold` + `TopAppBar` 又把同一份 inset 应用了第二遍：标题上方多出整条状态栏高度的空白（截图中 24dp 空白 + 24dp 重复 + 64dp 标题栏 = 112dp），底部导航栏 inset 同样被计算两次（一次已含在 `NavigationBar` 的实测高度里，一次来自界面自己的 `contentWindowInsets.bottom`），把内容顶掉/截断。
+- 修法：抽出 `FlowShellScaffold`，设 `contentWindowInsets = WindowInsets(0, 0, 0, 0)` 并追加 `.consumeWindowInsets(paddingValues)`。顶部归零后，状态栏 inset 由各界面的 `TopAppBar` 应用**恰好一次**，应用栏绘制到透明状态栏之下——这本来就是 `MainActivity` 里 `enableEdgeToEdge()` 与 `themes.xml` 透明状态栏/导航栏的意图。底部仍需 `consumeWindowInsets`，因为 shell 在底部花掉的 padding 是 `NavigationBar` 的实测高度，其中已经含有导航栏 inset。
+- 阅读器路由不在 `bottomNavItems` 中（`showBottomBar` 为 false），shell 现在把 inset 原样透传，`ReaderControls` 自己的 `windowInsetsPadding` 因此也变为应用一次，全屏沉浸式生效。
+- 平板/大屏分支（`screenWidthDp >= 600` 的 `NavigationRail`）本就没有外层 `Scaffold`，inset 从来只应用一次，未改动。
+
+### 测试
+- 新增 `ShellWindowInsetsTest`（2 个用例）作为回归闸门：断言标签页界面内容顶部恰为 `状态栏 24dp + TopAppBar 64dp = 88dp`，且内容底边正好等于 `NavigationBar` 顶边；另一个用例断言 shell 无底栏时 inset 仍原样透传给自行沉浸的全屏界面。
+- 反向验证（故意还原修复）复现出预期数字：`Actual top is 112.0.dp, expected 88.0.dp` 与 `Actual top is 48.0.dp, expected 24.0.dp`。
+- 说明这类 bug 为何此前未被发现：Robolectric 下 inset 默认全为 0，且必须把 `WindowInsetsCompat` 派发到 **ComposeView**（`findViewById(android.R.id.content).getChildAt(0)`）才能到达 Compose——派发到 decorView 无效；同时唯一的 Roborazzi 用例只截取 `BookCover`/`BookShelfSkeleton`，不含任何 `Scaffold`。
+- 测试广度 71.0% → 72.6%（45/62）。
+
 ## [v56.4.1] - 2026-08-07
 > 安全加固补丁（基于 v56.4.0 审计的进一步收紧）。
 

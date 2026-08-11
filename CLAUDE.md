@@ -127,7 +127,11 @@ The project is offline-first and privacy-minded — keep it that way. v56.3/v56.
 
 ## Version bookkeeping
 
-`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5641 / "56.4.1") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5642 / "56.4.2") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+
+**v56.4.2 window-inset fix (2026-08-11)** — issue #6, 「每个界面的顶部UI都很宽，导致内容被截断」:
+- The shell `Scaffold` in `ui/Navigation.kt` is now `FlowShellScaffold`, with `contentWindowInsets = WindowInsets(0, 0, 0, 0)` **and** `.consumeWindowInsets(paddingValues)`. `Modifier.padding()` applies an inset without consuming it, so the previous shell let all 9 nested screens re-apply the status-bar inset through their own `Scaffold` + `TopAppBar` (112dp above the title instead of 88dp) and double-count the nav-bar inset at the bottom. **The inset contract belongs in that one composable** — see `AGENTS.md` for the full rule.
+- Inset regressions are invisible to both existing gates: Robolectric reports zero insets unless `WindowInsetsCompat` is dispatched onto the ComposeView (not the decor view), and the Roborazzi goldens contain no `Scaffold`. `ShellWindowInsetsTest` is the regression gate; it asserts measured positions.
 
 **v56.4.1 security hardening (2026-08-07)** — see `SECURITY_AUDIT_REPORT.md` / `SECURITY_FIX_SUMMARY.md`:
 - `FlowReaderContentProvider` no longer wraps DAO reads in `runBlocking` (that blocked Binder threads); `BookDao` gained `getAllBooksSync()` / `getBookByIdSync()` for it. A ContentProvider must never suspend-bridge on a Binder thread — add a sync DAO method instead.
