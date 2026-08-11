@@ -1,76 +1,128 @@
-# FlowReader
+# FlowReader (心流阅读)
 
-Offline-first Android e-book reader. Gradle modules are `:app`, `:core`, `:data`, `:domain`, `:feature:library`, and `:feature:reader`.
+Offline-first Android e-book reader: Jetpack Compose + Material 3, Clean Architecture + MVVM, Hilt DI, Room + FTS5. All data stays on-device — no accounts, no analytics, no sync. Supports EPUB / TXT / PDF / Markdown / FB2 / MOBI / JPG-PNG-WebP / ZIP / CBZ (read-only; DRM rejected). Docs and user-facing strings are Chinese; code, identifiers and comments are English.
+
+Gradle modules: `:app`, `:core`, `:data`, `:domain`, `:feature:library`, `:feature:reader`. Package `com.flowreader.app`, applicationId `com.flowreader.app`, minSdk 26, compile/target SDK 35, GPL-3.0. Current build-file version is `56.3.0` (versionCode 5630); `CHANGELOG.md`'s newest entry is v56.4.0 — the v56.4.0 commit did not bump `versionName`.
 
 ## Commands
-- `./gradlew assembleDebug` builds the development APK.
-- `./gradlew assembleRelease` builds the minified/shrunk release APK; release intentionally uses the debug signing config in `app/build.gradle.kts`.
-- `./gradlew testDebugUnitTest` runs the JVM unit tests. Current focused test files include `app/src/test/java/com/flowreader/app/util/BookParserTest.kt` and domain model tests under `domain/src/test/java/`.
-- `./gradlew testDebugUnitTest --tests com.flowreader.app.util.BookParserTest` runs the existing focused test class.
-- `./gradlew verifyKotlinStyle` runs ktlint for non-app modules plus the lightweight whitespace gate. ktlint enforces a 140-char line cap and single-line signatures when they fit — check new feature module code against it.
-- Screenshot regression gate: `./gradlew recordRoborazziDebug` records goldens under `app/src/test/snapshots/`, `verifyRoborazziDebug` gates CI (Roborazzi 1.40 + Robolectric on JVM, `@GraphicsMode(NATIVE)`; capture API is `captureRoboImage(filePath = "src/test/snapshots/<name>.png") { content }` — `RoborazziRule` no longer exists in 1.40).
-- `./gradlew performanceBaseline` reports debug/release APK sizes vs `baseline/apk-size.properties` and is part of CI. ktlint enforces a 140-char line cap and single-line signatures when they fit — check new feature module code against it.
-- `./gradlew coverageSummary` enforces the 40% test breadth target across app/core/feature/domain (55.8% as of v52).
-- `./gradlew clean` is available when generated/KSP state looks stale.
-- CI is in `.github/workflows/ci.yml`; do not claim checks ran unless you ran a Gradle task or inspected CI results.
+
+- `./gradlew assembleDebug` — development APK.
+- `./gradlew assembleRelease` — R8 full-mode minify + resource shrink. **Deliberately signs with the debug key** (`signingConfig = signingConfigs.getByName("debug")` in `app/build.gradle.kts`) so CI can emit a testable `app-release.apk`.
+- `./gradlew testDebugUnitTest` — all JVM unit tests (JUnit 4 + MockK + Robolectric; no emulator).
+- `./gradlew :app:testDebugUnitTest --tests <FQCN>` — single test class (e.g. `com.flowreader.app.util.BookParserTest`).
+- `./gradlew verifyKotlinStyle` — ktlint for every module **except `:app`** (root `build.gradle.kts` `subprojects` block) plus a lightweight whitespace gate over **all** `.kt`/`.kts` in the repo: any tab character or trailing whitespace fails the build. ktlint enforces a 140-char line cap and single-line signatures when they fit.
+- `./gradlew recordRoborazziDebug` — records screenshot goldens under `app/src/test/snapshots/`; `./gradlew verifyRoborazziDebug` gates CI. Roborazzi 1.40 + Robolectric run on the JVM (`@GraphicsMode(NATIVE)`); capture API is `captureRoboImage(filePath = "src/test/snapshots/<name>.png") { content }` — `RoborazziRule` no longer exists in 1.40. Goldens currently: `library_shelf_light.png`, `library_skeleton_dark.png`.
+- `./gradlew performanceBaseline` — builds debug+release, prints APK sizes vs `baseline/apk-size.properties` (currently debug 27540KB / release 10839KB), warns when an APK grew, then rewrites the baseline. Part of CI.
+- `./gradlew coverageSummary` — file-count test-breadth ratio (see Testing) with a 40% floor; currently **71.0% (44/62 files)**.
+- `./gradlew clean` — when generated/KSP state looks stale.
+- CI is `.github/workflows/ci.yml` (push/PR on `main`): `verifyKotlinStyle` → `testDebugUnitTest` → `coverageSummary` → `assembleDebug` → `verifyRoborazziDebug` → `performanceBaseline`. Do not claim a check ran unless you ran the Gradle task or inspected CI results.
 
 ## Toolchain
-- JDK 17 and Android SDK 35 are required by Gradle config.
-- Gradle wrapper downloads Gradle `9.6.1` from `mirrors.cloud.tencent.com`; network issues may be mirror-related.
-- AGP `8.6.0`, Kotlin `2.1.0`, Compose BOM `2024.12.01`, Hilt `2.55`, Room `2.6.1`.
-- Room schemas are exported to `data/schemas/`; KSP generated output is under each module's `build/generated/ksp/`.
+
+- JDK 17 and Android SDK 35 required.
+- Gradle wrapper `9.6.1` downloaded from `mirrors.cloud.tencent.com`; wrapper/network failures are usually mirror-related.
+- AGP `8.6.0`, Kotlin `2.1.0`, Compose BOM `2024.12.01`, Hilt `2.55`, Room `2.6.1` (KSP), ktlint `12.1.2`, Roborazzi `1.40.0`, Robolectric `4.14.1`, MockK `1.13.16`, coroutines `1.9.0`, Navigation Compose `2.8.5`, Coil `2.7.0`, JSoup `1.18.3`, Readium Kotlin Toolkit `3.1.2`, `desugar_jdk_libs 2.0.4`, `profileinstaller 1.4.1`.
+- `coreLibraryDesugaring` enabled (`java.time` works on minSdk 26). Room schemas export to `data/schemas/` (the `:app` ksp arg for `app/schemas` is a leftover; the database lives in `:data` now). KSP output is under each module's `build/generated/ksp/`.
+- `.editorconfig`: UTF-8, LF, 4-space indent, `max_line_length = 140`, ktlint `android_studio` style, `ktlint_function_naming_ignore_when_annotated_with = Composable`.
+
+## Modules and dependency rules
+
+Allowed direction: `feature:* → core/domain`, `data → core/domain`, `app → core/data/domain/feature:*`. Features must not depend on `:app`; `:data` must not depend on features; `:domain` must stay free of app/Room/Compose/Hilt.
+
+- `:app` — composition root: Hilt graph, navigation shell, all screens/ViewModels, repository implementations, parsers (`util/`), widget, ContentProvider. Legacy home of most UI; screens are being migrated to `:feature:*` boundaries.
+- `:core` — design system and pure helpers: `designsystem/token` (`FlowTokens`, `FlowBrandColors`, `FlowTypography`), `designsystem/theme` (`FlowTheme`, `FlowLocale`), `designsystem/component` (`BookCover`, `FlowScaffold`, `FlowTopBar`, `FlowStateHost`, `SkeletonBox`, `FlowComponentPreviews`), `designsystem/reader` (`ReaderPalette`, `ReaderTypography`, `ReaderMetrics`), `core/util` (pure functions: `ReaderBehavior`, `ReaderCustomTheme`, `ColorContrast`, `ReadingProgress`, `FlowFormatters`, `CoverArt`, `ShelfExporter`, `AnnotationExporter`). Depends on `:domain` only; Coil is an `api` dependency so `BookCover` ships complete.
+- `:data` — Room local storage: `AppDatabase`, 7 DAOs, 8 entities. No Hilt, no Compose.
+- `:domain` — models (`Book`, `ReadingSettings`, `ReadingList`, `ReadingStats`, …) and repository contracts; plus pure logic like `ReadingListOrder`. Depends on coroutines-core only.
+- `:feature:library` — empty migration boundary (no sources yet).
+- `:feature:reader` — migrated reader logic: `ChapterPaginator`, `ReaderProgressEngine`, `ReaderSessionTracker` (all unit-tested).
 
 ## Architecture
-- Entry points: `MainActivity.kt`, `FlowReaderApplication.kt`, and root navigation/theme in `ui/Navigation.kt`.
-- Flow is `Composable -> ViewModel -> domain repository interface -> data repository impl -> Room DAO`.
-- `:app` is the current composition root; `:domain` owns models/contracts; `:data` owns Room local storage; `:core` owns the design system (tokens, `FlowTheme`, 12 reader palettes, Compose-free reader/format/contrast helpers) since v52; `:feature:*` are still empty migration boundaries.
-- `ui/screens/<screen>/` pairs `*Screen.kt` with `*ViewModel.kt`; each ViewModel exposes immutable `StateFlow<XxxUiState>` backed by private `MutableStateFlow`.
-- Domain repository interfaces are separate files in `domain/repository/`; implementations are in `data/repository/` and bound in `di/AppModule.kt`.
-- `di/AppModule.kt` contains `DatabaseModule` DAO providers and `RepositoryModule` Hilt `@Binds` entries. Add bindings there for new repos.
 
-## Navigation And Theme
-- Routes live in sealed class `Screen` in `ui/Navigation.kt`: `library`, `stats`, `settings`, `wheel`, `search?query={query}`, `book_detail/{bookId}`, `reader/{bookId}?chapterIndex={chapterIndex}`.
-- `Screen.Reader.createRoute(bookId, chapterIndex = -1)` omits `chapterIndex` when resuming; non-negative values jump directly to a chapter.
-- Bottom tabs are only Library, Stats, and Settings; the wheel is a secondary destination opened from the library top-bar overflow (demoted in v52). Since v55 the navigation is adaptive: width >= 600dp swaps the bottom bar for a navigation rail (hand-rolled, because `NavigationSuiteScaffold` needs m3 1.4 which needs Compose 1.9+).
-- The library search icon navigates to the standalone `SearchScreen` (history + books/chapters sections + paged FTS results); the shelf itself no longer embeds global search.
-- Reader settings support custom text/background colors (`ReadingSettings.customTextColorArgb`/`customBackgroundColorArgb`, DataStore-backed): `:core` `ReaderCustomTheme.resolve()` guards the pair with WCAG AA and falls back to the palette side that restores contrast. No Room migration involved — reading settings never lived in Room.
-- App theme is `AppThemeMode` (LIGHT/DARK/FOLLOW_SYSTEM) plus `ColorSource` (BRAND default, DYNAMIC opt-in). It is applied once in `FlowReaderNavHost` via `:core`'s `FlowTheme`; do not add per-screen theme wrappers.
-- Reader colors are the 12 `ReaderPalette`s in `:core`, selected by `ReadingSettings.palette` / `nightPalette`. Contrast for all 12 is asserted against WCAG AA in `ReaderPaletteContrastTest`.
-- `SettingsScreen` displays the app version from `BuildConfig.VERSION_NAME`.
+Flow: `Composable → ViewModel → domain repository interface → data repository impl → Room DAO`.
 
-## Room And Data
-- `AppDatabase` is version `7`, has 8 entities, and `exportSchema = true`.
-- Room has explicit `MIGRATION_4_5` adding `books.tags` and `MIGRATION_5_6` adding the bookmark `(bookId, chapterIndex, position)` index; do not use `fallbackToDestructiveMigration()`.
-- `BackupRepositoryImpl.importData()` uses `database.withTransaction`; keep backup import atomic.
-- `ChapterRepositoryImpl` routes chapter metadata/content through `CacheManager`; avoid adding a second chapter-content cache. `CacheManager` adapts its per-book chapter capacity (2-12) to the hit rate sampled every 50 accesses and evicts least-used books on moderate trims.
+- Entry points: `MainActivity.kt` (also resolves `ACTION_VIEW` import URIs — see Security), `FlowReaderApplication.kt` (`@HiltAndroidApp`), root UI in `ui/FlowReaderApp.kt` (`FlowReaderRoot`) and `ui/Navigation.kt` (`FlowReaderNavHost`).
+- `ui/screens/<screen>/` pairs `*Screen.kt` with `*ViewModel.kt`; screens: `library`, `stats`, `settings`, `wheel`, `bookdetail`, `reader`, `search`, `notes`, `readinglist`, `opds`. Each ViewModel exposes an immutable `StateFlow<XxxUiState>` backed by a private `MutableStateFlow`.
+- Repository interfaces are separate files in `domain/repository/` (10: Book, Chapter, Bookmark, Annotation, Category, ReadingStats, Backup, Settings, Search, ReadingList); implementations in `:app` `data/repository/`, bound in `di/AppModule.kt`.
+- `di/AppModule.kt`: `DatabaseModule` (`@Provides`: AppDatabase with migrations + 7 DAOs) and `RepositoryModule` (`@Binds` × 10). Add bindings there for new repos.
+- No use-case layer (`domain/usecase/` is an empty leftover); logic lives in ViewModels and feature-module engines.
+
+## Navigation and theme
+
+- Routes live in sealed class `Screen` (`ui/Navigation.kt`), titles as `@StringRes` (never literals — the v53 in-app language switch freezes string-bearing statics at first composition): `library`, `stats`, `settings` (bottom tabs / rail), `wheel`, `notes`, `reading_lists`, `opds` (secondary, opened from the library top-bar overflow), `search?query={query}`, `book_detail/{bookId}`, `reader/{bookId}?chapterIndex={chapterIndex}`.
+- `Screen.Reader.createRoute(bookId, chapterIndex = -1)` omits `chapterIndex` when resuming; non-negative values jump to a chapter. `Screen.Search.createRoute(query)` omits the arg when blank.
+- Since v55 navigation is adaptive: `screenWidthDp >= 600` swaps the bottom bar for a hand-rolled `NavigationRail` (a `NavigationSuiteScaffold` would need m3 1.4 / Compose 1.9+).
+- App theme is `AppThemeMode` (LIGHT/DARK/FOLLOW_SYSTEM) + `ColorSource` (BRAND default, DYNAMIC opt-in), applied once in `FlowReaderNavHost` via `:core`'s `FlowTheme`; the reader body has its own palettes and never follows this. Do not add per-screen theme wrappers.
+- Reader colors are the 12 `ReaderPaletteId`s (`domain/model/ReadingSettings.kt`); the actual colors live in `:core` `ReaderPalette.kt`. Contrast for all 12 is asserted against WCAG AA in `core/.../ReaderPaletteContrastTest`.
+- Custom text/background colors (`ReadingSettings.customTextColorArgb`/`customBackgroundColorArgb`, DataStore-backed): `:core` `ReaderCustomTheme.resolve()` guards the pair with WCAG AA and falls back to the side that restores contrast. No Room involvement — reading settings never lived in Room.
+- In-app language switch (`AppLanguage`): `FlowLocaleProvider` wraps `LocalContext`/`LocalConfiguration`/`LocalLayoutDirection` with a **`ContextWrapper`** — a bare `createConfigurationContext()` result is not an Activity and makes `hiltViewModel()`'s `findActivity()` throw. Locales: zh (default), en, ja, ko, de, es, fr, pt, ru.
+- `SettingsScreen` shows `BuildConfig.VERSION_NAME`.
+
+## Room and data
+
+- `AppDatabase` is version **7**, **8 entities** (Book, Chapter, Bookmark, Annotation, Category, ReadingStats, ReadingList, ReadingListItem) and **7 DAOs**, `exportSchema = true` → `data/schemas/com.flowreader.app.data.local.AppDatabase/{4,6,7}.json`.
+- Explicit migrations in `di/AppModule.kt`: `MIGRATION_4_5` (`books.tags`), `MIGRATION_5_6` (bookmark `(bookId, chapterIndex, position)` index), `MIGRATION_6_7` (reading_lists + reading_list_items, `(listId, bookId)` unique index, FK cascades). **Never** use `fallbackToDestructiveMigration()`.
+- `BackupRepositoryImpl.importData()` wraps everything in `database.withTransaction` — keep backup import atomic. Backup import/export capped at 200MB.
+- `ChapterRepositoryImpl` routes chapter metadata/content through `CacheManager`; do not add a second chapter-content cache. `CacheManager` adapts per-book chapter capacity (2–12) to hit rate sampled every 50 accesses and evicts least-used books on moderate trims; it was actually wired to hit/miss stats in v54.5.
+- `SearchRepositoryImpl` serializes index rebuilds with a `Mutex` (v56.4) so concurrent searches cannot interleave `deleteAllContent`/`indexChapter`.
 - Code uses built-in `kotlin.Result` where needed; the old custom `AppException`/`Result` wrapper is gone.
 
-## Reader Gotchas
-- `ReaderViewModel` reads `bookId` and optional `chapterIndex` from `SavedStateHandle`; validate `bookId > 0` before DB work. Since v54 its progress math lives in `ReaderProgressEngine` (feature:reader), session timing/EMA speed in `ReaderSessionTracker` (injectable clock for tests), and TTS speak-from-position in `ReaderTtsCoordinator`.
-- `goToChapter()` must load chapter content before setting `currentChapter`; setting metadata-only chapters causes blank reader content.
-- Reading progress saves are debounced by 3 seconds in `debouncedSaveProgress()`.
-- Reading stats are auto-saved every 30 seconds, on chapter change, and in `onCleared()`; page counts come from real chapter-character deltas, unfinished page characters carry across scroll updates, and pauses over 5 minutes split a new session.
+## Reader gotchas
+
+- `ReaderViewModel` reads `bookId` and optional `chapterIndex` from `SavedStateHandle`; validate `bookId > 0` before DB work. Progress math lives in `ReaderProgressEngine` (feature:reader), session timing/EMA speed in `ReaderSessionTracker` (injectable clock), TTS speak-from-position in `ReaderTtsCoordinator`.
+- `goToChapter()` must load chapter content before setting `currentChapter`; setting metadata-only chapters blanks the reader.
+- Progress saves are debounced 3s in `debouncedSaveProgress()`. Stats save every 30s, on chapter change, and in `onCleared()` — since v56.3 `onCleared()` runs its save in an independent IO scope (not `viewModelScope`, which is already cancelled). Page counts come from real chapter-character deltas; unfinished page characters carry across scroll updates; pauses over 5 minutes split a new session.
 - `ReadingStatsRepository.getRecentDailyStats()` must aggregate rows by date before charting; `getReadingReport(days)` powers weekly/monthly reports and goals.
-- Eye protection reminder interval is persisted in `ReadingSettings.eyeProtectionIntervalMinutes` and exposed as 15/20/30/45/60 minute chips in `ReaderSettingsSheet`.
+- Eye-protection interval is persisted in `ReadingSettings.eyeProtectionIntervalMinutes` (15/20/30/45/60 chips in `ReaderSettingsSheet`).
 - Every reader preference is written through the single `ReaderViewModel.updateReadingSettings(ReadingSettings)`; per-field mutators were removed in v52.
 - Reader text styles must come from `:core` (`readerBodyStyle`, `paragraphSpacing`, `ReaderMetrics`). Hard-coding `bodyLarge` is what made font/custom-font/paragraph-spacing settings inert before v52.
-- `PageMode` is `SLIDE` / `PAGED` / `NONE`, and all three are actually rendered: `SLIDE` animates the chapter scroll, `PAGED` renders measured pages in a `HorizontalPager` (tap left/right third flips one page, `ChapterPaginator` splits oversized paragraphs on raw offsets so highlight/bookmark ranges survive re-pagination), `NONE` jumps. Never add a mode ahead of its implementation.
-- Tap zones, swipes, double tap and long press are resolved by `ReaderBehavior` in `:core` from `GestureSettings`; auto night mode is driven by a one-minute ticker, not a single composition-time `Calendar` read.
-- Reader scroll position is remembered per chapter in `ReaderViewModel.chapterPositions`; keep `ReaderScreen` scroll restoration aligned with `uiState.currentPosition`.
+- `PageMode` is `SLIDE` / `PAGED` / `NONE`, all three rendered: `SLIDE` animates chapter scroll, `PAGED` renders measured pages in a `HorizontalPager` (`PagedReader`; `ChapterPaginator` splits oversized paragraphs on raw offsets so highlight/bookmark ranges survive re-pagination), `NONE` jumps. **Never add a mode ahead of its implementation** — the v52 `SIMULATION`/`CURL` fakes were deleted, and `docs/page_turn_evaluation.md` (v56) decided simulated page curl stays unimplemented. Comic books use `ComicReader` (SLIDE = swipe per page, NONE = vertical `LazyColumn` virtualized list).
+- Tap zones, swipes, double tap and long press are resolved by `ReaderBehavior` in `:core` from `GestureSettings`; auto night mode is a one-minute ticker, not a composition-time `Calendar` read.
+- Scroll position is remembered per chapter in `ReaderViewModel.chapterPositions`; keep `ReaderScreen` scroll restoration aligned with `uiState.currentPosition`.
 - `FullTextSearch` is injected into `ReaderViewModel`; chapters are indexed after book load and `SearchDialog` navigates to matching chapters.
-- `TtsManager` wraps Android `TextToSpeech` and exposes `StateFlow<TtsState>`; `ReaderViewModel` observes it for button state, speaks from `currentPosition`, and calls `shutdown()` in `onCleared()`.
-- Reading progress Widget uses DataStore keys `widget_book_title` and `widget_progress_percent`, updated from `ReaderViewModel.updateWidgetSnapshot()`; the widget provider updates via `goAsync()` (never `runBlocking`).
-- `ReadingSettings.autoNightMode` is time-based in `ReaderScreen` (19:00-07:00 dark); it does not change the global app theme.
-- Reader font selection uses `ReaderFontFamily` with 4 resolvable faces in `domain/model/ReadingSettings.kt`; imported `.ttf/.otf` files win over the built-in face and fall back silently when unreadable.
-- Native text selection (v54): long-pressing a paragraph opens the in-house selection engine in `ReaderContent` (`ReaderParagraph` + `ReaderSelectionBar`), with drag-extend and draggable handles; the action bar highlights / copies / bookmarks the exact range. `ReaderTextMapping` maps display offsets back to raw chapter offsets (pure, tested). Do NOT reach for the platform `SelectionContainer` hoisted selection overload — it is `internal` through Compose 1.9.x; the engine deliberately uses only public `TextLayoutResult` APIs.
-- Bookmark repository normalizes text, validates positive IDs, stores via `addBookmark()`, and bookmarks are sorted by chapter/position for stable navigation.
+- `TtsManager` (`util/TtsManager.kt`) wraps Android `TextToSpeech`, exposes `StateFlow<TtsState>`; `ReaderViewModel` observes it for button state, speaks from `currentPosition`, calls `shutdown()` in `onCleared()`. Lazy-initialized — entering the reader must not start the TTS engine.
+- Progress Widget uses DataStore keys `widget_book_title` (string) / `widget_progress_percent` (int) defined in `data/repository/SettingsRepository.kt`, updated from `ReaderViewModel.updateWidgetSnapshot()`; `ReadingProgressWidgetProvider` updates via `goAsync()` (never `runBlocking`).
+- `ReadingSettings.autoNightMode` is time-based in `ReaderScreen` (19:00–07:00 dark); it does not change the global app theme.
+- Font selection uses `ReaderFontFamily` (4 resolvable faces) in `domain/model/ReadingSettings.kt`; imported `.ttf/.otf` wins over the built-in face and falls back silently when unreadable.
+- Native text selection (v54): long-press opens the in-house engine in `ReaderContent` (`ReaderParagraph` + `ReaderSelectionBar`), drag-extend and draggable handles; the action bar highlights / copies / bookmarks the exact range. `ReaderTextMapping` maps display offsets back to raw chapter offsets (pure, tested). Do NOT use the platform `SelectionContainer` hoisted-selection overload — it is `internal` through Compose 1.9.x; the engine deliberately uses only public `TextLayoutResult` APIs.
+- Bookmark repository normalizes text, validates positive IDs, stores via `addBookmark()`, and sorts by chapter/position for stable navigation.
 
-## Compose/UI Gotchas
-- Never put a `LazyColumn` inside another `LazyColumn` item; use a plain `Column` for nested lists to avoid unbounded-height crashes.
-- `WheelViewModel.spin()` is a regular function that launches its own coroutine; do not call it from a `LaunchedEffect` as if it were suspend.
-- Wheel animation timing uses `System.nanoTime()` plus `delay(16L)`; preserve elapsed-time-based animation rather than reintroducing fixed-step loops.
-- `WheelScreen` isolates `error` and `result` with `derivedStateOf` so 60 FPS `rotationAngle` updates do not recompose unrelated UI.
-- Library filtering combines category chips, search query, and sort order in `LibraryViewModel`; keep `selectedCategoryId` reflected in `LibraryUiState` for UI chips.
-- Global search uses `SearchRepository.rebuildIndex()` + `FullTextSearch.searchAll()` from the library search bar; results must include source book title.
-- `BookParser` caps reads: 16MB per EPUB chapter, 24MB per embedded image, 128MB for TXT/MD/FB2/MOBI whole files; oversized entries are skipped or fail with a clear message.
-- Startup: `androidx.profileinstaller` is wired and `app/src/main/baseline-prof.txt` carries the hand-written cold-start profile; keep profile rules in sync when startup-path classes are renamed.
+## Compose/UI gotchas
+
+- Never put a `LazyColumn` inside another `LazyColumn` item; use a plain `Column` for nested lists (unbounded-height crash).
+- `WheelViewModel.spin()` is a regular function that launches its own coroutine; do not call it from a `LaunchedEffect` as if it were suspend. Wheel animation uses `System.nanoTime()` plus `delay(16L)` — preserve elapsed-time-based animation, not fixed-step loops. `WheelScreen` isolates `error`/`result` with `derivedStateOf` so 60 FPS `rotationAngle` updates do not recompose unrelated UI.
+- Library filtering (category chips + query + sort) lives in `LibraryViewModel`; keep `selectedCategoryId` reflected in `LibraryUiState`. Batch operations send one SQL statement per action and report via a sealed `LibraryMessage`.
+- Global search uses `SearchRepository.rebuildIndex()` + `FullTextSearch.searchAll()` from the standalone `SearchScreen`; results must include the source book title. The shelf itself no longer embeds global search.
+- `BookParser` caps reads: 16MB per EPUB chapter, 24MB per embedded image, 128MB for whole TXT/MD/FB2/MOBI files; oversized entries are skipped or fail with a clear message.
+- `ZipImporter` / `ZipImportRules` guard ZIP/CBZ imports: absolute paths and `..` rejected (zip-slip), `__MACOSX` and hidden entries skipped, entry count and per-entry size capped, only parser-supported extensions let through. Comic ZIPs import as one comic (natural filename sort, first image = cover); plain-book ZIPs batch-import.
+- Startup: `androidx.profileinstaller` is wired and `app/src/main/baseline-prof.txt` carries the hand-written cold-start profile (class-level rules robust against renames, method rules pin hot paths); keep profile rules in sync when startup-path classes are renamed.
+
+## Testing strategy
+
+- JVM unit tests only in CI (no instrumented tests in the gate). `:app` tests use Robolectric (`unitTests.isIncludeAndroidResources = true`); `:core` sets `unitTests.isReturnDefaultValues = true`.
+- Test locations: `app/src/test` (parsers, repositories, provider, `ReaderTextMapping`, Roborazzi screenshots), `core/src/test` (palette contrast, `ReaderBehavior`, `ReaderCustomTheme`, exporters/formatters, metrics), `domain/src/test` (model behavior: `ReadingSettings` normalization, `ReadingListOrder`, `ReaderPaletteId` migration mapping, `AppLanguage`…), `feature/reader/src/test` (`ChapterPaginator`, `ReaderProgressEngine`, `ReaderSessionTracker`).
+- `coverageSummary` is a **file-count ratio, not line coverage**: `(test files under app/core/feature/domain test source sets) / (app repo impls + app+feature ViewModels + every :core main file + domain repository interfaces + domain models)` must be ≥ 40%. Adding a new domain model, ViewModel or `:core` file without a test can break the build even though nothing else changed. Currently 71.0% (44/62).
+- Screenshot goldens: record with `recordRoborazziDebug`, gate with `verifyRoborazziDebug`; new UI worth pinning should add a golden under `app/src/test/snapshots/`.
+
+## Security considerations
+
+The project is offline-first and privacy-minded — keep it that way. v56.3/v56.4 were dedicated security audits; the following are hard constraints:
+
+- **Single `INTERNET` permission** (`AndroidManifest.xml`), used only by the LAN OPDS client. No accounts, analytics, crash reporting, or sync. Cleartext is permitted only because home-LAN OPDS servers (Calibre, COPS, Komga) rarely run HTTPS; the real boundary is code, not config.
+- **OPDS is LAN-only**: `OpdsAddress` restricts reachability to loopback / RFC1918 / RFC4193 / `.local`-style names and re-validates **every redirect hop**; public hosts are unreachable. Catalog reads capped at 2MB, downloads at 200MB, acquisition links MIME-filtered.
+- **Import caps everywhere**: `BookParser` read limits (above), `ZipImportRules` zip-slip/entry caps, backup import 200MB on both SAF and LAN paths, `ACTION_VIEW` ("open with FlowReader") imports run through the same capped pipeline and are consumed once (`intent.data`/`EXTRA_STREAM` cleared) so configuration changes cannot re-import.
+- **No DRM circumvention**: DRM-protected MOBI/AZW files are rejected outright; HUFF/CDIC-compressed files are rejected rather than half-decoded.
+- **Backup/export contains no executables**: backup import is a single atomic transaction; cloud backup (`backup_rules.xml`, `data_extraction_rules.xml`) includes shared prefs only (`device.xml` excluded) — the DB never leaves the device via Android Backup.
+- **ContentProvider** (`com.flowreader.app.provider`) exposes read-only book metadata and progress — no file paths, no book text; writes are refused. FileProvider paths are whitelisted (`res/xml/file_paths.xml`).
+- **LAN transfer** (`LanTransferServer`/`LanTransferClient`): random-token-protected, binds the discovered LAN interface (never `0.0.0.0` since v56.4), and the HTTP server stops when the dialog closes.
+- **Sanitization**: FTS queries escaped (`FullTextSearch.escapeFtsQuery()`), HTML/Markdown annotation exports escaped, `OpdsClient` filters MIME types.
+- No WebView anywhere. The v56.3 audit gate requires **no new `!!`** (the only remaining one is the ContentProvider's standard `context!!` in `onCreate`).
+
+## Project docs and dev-environment artifacts
+
+- `README.md` — Chinese product overview; **stale** on architecture details (still describes the v50 single-module layout). Trust `AGENTS.md`/`ARCHITECTURE.md` for structure.
+- `ARCHITECTURE.md` — module map and dependency direction (v51+).
+- `CHANGELOG.md` — full semantic-version changelog, Chinese; newest entry v56.4.0.
+- `ROADMAP.md` — product plan and "否决清单" (rejected-features list); the place to check before adding a feature that touches principles (offline-first, performance, restraint).
+- `docs/page_turn_evaluation.md` — v56 evaluation concluding simulated page-turn is not implemented and must not get a UI entry.
+- `CLAUDE.md`, `AGENTS_CN.md` — older agent guides; `AGENTS_CN.md` is stale (describes v45). `UI_REFACTOR_PLAN.md` is the v52-era migration plan.
+- `.opencode/` + `providers.yaml` + `index.html` are developer/AI-tool environment artifacts, not app code.

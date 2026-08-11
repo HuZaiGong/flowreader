@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Auto Backup rules (API 23+).
+
+  FlowReader backs up user preferences (SharedPreferences/DataStore) but NOT the database:
+  - Included: reading settings, theme, language (settings.preferences_pb)
+  - Excluded: device.xml (device-specific data), the Room database (books stay local)
+
+  Security note: Currently safe as no credentials are stored. If future versions add
+  account/sync features, use EncryptedSharedPreferences and exclude from backup.
+-->
 <full-backup-content>
     <include domain="sharedpref" path="."/>
     <exclude domain="sharedpref" path="device.xml"/>

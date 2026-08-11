@@ -1,7 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  FileProvider paths (v56.4.1 security audit fix: narrowed from root paths).
+
+  Only expose specific subdirectories that the app actually shares:
+  - OPDS downloads: cached books from LAN OPDS servers
+  - Backup exports: backup files for LAN transfer
+  - Annotation exports: exported markdown/HTML/text files
+
+  Removed:
+  - external-path (never used, exposes entire external storage)
+  - Root files-path and cache-path (replaced with subdirectories)
+-->
 <paths>
-    <external-path name="external" path="." />
-    <files-path name="files" path="." />
-    <cache-path name="cache" path="." />
-    <external-files-path name="external_files" path="." />
+    <!-- OPDS client downloads (OpdsClient.download) -->
+    <cache-path name="opds_downloads" path="opds/" />
+
+    <!-- Backup export for LAN transfer (LanTransferServer) -->
+    <cache-path name="backup_exports" path="backup_exports/" />
+
+    <!-- Annotation exports (markdown/HTML/text) -->
+    <cache-path name="annotation_exports" path="annotation_exports/" />
+
+    <!-- Book cover sharing (if needed in future) -->
+    <files-path name="covers" path="covers/" />
 </paths>

@@ -11,8 +11,6 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 
 /**
  * Read-only access to reading data for other apps (v56). Exposes:
@@ -55,7 +53,7 @@ class FlowReaderContentProvider : ContentProvider() {
     ): Cursor? {
         return when (MATCHER.match(uri)) {
             MATCH_BOOKS -> {
-                val books = runBlocking { bookDao.getAllBooks().first() }
+                val books = bookDao.getAllBooksSync()
                 matrixCursor(
                     COLUMNS,
                     books.map { book ->
@@ -74,7 +72,7 @@ class FlowReaderContentProvider : ContentProvider() {
             }
             MATCH_BOOK_BY_ID -> {
                 val bookId = uri.lastPathSegment?.toLongOrNull() ?: return null
-                val book = runBlocking { bookDao.getBookById(bookId) } ?: return null
+                val book = bookDao.getBookByIdSync(bookId) ?: return null
                 matrixCursor(
                     COLUMNS,
                     listOf(
@@ -93,7 +91,7 @@ class FlowReaderContentProvider : ContentProvider() {
             }
             MATCH_PROGRESS_BY_BOOK -> {
                 val bookId = uri.lastPathSegment?.toLongOrNull() ?: return null
-                val book = runBlocking { bookDao.getBookById(bookId) } ?: return null
+                val book = bookDao.getBookByIdSync(bookId) ?: return null
                 matrixCursor(
                     PROGRESS_COLUMNS,
                     listOf(

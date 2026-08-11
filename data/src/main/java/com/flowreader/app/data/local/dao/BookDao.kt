@@ -14,6 +14,9 @@ interface BookDao {
     @Query("SELECT * FROM books ORDER BY lastReadTime DESC, addedTime DESC")
     fun getAllBooks(): Flow<List<BookEntity>>
 
+    @Query("SELECT * FROM books ORDER BY lastReadTime DESC, addedTime DESC")
+    fun getAllBooksSync(): List<BookEntity>
+
     @Query("SELECT * FROM books ORDER BY lastReadTime DESC, addedTime DESC LIMIT :limit OFFSET :offset")
     suspend fun getBooksPaged(offset: Int, limit: Int): List<BookEntity>
 
@@ -25,6 +28,9 @@ interface BookDao {
 
     @Query("SELECT * FROM books WHERE id = :id")
     suspend fun getBookById(id: Long): BookEntity?
+
+    @Query("SELECT * FROM books WHERE id = :id")
+    fun getBookByIdSync(id: Long): BookEntity?
 
     @Query("SELECT * FROM books WHERE filePath = :filePath")
     suspend fun getBookByPath(filePath: String): BookEntity?

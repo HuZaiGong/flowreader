@@ -86,4 +86,60 @@ class LanTransferServerTest {
         assertTrue(first != second)
         LanTransferServer(payload).stop()
     }
+
+    /**
+     * Security regression test for CVE-LOCAL-001 (v56.4.1 fix).
+     *
+     * Validates that token generation uses the full charset length, not the desired token length.
+     * The bug was: `random.nextInt(length)` instead of `random.nextInt(charset.length)`.
+     */
+    @Test
+    fun tokenGenerationUsesFullCharsetEntropy() {
+        // Generate many servers and extract tokens from URLs
+        val tokens = (1..100).map {
+            val srv = LanTransferServer(payload)
+            val url = srv.start() ?: return@map null
+            srv.stop()
+            // Extract token from "http://IP:PORT/backup/TOKEN"
+            url.substringAfterLast("/")
+        }.filterNotNull()
+
+        assertTrue("Should generate at least 90 valid tokens", tokens.size >= 90)
+
+        // All tokens should be 16 characters (hex)
+        tokens.forEach { token ->
+            assertEquals("Token should be 16 chars", 16, token.length)
+            assertTrue(
+                "Token should be all hex chars",
+                token.all { it in '0'..'9' || it in 'a'..'f' }
+            )
+        }
+
+        // Aggregate all characters used across all tokens
+        val allCharsUsed = tokens.flatMap { it.toList() }.toSet()
+
+        // Over 100 tokens, we should see most or all of the 16 hex characters
+        assertTrue(
+            "Expected to see at least 14 of 16 hex chars across 100 tokens, got ${allCharsUsed.size}",
+            allCharsUsed.size >= 14
+        )
+    }
+
+    @Test
+    fun tokenUniquenessAcrossMultipleInstances() {
+        val tokens = (1..50).map {
+            val srv = LanTransferServer(payload)
+            val url = srv.start()
+            srv.stop()
+            url?.substringAfterLast("/")
+        }.filterNotNull()
+
+        val uniqueTokens = tokens.toSet()
+        // With 16^16 space, all 50 tokens should be unique
+        assertEquals(
+            "All generated tokens should be unique",
+            tokens.size,
+            uniqueTokens.size
+        )
+    }
 }

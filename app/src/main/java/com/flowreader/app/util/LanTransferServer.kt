@@ -140,8 +140,9 @@ class LanTransferServer(private val file: File) {
 
         private fun String.generateToken(length: Int): String {
             val random = SecureRandom()
+            val charset = this
             return buildString {
-                repeat(length) { append(this@generateToken[random.nextInt(length)]) }
+                repeat(length) { append(charset[random.nextInt(charset.length)]) }
             }
         }
     }

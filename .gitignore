@@ -94,3 +94,10 @@ Thumbs.db
 # Virtual machine crash logs
 hs_err_pid*
 replay_pid*
+
+# AI tool config — contains API keys; never commit real keys
+providers.yaml
+
+# AI tool session data (may contain sensitive conversation content) and deps
+.opencode/goals/
+.opencode/node_modules/

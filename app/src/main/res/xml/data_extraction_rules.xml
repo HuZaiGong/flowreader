@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android Cloud Backup rules (API 31+).
+
+  Same policy as backup_rules.xml: preferences only, no database.
+-->
 <data-extraction-rules>
     <cloud-backup>
         <include domain="sharedpref" path="."/>
