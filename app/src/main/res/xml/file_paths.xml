@@ -1,26 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  FileProvider paths (v56.4.1 security audit fix: narrowed from root paths).
+  FileProvider paths (v56.4.1 security fix: narrowed from whole-root grants).
 
-  Only expose specific subdirectories that the app actually shares:
-  - OPDS downloads: cached books from LAN OPDS servers
-  - Backup exports: backup files for LAN transfer
-  - Annotation exports: exported markdown/HTML/text files
+  There is exactly one getUriForFile() call site in the app — the reader's
+  "分享阅读卡片" action (ReaderScreen -> ShareCardGenerator) — so this file grants
+  exactly one directory. Keep it that way: every path listed here is reachable by
+  any app holding a granted URI.
 
-  Removed:
-  - external-path (never used, exposes entire external storage)
-  - Root files-path and cache-path (replaced with subdirectories)
+  Removed in v56.4.1 (each exposed a whole tree with no consumer):
+  - <external-path path="." />  never used at all
+  - <files-path path="." />     covers/ is read in-process by Coil, never shared
+  - <cache-path path="." />     opds/ downloads are imported in-process; the LAN
+                                backup JSON is served over LanTransferServer's own
+                                token-guarded socket, not through FileProvider
+
+  If a new share path is ever needed, add the narrowest subdirectory that works and
+  point the writing code at it — do not widen these back to ".".
 -->
 <paths>
-    <!-- OPDS client downloads (OpdsClient.download) -->
-    <cache-path name="opds_downloads" path="opds/" />
-
-    <!-- Backup export for LAN transfer (LanTransferServer) -->
-    <cache-path name="backup_exports" path="backup_exports/" />
-
-    <!-- Annotation exports (markdown/HTML/text) -->
-    <cache-path name="annotation_exports" path="annotation_exports/" />
-
-    <!-- Book cover sharing (if needed in future) -->
-    <files-path name="covers" path="covers/" />
+    <!-- Reader share cards; must match ShareCardGenerator.SHARE_CARD_DIR -->
+    <cache-path name="share_cards" path="share_cards/" />
 </paths>

@@ -4,6 +4,19 @@
 
 ---
 
+## [v56.4.1] - 2026-08-07
+> 安全加固补丁（基于 v56.4.0 审计的进一步收紧）。
+
+### 安全修复
+- **LanTransferServer 令牌生成的潜伏缺陷**：`String.generateToken(length)` 用目标长度而非字符集长度作为索引上限（`random.nextInt(length)`）。当前 `TOKEN_CHARS`（16 个 hex 字符）与 token 长度恰好都是 16，所以现有令牌的熵并未受损——这是一个潜伏缺陷而非活跃漏洞：一旦令牌长度调高就会抛 `StringIndexOutOfBoundsException`，调低则会静默地只取字符集前 N 个字符。现改为 `random.nextInt(charset.length)`，让熵不再依赖两个常量的巧合相等。新增两个回归测试（字符集覆盖度 + 50 个令牌唯一性）。
+- **消除 ContentProvider 中的 runBlocking**：`FlowReaderContentProvider` 此前在 Binder 线程上调用 `runBlocking { bookDao.getAllBooks().first() }` 和 `runBlocking { bookDao.getBookById(bookId) }`，阻塞 Binder 线程池导致系统范围 ANR 风险。现新增同步 DAO 方法 `getAllBooksSync()` / `getBookByIdSync()`，避免阻塞。
+- **收紧 FileProvider 路径权限**：`file_paths.xml` 此前把三棵完整目录树（`<external-path path="." />`、`<files-path path="." />`、`<cache-path path="." />`）全部授权给 FileProvider，违反最小权限原则。全仓审计确认 `getUriForFile()` 只有一个调用点——阅读器的「分享阅读卡片」——因此现在只授权 `share_cards/` 一个子目录，`ShareCardGenerator` 相应改为写入该子目录（此前写在 cache 根目录）。其余三棵树均无消费方：`covers/` 由 Coil 在进程内按路径读取，`opds/` 下载在进程内导入，LAN 备份 JSON 走 `LanTransferServer` 自己的令牌校验 socket，都不经过 FileProvider。
+- **为 backup_rules.xml / data_extraction_rules.xml 补充安全文档注释**：说明 Android 备份仅含 DataStore Preferences（不含 DB），并标注 OPDS 密码平文持久化需后续引入加密（EncryptedSharedPreferences 或 Jetpack Security）。
+
+### 文档
+- 同步更新 `AGENTS.md`（新增"Security"部分）与 `CLAUDE.md`（"Version bookkeeping"记录安全修复）。
+- 新增 `SECURITY_AUDIT_REPORT.md`（完整审计报告）与 `SECURITY_FIX_SUMMARY.md`（修复总结）。
+
 ## [v56.4.0] - 2026-08
 > 安全审计第二轮（v56.3 收尾后的全量复查）。
 

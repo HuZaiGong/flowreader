@@ -15,6 +15,9 @@ import java.io.File
  */
 object ShareCardGenerator {
 
+    /** Cache subdirectory granted to the FileProvider in `res/xml/file_paths.xml`. */
+    const val SHARE_CARD_DIR = "share_cards"
+
     fun generate(
         cacheDir: File,
         bookTitle: String,
@@ -81,7 +84,11 @@ object ShareCardGenerator {
         subtlePaint.alpha = 160
         canvas.drawText("#FlowReader 心流阅读", margin, height - 120f, subtlePaint)
 
-        val file = File(cacheDir, "share_card_${System.currentTimeMillis()}.png")
+        // Must stay inside the share_cards/ subdirectory: file_paths.xml only grants the
+        // FileProvider that one path, so writing to the cache root would make
+        // getUriForFile() throw when the reader shares the card.
+        val shareDir = File(cacheDir, SHARE_CARD_DIR).apply { mkdirs() }
+        val file = File(shareDir, "share_card_${System.currentTimeMillis()}.png")
         file.outputStream().use { output ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, output)
         }
