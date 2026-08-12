@@ -60,8 +60,13 @@ class ReaderSessionTracker(
     }
 
     /**
-     * Advances the reading math for a new [position] (scroll pixels or page index). Returns the
+     * Advances the reading math for a new scroll [position] in characters (the `SLIDE` / `NONE`
+     * page modes feed scroll pixels, which track character count closely enough). Returns the
      * number of completed pages since the last call — the caller only persists when > 0.
+     *
+     * `PAGED` and comic reading report a **page index**, not a character offset; those must call
+     * [recordPageProgress] instead. Passing a page index here yields a delta of 1 per page turn,
+     * which never reaches one page worth of characters, so no reading time is ever persisted.
      */
     fun recordProgress(position: Int, content: String?, charsPerPage: Int): Int {
         val now = nowProvider()
@@ -86,12 +91,40 @@ class ReaderSessionTracker(
         lastPosition = position
         lastUpdateTime = now
 
-        val completedPages = readChars / charsPerPage.coerceAtLeast(1)
+        val pageSize = charsPerPage.coerceAtLeast(1)
+        val completedPages = readChars / pageSize
         if (completedPages > 0) {
             readPages += completedPages
-            readChars %= charsPerPage
+            readChars %= pageSize
         }
         return completedPages
+    }
+
+    /**
+     * Advances the reading math when [pageIndex] is a rendered page index rather than a character
+     * offset (`PAGED` mode and comic pages). One forward step is one completed page; [charsPerPage]
+     * only scales the speed estimate so it stays in characters per minute.
+     *
+     * Returns the number of pages completed since the last call.
+     */
+    fun recordPageProgress(pageIndex: Int, charsPerPage: Int): Int {
+        val now = nowProvider()
+        val pageDelta = (pageIndex - lastPosition).coerceAtLeast(0)
+        val timeDelta = now - lastUpdateTime
+
+        if (lastUpdateTime > 0 && pageDelta > 0 && timeDelta > 0) {
+            val charsPerMinute = pageDelta.toFloat() * charsPerPage.coerceAtLeast(1) / (timeDelta / 1000f) * 60f
+            readingSpeed = if (readingSpeed > 0f) {
+                emaAlpha * charsPerMinute + (1 - emaAlpha) * readingSpeed
+            } else {
+                charsPerMinute
+            }
+        }
+
+        lastPosition = pageIndex
+        lastUpdateTime = now
+        readPages += pageDelta
+        return pageDelta
     }
 
     /** Consumes the current session and returns (pages, seconds) for persistence. */

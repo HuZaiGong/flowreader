@@ -35,8 +35,9 @@ class CacheManager @Inject constructor(
     private val chapterCache = object : LinkedHashMap<Long, MutableMap<Int, String>>(32, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Long, MutableMap<Int, String>>?): Boolean {
             if (size > maxBooks) {
-                eldest?.key?.let { bookId ->
-                    bookMetadataCache.remove(bookId)
+                eldest?.let { entry ->
+                    releaseMemory(entry.value.values.sumOf { it.length })
+                    bookMetadataCache.remove(entry.key)
                 }
                 return true
             }
@@ -98,13 +99,24 @@ class CacheManager @Inject constructor(
             val bookChapters = chapterCache.getOrPut(bookId) {
                 object : LinkedHashMap<Int, String>(maxChaptersPerBook, 0.75f, true) {
                     override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Int, String>?): Boolean {
-                        return size > maxChaptersPerBook
+                        val evict = size > maxChaptersPerBook
+                        if (evict) releaseMemory(eldest?.value?.length ?: 0)
+                        return evict
                     }
                 }
             }
-            bookChapters[chapterIndex] = content
+            // Replacing an existing chapter must not double-count it.
+            val replaced = bookChapters.put(chapterIndex, content)
+            memoryUsage.addAndGet(content.length - (replaced?.length ?: 0))
         }
-        memoryUsage.addAndGet(content.length)
+    }
+
+    /**
+     * Keeps [memoryUsage] honest on eviction. Without this the estimate only ever grew, so
+     * `CacheStats.estimatedMemory` drifted away from what the cache actually holds.
+     */
+    private fun releaseMemory(chars: Int) {
+        if (chars > 0) memoryUsage.addAndGet(-chars)
     }
 
     fun getBookMetadata(bookId: Long): List<ChapterMeta>? {
@@ -134,7 +146,9 @@ class CacheManager @Inject constructor(
     }
 
     private fun evictBook(bookId: Long) {
-        chapterCache.remove(bookId)
+        chapterCache.remove(bookId)?.let { chapters ->
+            releaseMemory(chapters.values.sumOf { it.length })
+        }
         bookMetadataCache.remove(bookId)
         bookUsage.remove(bookId)
     }

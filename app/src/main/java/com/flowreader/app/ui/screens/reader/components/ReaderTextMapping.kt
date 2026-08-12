@@ -38,7 +38,39 @@ data class ParagraphContent(
         if (rawStart < 0 || rawEnd < 0) return null
         return rawStart..rawEnd
     }
+
+    /**
+     * Turns a rendered selection into the span an [Annotation] actually stores, together with the
+     * exact text it covers. Returns null when the selection is empty or lands on an invented
+     * character (indent prefix), i.e. when nothing should be persisted.
+     *
+     * [rawRange] deliberately returns an **inclusive** last offset, but every consumer of
+     * `Annotation.endPosition` treats it as **exclusive** — `buildParagraphContent` renders
+     * `paragraph.substring(relStart, relEnd)`, and the per-paragraph filters in `ReaderContent` /
+     * `PagedReader` compare against an exclusive paragraph end. Writing the inclusive value
+     * straight through therefore dropped the last selected character from both the stored text and
+     * the rendered highlight, which is exactly the v56.4.3 fix. Do the conversion here, once.
+     */
+    fun selectionSpan(displayStart: Int, displayEnd: Int, paragraph: String, paragraphStart: Int): RawSelectionSpan? {
+        val range = rawRange(displayStart, displayEnd)?.takeIf { !it.isEmpty() } ?: return null
+        val endExclusive = range.last + 1
+        val text = paragraph.substring(
+            (range.first - paragraphStart).coerceIn(0, paragraph.length),
+            (endExclusive - paragraphStart).coerceIn(0, paragraph.length)
+        )
+        return RawSelectionSpan(startPosition = range.first, endPosition = endExclusive, text = text)
+    }
 }
+
+/**
+ * A highlight or bookmark about to be persisted: [startPosition] inclusive, [endPosition]
+ * **exclusive**, [text] the raw characters between them.
+ */
+data class RawSelectionSpan(
+    val startPosition: Int,
+    val endPosition: Int,
+    val text: String
+)
 
 /**
  * Builds the display text for one paragraph with markdown emphasis and stored highlight spans,
@@ -127,12 +159,20 @@ fun buildParagraphContent(
     annotations.sortedBy { it.startPosition }.forEach { annotation ->
         val relStart = (annotation.startPosition - paragraphStart).coerceIn(0, paragraph.length)
         val relEnd = (annotation.endPosition - paragraphStart).coerceIn(relStart, paragraph.length)
-        if (relStart > lastEnd) {
-            appendFormatted(paragraph.substring(lastEnd, relStart), paragraphStart + lastEnd)
+        // Highlights may overlap or nest — a user can highlight a span that covers an earlier one.
+        // Emitting each annotation's full range unconditionally appended the shared characters
+        // twice (garbled paragraph, and rawOffsets no longer lines up with the displayed text, so
+        // selections mapped to the wrong chapter offsets). Clamp to what has already been emitted
+        // and skip anything fully covered; a nested annotation would otherwise also drag `lastEnd`
+        // backwards and duplicate the gap text as well.
+        val spanStart = relStart.coerceAtLeast(lastEnd)
+        if (relEnd <= spanStart) return@forEach
+        if (spanStart > lastEnd) {
+            appendFormatted(paragraph.substring(lastEnd, spanStart), paragraphStart + lastEnd)
         }
         builder.withStyle(SpanStyle(background = Color(annotation.color.colorValue).copy(alpha = 0.4f))) {
-            appendRange(paragraph.substring(relStart, relEnd), paragraphStart + relStart)
-            append(paragraph.substring(relStart, relEnd))
+            appendRange(paragraph.substring(spanStart, relEnd), paragraphStart + spanStart)
+            append(paragraph.substring(spanStart, relEnd))
         }
         lastEnd = relEnd
     }

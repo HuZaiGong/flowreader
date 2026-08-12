@@ -7,8 +7,6 @@ import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.SearchRepository
 import com.flowreader.app.util.FullTextSearch
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -21,11 +19,17 @@ class SearchRepositoryImpl @Inject constructor(
     private var indexedBookIds: Set<Long> = emptySet()
     private var hasBuiltIndex = false
 
-    /** Concurrent searches must not interleave deleteAllContent()/indexChapter(). */
-    private val indexMutex = Mutex()
-
+    /**
+     * The index lock lives in [FullTextSearch] so the reader's per-book re-index cannot interleave
+     * with a global rebuild either. [FullTextSearch.withIndexLock] is not re-entrant, so every
+     * entry point takes it exactly once and delegates to [rebuildIndexLocked].
+     */
     override suspend fun rebuildIndex() {
         fullTextSearch.initialize()
+        fullTextSearch.withIndexLock { rebuildIndexLocked() }
+    }
+
+    private suspend fun rebuildIndexLocked() {
         val books = bookRepository.getAllBooks().first()
         fullTextSearch.deleteAllContent()
         books.forEach { book ->
@@ -47,10 +51,10 @@ class SearchRepositoryImpl @Inject constructor(
     override suspend fun searchChapters(query: String, limit: Int, offset: Int): List<GlobalSearchResult> {
         val books = bookRepository.getAllBooks().first()
         val bookIds = books.map { it.id }.toSet()
-        indexMutex.withLock {
-            fullTextSearch.initialize()
+        fullTextSearch.initialize()
+        fullTextSearch.withIndexLock {
             if (!hasBuiltIndex || bookIds != indexedBookIds) {
-                rebuildIndex()
+                rebuildIndexLocked()
             }
         }
         val booksById = books.associateBy { it.id }
