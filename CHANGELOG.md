@@ -4,6 +4,37 @@
 
 ---
 
+## [v56.4.3] - 2026-08-12
+> 功能性 bug 排查：书内全文搜索恒返回空结果、翻页模式阅读统计全部丢失，另修八处缺陷。
+
+### 修复
+- **书内全文搜索永远搜不到任何结果**（影响面最大）。`FullTextSearch.search()` 用 `WHERE book_id = ?` 限定书籍，但 `book_content_fts` 是 FTS5 **external content** 表（`content='book_content'`），FTS5 的列没有声明类型、因而没有列亲和性（column affinity）；而 `SQLiteDatabase.rawQuery()` 只能绑定 `String` 参数。SQLite 在两侧都没有亲和性可做隐式转换时，绝不会认为 INTEGER `5` 等于 TEXT `'5'`，于是这个条件恒为假——书内搜索、以及依赖它的阅读器搜索面板，一直返回 0 条结果。现改为 `WHERE book_id = CAST(? AS INTEGER)`。
+  - 全局搜索 `searchAll()` 不受影响：它不按书籍过滤，只有 `MATCH`。`deleteBookContent()` 也不受影响：它查的是普通表 `book_content`，`book_id INTEGER` 有正常亲和性，TEXT 参数会被转换。
+  - 根因已用相同 schema + 触发器在 sqlite3 上实证复现：绑定 TEXT 返回 `[]`，绑定 INTEGER 返回该行，加 `CAST` 后恢复正常。
+- **翻页模式与漫画的阅读统计整段丢失**。`updatePosition()` 收到的 `position` 在 `SLIDE`/`NONE` 下是字符偏移，在 `PAGED` 与漫画下却是**已渲染页的下标**；两者都被喂进按字符计算的 `ReaderSessionTracker.recordProgress()`。一次翻页只前进 1，被当作"读了 1 个字符"，`readPages` 永远停在 0，而 `saveReadingStats()` 的 `if (seconds > 0 && pages > 0)` 门槛会把**整个会话**（含已累计的阅读时长）一起丢掉——不是少记页数，是时长和页数都不落库。
+  - 新增 `ReaderSessionTracker.recordPageProgress(pageIndex, charsPerPage)`：一次前进算一页，`charsPerPage` 只用于把速度估算换算回"字/分钟"。
+  - 新增 `ReaderPositionUnit`（`CHARACTERS` / `PAGE_INDEX`）把"位置的单位到底是什么"这条规则从 ViewModel 里抽出来，使其可被单测覆盖；漫画恒为页下标，`PAGED` 为页下标，其余为字符。
+  - `updatePosition()` 的移动阈值随单位切换：字符模式仍是 200，页模式为 1——页下标每次只 +1，原来的 200 字阈值在页模式下永远不可能触发。
+- **阅读器的按书重建索引绕过了索引锁**。v56.4 只在 `SearchRepositoryImpl` 内部加了 Mutex，而 `ReaderViewModel.indexBookForSearch()` 直接调用 `deleteBookContent` + `indexChapter`，可与全局重建交错，导致一本书在重建已把它计为"已索引"之后又被删掉。现把锁移进 `FullTextSearch`（`withIndexLock`），任何调用方都无法绕过；因 `kotlinx` 的 `Mutex` 不可重入，`rebuildIndex()`（加锁）与 `rebuildIndexLocked()`（已持锁）拆开，每个入口只加一次锁。
+- **切换章节时保存了过期的滚动位置**。`goToChapter()` 用 `uiState.currentPosition` 覆盖 `chapterPositions[上一章]`，但 `currentPosition` 经 250ms 节流，`chapterPositions` 始终更新；改为 `getOrPut`，只在该章从未记录过时才回填。
+- **`recordProgress()` 中潜伏的除零**。`readChars %= charsPerPage` 在 `charsPerPage` 为 0 时抛 `ArithmeticException`。当前调用方恒传正数（不可达），现统一 `coerceAtLeast(1)`。
+- **`CacheManager.estimatedMemory` 只增不减**。`memoryUsage` 在 put 时累加，但 LRU 淘汰（内外两层 `removeEldestEntry`）与 `evictBook()` 都不归还，替换同一章也会重复计数。现在淘汰/替换/逐书清理都会释放对应字符数，计数改在 synchronized 块内用 `put()` 的返回值做差。该值仅用于展示与自适应容量判断，不影响正确性。
+- **划词高亮/书签少存一个字符**。`ParagraphContent.rawRange()` 返回的是**闭区间**（`rawStart..rawEnd`，`rawEnd` 是选区最后一个字符的偏移），但 `Annotation.endPosition` 的所有消费方都按**开区间**处理——`buildParagraphContent()` 渲染的是 `paragraph.substring(relStart, relEnd)`，`ReaderContent`/`PagedReader` 的分段过滤也按开区间比较段尾。写入方却把闭区间的 `range.last` 原样传下去，于是选中「hello」实际存成、也实际只高亮「hell」；只选一个字符时高亮宽度为 0，等于什么都没高亮。现新增 `ParagraphContent.selectionSpan()`，在唯一一处完成 `+1` 转换并顺带切出文本（Composable 的回调无法单测，这个纯函数可以）。
+- **重叠或嵌套的高亮会把段落文字重复渲染**。`buildParagraphContent()` 逐条 annotation 追加 `substring(relStart, relEnd)`，重叠区间被追加两次：`abcdefghij` 上高亮 `[0,6)` 与 `[3,9)` 渲染成 `abcdefdefghij`；嵌套时 `lastEnd` 还会**倒退**，连间隙文字一起重复（`abcdefghcdefghij`）。更糟的是 `rawOffsets` 随之与显示文本错位，此后所有划词都会映射到错误的章节偏移。现在按已输出位置钳制起点、跳过被完全覆盖的区间；重叠区取先出现者的颜色，尾部区取后者，文字只输出一次。
+- **划词做的书签跳不回原处**。书签的 `position` 会被 `goToBookmark()` → `goToChapter()` 写回 `currentPosition`，而 `ReaderScreen` 把它交给 `ScrollState.scrollTo()`（滚动模式的**像素**）或 `PagedReader` 当**页下标**用；划词书签存的却是**字符偏移**。滚动模式下会滚到一个无意义的像素位置，分页模式下字符偏移远大于页数、被 `coerceIn(0, pages.size - 1)` 钳到章节最后一页。书签现在统一只存阅读器自己的位置（选区就在当前屏/当前页上，回到该位置即可看到它），`addBookmark()` 不再接受字符偏移参数。高亮不受影响——`Annotation` 的位置确实是字符偏移。
+- **「最近 7 天趋势」图最多只显示两三天**。`getRecentDailyStats(limit)` 走的是 `getRecentStats(limit)` = `ORDER BY date DESC LIMIT :limit`，`LIMIT` 限的是**行数**；但 `reading_stats` 带 `(bookId, date)` 唯一索引，一天一本书一行。同时读 3 本书的用户请求 7 天，只能拿到 21 行中最新的 7 行，即最近 2–3 天（按天聚合后 `takeLast(7)` 也救不回已经没查出来的日期）。现改为按日期范围查询：新增 DAO 方法 `getStatsSince(startDate)`，起始日取 `今天 - (limit - 1)`（含今天），`yyyy-MM-dd` 的字典序等价于日期序，因此 `date >= :startDate` 是正确的范围扫描。`limit` 另做 `coerceAtLeast(1)`，避免 0 或负数算出未来的起始日期把全部数据过滤掉。
+  - 统计页的周报（`getReadingReport(days)`）不受影响：它走 `getAllStats()` + 日期过滤，本来就是按天算的。`getRecentStats()` 这个 repository 方法保留原样——它的语义本就是"最近 N 行"，无调用方受影响。
+- 顺带清理：删除 `ReaderViewModel` 中已无调用方的私有 `loadChapterContent()`；`toggleTts()` 改为走 `ReaderTtsCoordinator.pause()/speakFrom()`，不再直接操作 `ttsManager`，并在页模式下从章首朗读（页下标不是字符偏移，不能当起点）。
+
+### 测试
+- 新增 `FullTextSearchQueryTest`（4 个用例）。Robolectric 自带的 SQLite **没有编译 fts5 模块**（实测报 `no such module: fts5`），离线环境也没有 sqlite-jdbc 可替代，因此无法真的执行生产查询；测试改为两头夹：一头断言 `SEARCH_IN_BOOK_SQL` 常量确实带 `CAST(? AS INTEGER)` 且不含裸 `book_id = ?`，另一头在无声明类型的普通表上实证"TEXT 参数匹配不到 INTEGER 值、加 CAST 才能匹配"这一 SQLite 语义。
+- `ReaderSessionTrackerTest` 新增 8 个用例，其中一个专门固化 bug 现象：把页下标喂进字符路径，30 次翻页后 `readPages` 仍为 0。
+- 新增 `ReaderPositionUnitTest`（6 个用例）覆盖单位判定规则。
+- `CacheManagerTest` 新增 4 个用例覆盖内存计数的淘汰/替换/逐书释放。
+- `ReaderTextMappingTest` 从 7 个扩到 16 个用例，覆盖 `selectionSpan` 的开闭区间转换（含单字符选区、跨 markdown 标记、非零段落起点、空选区/缩进字符拒绝）与重叠/嵌套/同起点高亮的去重。两处修复都做了反向验证：还原去重逻辑后 3 个用例失败并打印出重复文本（`expected:<abcdef[]ghij> but was:<abcdef[def]ghij>`），还原 `+1` 后 4 个用例失败（`expected:<5> but was:<4>`）。
+- `ReadingStatsRepositoryImplTest` 新增 3 个用例：7 天 × 3 本书 = 21 行时必须聚合出 7 天、DAO 收到的起始日必须是"今天 - 6"（含今天）、`limit = 0` 时不得算出未来日期。反向验证（改回按行取最近 N 条）复现出 `expected:<7> but was:<3>`，另两个用例同时失败。
+- 单测总数 227 → 260（0 失败），测试文件 45 → 47。测试广度 72.6% → 75.8%（47/62，实测 `coverageSummary` 输出）。
+
 ## [v56.4.2] - 2026-08-11
 > 修复 issue #6：每个界面顶部空出一条空白带、内容被截断。
 

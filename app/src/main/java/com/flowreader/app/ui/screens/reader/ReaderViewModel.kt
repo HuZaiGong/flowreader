@@ -16,6 +16,7 @@ import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingStatsRepository
 import com.flowreader.app.domain.repository.SettingsRepository
+import com.flowreader.feature.reader.ReaderPositionUnit
 import com.flowreader.feature.reader.ReaderProgressEngine
 import com.flowreader.feature.reader.ReaderSessionTracker
 import com.flowreader.app.util.CacheManager
@@ -285,33 +286,6 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun loadChapterContent(index: Int) {
-        viewModelScope.launch {
-            try {
-                val content = chapterRepository.getChapterContent(bookId, index)
-                if (content != null) {
-                    val state = _uiState.value
-                    val updatedChapter = state.chapters.getOrNull(index)?.copy(content = content)
-                    if (updatedChapter != null) {
-                        val updatedChapters = state.chapters.toMutableList().apply {
-                            if (index < size) set(index, updatedChapter)
-                        }
-                        _uiState.update {
-                            it.copy(
-                                chapters = updatedChapters,
-                                currentChapter = if (index == it.currentChapterIndex) updatedChapter else it.currentChapter
-                            )
-                        }
-                    }
-                } else {
-                    _uiState.update { it.copy(error = "章节内容加载失败: 内容为空") }
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = "章节内容加载失败: ${e.localizedMessage ?: "未知错误"}") }
-            }
-        }
-    }
-
     fun goToNextChapter() {
         val state = _uiState.value
         if (state.currentChapterIndex < state.chapters.size - 1) {
@@ -350,7 +324,10 @@ class ReaderViewModel @Inject constructor(
         if (index !in _uiState.value.chapters.indices) return
 
         val previousState = _uiState.value
-        chapterPositions[previousState.currentChapterIndex] = previousState.currentPosition
+        // `chapterPositions` is written on every updatePosition() call, before the UI throttle, so
+        // it is always at least as fresh as uiState.currentPosition (which lags up to 250ms).
+        // Only seed it when the chapter was never scrolled, or leaving rewinds the saved spot.
+        chapterPositions.getOrPut(previousState.currentChapterIndex) { previousState.currentPosition }
         ttsCoordinator.stop()
         saveReadingStats()
 
@@ -404,25 +381,47 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * True when [updatePosition] is fed a rendered page index instead of a character offset. The
+     * two units need different reading-stats math — see [ReaderPositionUnit].
+     */
+    private val positionIsPageIndex: Boolean
+        get() {
+            val state = _uiState.value
+            return ReaderPositionUnit.of(state.readingSettings.pageMode, state.book?.format).isPageIndex
+        }
+
     fun updatePosition(position: Int, chapterScrollFraction: Float = chapterFraction) {
         val state = _uiState.value
         if (position < 0) return
         chapterFraction = if (chapterScrollFraction.isNaN()) 0f else chapterScrollFraction.coerceIn(0f, 1f)
         val now = System.currentTimeMillis()
         chapterPositions[state.currentChapterIndex] = position
+        val pageUnits = positionIsPageIndex
 
-        val movedEnough = abs(position - sessionTracker.lastPosition) >= 200
+        // A page index moves by 1 per turn, so the 200-character scroll threshold can never fire;
+        // any page change is significant on its own.
+        val moveThreshold = if (pageUnits) 1 else 200
+        val movedEnough = abs(position - sessionTracker.lastPosition) >= moveThreshold
         val waitedEnough = now - lastPositionUpdateTime >= positionUpdateIntervalMs
         if (lastPositionUpdateTime > 0 && !movedEnough && !waitedEnough) return
 
         if (sessionTracker.recordInteraction(position)) {
             saveReadingStats()
         }
-        sessionTracker.recordProgress(
-            position = position,
-            content = state.currentChapter?.content,
-            charsPerPage = progressEngine.estimateCharsPerPage(state.readingSettings.fontSize, state.readingSettings.lineSpacing)
+        val charsPerPage = progressEngine.estimateCharsPerPage(
+            state.readingSettings.fontSize,
+            state.readingSettings.lineSpacing
         )
+        if (pageUnits) {
+            sessionTracker.recordPageProgress(pageIndex = position, charsPerPage = charsPerPage)
+        } else {
+            sessionTracker.recordProgress(
+                position = position,
+                content = state.currentChapter?.content,
+                charsPerPage = charsPerPage
+            )
+        }
         _uiState.update { it.copy(readingSpeed = sessionTracker.readingSpeed) }
 
         lastPositionUpdateTime = now
@@ -490,10 +489,15 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 fullTextSearch.initialize()
-                fullTextSearch.deleteBookContent(bookId)
-                chapters.forEachIndexed { index, chapter ->
-                    chapterRepository.getChapterContent(bookId, index)?.let { content ->
-                        fullTextSearch.indexChapter(bookId, index, chapter.title, content)
+                // Delete-then-reindex must be atomic against SearchRepositoryImpl's global
+                // rebuild, or this book can be wiped from the index after the rebuild already
+                // recorded it as indexed — global search would then silently miss it.
+                fullTextSearch.withIndexLock {
+                    fullTextSearch.deleteBookContent(bookId)
+                    chapters.forEachIndexed { index, chapter ->
+                        chapterRepository.getChapterContent(bookId, index)?.let { content ->
+                            fullTextSearch.indexChapter(bookId, index, chapter.title, content)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -542,7 +546,17 @@ class ReaderViewModel @Inject constructor(
         _uiState.update { it.copy(showBookmarks = false) }
     }
 
-    fun addBookmark(text: String, position: Int? = null) {
+    /**
+     * A bookmark's [Bookmark.position] is always the reader's own position, because that is the
+     * only unit [goToBookmark] can restore: `goToChapter(index, position)` writes it back into
+     * `currentPosition`, which `ReaderScreen` feeds to `ScrollState.scrollTo()` (scroll pixels in
+     * SLIDE/NONE) or `PagedReader` uses as a page index. A selection's raw character offset is
+     * none of those and nothing can convert it back without the layout, so bookmarks made from
+     * selected text deliberately keep only the [text] — passing the character offset through used
+     * to scroll to an arbitrary pixel, or in PAGED mode get clamped to the last page of the
+     * chapter. Highlights are unaffected: `Annotation` positions really are character offsets.
+     */
+    fun addBookmark(text: String) {
         viewModelScope.launch {
             val state = _uiState.value
             if (bookId <= 0L || state.currentChapterIndex !in state.chapters.indices) return@launch
@@ -550,7 +564,7 @@ class ReaderViewModel @Inject constructor(
                 bookId = bookId,
                 chapterIndex = state.currentChapterIndex,
                 text = text,
-                position = (position ?: state.currentPosition).coerceAtLeast(0)
+                position = state.currentPosition.coerceAtLeast(0)
             )
             try {
                 val savedBookmark = bookmarkRepository.addBookmark(bookmark)
@@ -564,15 +578,16 @@ class ReaderViewModel @Inject constructor(
     fun toggleTts() {
         val state = _uiState.value
         if (state.isTtsPlaying) {
-            ttsManager.pause()
+            ttsCoordinator.pause()
             _uiState.update { it.copy(isTtsPlaying = false) }
             return
         }
 
         val chapter = state.currentChapter ?: return
-        val start = state.currentPosition.coerceIn(0, chapter.content.length)
-        val text = chapter.content.substring(start).ifBlank { chapter.content }
-        ttsManager.speak(text)
+        // PAGED / comic positions are page indices, so speaking "from position" would start a few
+        // characters in; only a character offset is a meaningful start point.
+        val start = if (positionIsPageIndex) 0 else state.currentPosition
+        ttsCoordinator.speakFrom(chapter.content, start)
     }
 
     fun stopTts() {

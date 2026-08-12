@@ -5,6 +5,8 @@ import android.database.sqlite.SQLiteDatabase
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -17,10 +19,49 @@ class FullTextSearch @Inject constructor(
         private const val TAG = "FullTextSearch"
         private const val DB_NAME = "flowreader_fts.db"
         private val FTS_SPECIAL = setOf('^', '*', '-', '+', '~', '(', ')', '{', '}', '[', ']', ':', '"')
+
+        /**
+         * In-book search, scoped to one book.
+         *
+         * `book_id` **must** be compared through `CAST(? AS INTEGER)`. `book_content_fts` is an
+         * FTS5 external-content table, so its columns have no declared type and therefore no
+         * column affinity, while the values come back from `book_content.book_id` as INTEGER.
+         * `SQLiteDatabase.rawQuery()` can only bind `String` arguments, and SQLite never treats
+         * INTEGER 5 as equal to TEXT '5' when no affinity converts one side — so a bare
+         * `book_id = ?` matched nothing and in-book search always returned zero results.
+         * Guarded by `FullTextSearchQueryTest`.
+         */
+        internal const val SEARCH_IN_BOOK_SQL =
+            "SELECT chapter_index, chapter_title, " +
+                "snippet(book_content_fts, 3, '<<', '>>', '...', 30) as matched_text\n" +
+                "FROM book_content_fts\n" +
+                "WHERE book_id = CAST(? AS INTEGER) AND book_content_fts MATCH ?\n" +
+                "ORDER BY rank\n" +
+                "LIMIT ?"
+
+        /** Global search across every indexed book; no book scoping, so no CAST needed. */
+        internal const val SEARCH_ALL_SQL =
+            "SELECT book_id, chapter_index, chapter_title, " +
+                "snippet(book_content_fts, 3, '<<', '>>', '...', 30) as matched_text\n" +
+                "FROM book_content_fts\n" +
+                "WHERE book_content_fts MATCH ?\n" +
+                "ORDER BY rank\n" +
+                "LIMIT ? OFFSET ?"
     }
 
     @Volatile
     private var database: SQLiteDatabase? = null
+
+    /**
+     * Serializes every index mutation. `deleteAllContent()` + re-index (global rebuild) and
+     * `deleteBookContent()` + re-index (opening a book in the reader) must not interleave, or a
+     * book can end up deleted from the index after the rebuild already counted it as fresh.
+     * The lock lives here rather than in one caller so no code path can skip it.
+     */
+    private val indexMutex = Mutex()
+
+    /** Runs [block] with exclusive access to the index. Not re-entrant — never nest calls. */
+    suspend fun <T> withIndexLock(block: suspend () -> T): T = indexMutex.withLock { block() }
 
     suspend fun initialize() = withContext(Dispatchers.IO) {
         if (database?.isOpen == true) return@withContext
@@ -138,13 +179,7 @@ class FullTextSearch @Inject constructor(
         try {
             val results = mutableListOf<FtsSearchResult>()
             val cursor = database?.rawQuery(
-                """
-                SELECT chapter_index, chapter_title, snippet(book_content_fts, 3, '<<', '>>', '...', 30) as matched_text
-                FROM book_content_fts
-                WHERE book_id = ? AND book_content_fts MATCH ?
-                ORDER BY rank
-                LIMIT ?
-                """.trimIndent(),
+                SEARCH_IN_BOOK_SQL,
                 arrayOf(bookId.toString(), safeMatch, maxResults.toString())
             )
 
@@ -179,13 +214,7 @@ class FullTextSearch @Inject constructor(
         try {
             val results = mutableListOf<FtsSearchResult>()
             val cursor = database?.rawQuery(
-                """
-                SELECT book_id, chapter_index, chapter_title, snippet(book_content_fts, 3, '<<', '>>', '...', 30) as matched_text
-                FROM book_content_fts
-                WHERE book_content_fts MATCH ?
-                ORDER BY rank
-                LIMIT ? OFFSET ?
-                """.trimIndent(),
+                SEARCH_ALL_SQL,
                 arrayOf(safeMatch, maxResults.toString(), offset.toString())
             )
 

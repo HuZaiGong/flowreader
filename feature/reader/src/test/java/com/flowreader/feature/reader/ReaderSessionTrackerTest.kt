@@ -127,6 +127,89 @@ class ReaderSessionTrackerTest {
         assertEquals(0L, tracker.elapsedSeconds)
     }
 
+    /**
+     * The PAGED / comic regression: a page index moves by 1 per turn, so feeding it to
+     * [ReaderSessionTracker.recordProgress] never completes a page and the caller's
+     * `pages > 0` gate drops the whole session — no reading time, no pages.
+     */
+    @Test
+    fun pageIndexThroughCharacterPathNeverCompletesAPage() {
+        val tracker = freshTracker()
+        tracker.startSession()
+        val content = "a".repeat(100_000)
+        repeat(30) { page ->
+            tick(5_000L)
+            tracker.recordProgress(page + 1, content, 900)
+        }
+        assertEquals(0, tracker.readPages)
+    }
+
+    @Test
+    fun pageProgressCountsOnePagePerTurn() {
+        val tracker = freshTracker()
+        tracker.startSession()
+        tick(1_000L)
+        assertEquals(1, tracker.recordPageProgress(1, 900))
+        tick(1_000L)
+        assertEquals(1, tracker.recordPageProgress(2, 900))
+        assertEquals(2, tracker.readPages)
+    }
+
+    @Test
+    fun pageProgressCountsMultiPageJumps() {
+        val tracker = freshTracker()
+        tracker.startSession()
+        tick(1_000L)
+        assertEquals(4, tracker.recordPageProgress(4, 900))
+        assertEquals(4, tracker.readPages)
+    }
+
+    @Test
+    fun pageProgressIgnoresBackwardTurns() {
+        val tracker = freshTracker()
+        tracker.startSession()
+        tick(1_000L)
+        tracker.recordPageProgress(5, 900)
+        tick(1_000L)
+        assertEquals(0, tracker.recordPageProgress(2, 900))
+        assertEquals(5, tracker.readPages)
+        // The tracker follows the reader back, so re-reading forward counts again.
+        tick(1_000L)
+        assertEquals(1, tracker.recordPageProgress(3, 900))
+    }
+
+    @Test
+    fun pageProgressSpeedScalesByCharsPerPage() {
+        val tracker = freshTracker()
+        tracker.startSession()
+        tick(1_000L)
+        // 1 page of 900 chars over 1s -> 54000 chars/min, no EMA smoothing on the first sample.
+        tracker.recordPageProgress(1, 900)
+        assertEquals(54_000f, tracker.readingSpeed, 1f)
+    }
+
+    @Test
+    fun pageProgressSnapshotPersistsPagesAndSeconds() {
+        val tracker = freshTracker()
+        tracker.startSession()
+        tick(1_000L)
+        tracker.recordPageProgress(3, 900)
+        tick(59_000L)
+        val (pages, seconds) = tracker.takeSnapshotAndReset()
+        assertEquals(3, pages)
+        assertEquals(60L, seconds)
+    }
+
+    /** `charsPerPage` was coerced for the division but not for the modulo. */
+    @Test
+    fun zeroCharsPerPageDoesNotDivideByZero() {
+        val tracker = freshTracker()
+        tracker.startSession()
+        tick(1_000L)
+        tracker.recordProgress(500, "a".repeat(500), 0)
+        tracker.recordPageProgress(2, 0)
+    }
+
     @Test
     fun backwardScrollDoesNotCountChars() {
         val tracker = freshTracker()

@@ -43,7 +43,8 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 - `:feature:library` 与 `:feature:reader` 仍是迁移边界，业务 UI 尚主要留在 `:app`（v54 起阅读器纯逻辑已迁入 `:feature:reader`）
 - `SavedStateHandle` 取出的 bookId 默认 0L，各 ViewModel 需各自校验
 - Room DB version 7，已有 4→5、5→6、6→7 显式迁移，无 destructive migration 兜底
-- 分页模式进度以"页号"为位置语义，与滚动模式像素语义并存；切换模式后进度按章内比例近似恢复
+- 分页模式进度以"页号"为位置语义，与滚动模式像素语义并存；切换模式后进度按章内比例近似恢复。v56.4.3 起这两种单位由 `ReaderPositionUnit` 显式区分，阅读统计各走各的计数路径
+- **滚动模式的阅读统计仍把滚动像素当字符数用**（`ReaderSessionTracker.recordProgress()` 对 `content.substring(上次位置, 当前位置)` 取长度，而这两个值来自 `ScrollState.value`）。因此"已读字数/阅读速度"在 SLIDE/NONE 下是个与真实字数成正比但系数取决于字号行距的粗略代理值，而非真实字数；页数因除以 `charsPerPage` 而同比缩放，日/周统计的相对趋势可用，绝对值不可信。修正需要引入像素→字符映射（`updatePosition` 已经带着 `chapterScrollFraction`，可用 `比例 × 章节字数`），但会改变统计口径并需要重写 `ReaderSessionTrackerTest` 中既有的按字符断言，故留待专门的统计口径改造
 
 ---
 

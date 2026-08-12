@@ -81,6 +81,49 @@ class CacheManagerTest {
     }
 
     @Test
+    fun estimatedMemoryTracksWhatTheCacheActuallyHolds() {
+        val cm = cacheManager(recommended = 5)
+        cm.putChapterContent(1L, 0, "a".repeat(100))
+        cm.putChapterContent(1L, 1, "b".repeat(50))
+        assertEquals(150, cm.getCacheStats().estimatedMemory)
+    }
+
+    @Test
+    fun replacingAChapterDoesNotDoubleCountIt() {
+        val cm = cacheManager(recommended = 5)
+        cm.putChapterContent(1L, 0, "a".repeat(100))
+        cm.putChapterContent(1L, 0, "b".repeat(30))
+        assertEquals(30, cm.getCacheStats().estimatedMemory)
+    }
+
+    @Test
+    fun chapterEvictionReleasesEstimatedMemory() {
+        val cm = cacheManager(recommended = 1)
+        val capacity = cm.getCacheStats().chaptersCapacity
+        // Overflow the per-book chapter capacity; evicted chapters must stop being counted.
+        repeat(capacity + 3) { i ->
+            cm.putChapterContent(1L, i, "x".repeat(10))
+        }
+        val stats = cm.getCacheStats()
+        assertEquals(capacity, stats.chaptersInMemory)
+        assertEquals(capacity * 10, stats.estimatedMemory)
+    }
+
+    @Test
+    fun bookEvictionReleasesEstimatedMemory() {
+        val cm = cacheManager(recommended = 5)
+        cm.putChapterContent(1L, 0, "a".repeat(40))
+        cm.putChapterContent(2L, 0, "b".repeat(60))
+        repeat(9) { cm.getChapterContent(2L, 0) }
+        cm.getChapterContent(1L, 0)
+
+        cm.trimMemory(android.content.ComponentCallbacks2.TRIM_MEMORY_MODERATE)
+
+        // Only book 2 survives, so only its 60 characters are still counted.
+        assertEquals(60, cm.getCacheStats().estimatedMemory)
+    }
+
+    @Test
     fun leastUsedBookIsEvictedFirstOnModerateTrim() {
         val cm = cacheManager(recommended = 5)
         cm.putChapterContent(1L, 0, "a")

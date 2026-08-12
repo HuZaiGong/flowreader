@@ -159,8 +159,18 @@ class ReadingStatsRepositoryImpl @Inject constructor(
         return maxStreak
     }
 
+    /**
+     * The last [limit] **days** of aggregated stats, oldest first.
+     *
+     * `reading_stats` carries a unique `(bookId, date)` index, i.e. one row per book per day, so
+     * `getRecentStats(limit)`'s `LIMIT` counts rows, not days: a reader with three books open got
+     * two or three days in the caller's 7-day chart. Filter by date instead — the `yyyy-MM-dd`
+     * format sorts lexicographically, so `date >= startDate` is a correct range scan.
+     */
     override fun getRecentDailyStats(limit: Int): Flow<List<DailyStats>> {
-        return readingStatsDao.getRecentStats(limit).map { entities ->
+        val days = limit.coerceAtLeast(1)
+        val startDate = LocalDate.now().minusDays((days - 1).toLong()).format(dateFormat)
+        return readingStatsDao.getStatsSince(startDate).map { entities ->
             entities.groupBy { it.date }.map { (date, rows) ->
                 DailyStats(
                     date = date,
@@ -168,7 +178,7 @@ class ReadingStatsRepositoryImpl @Inject constructor(
                     totalReadPages = rows.sumOf { it.readPages },
                     booksRead = rows.map { it.bookId }.distinct().size
                 )
-            }.sortedBy { it.date }.takeLast(limit)
+            }.sortedBy { it.date }.takeLast(days)
         }
     }
 

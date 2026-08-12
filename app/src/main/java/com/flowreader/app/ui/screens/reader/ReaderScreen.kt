@@ -230,8 +230,8 @@ fun ReaderScreen(
                         onHighlightSelection = { text, start, end ->
                             viewModel.addAnnotation(text, start, end)
                         },
-                        onBookmarkSelection = { text, start, end ->
-                            viewModel.addBookmark(text.ifBlank { "选中文本书签" }, start)
+                        onBookmarkSelection = { text, _, _ ->
+                            viewModel.addBookmark(text.ifBlank { "选中文本书签" })
                         }
                     )
                 } else {
@@ -252,8 +252,8 @@ fun ReaderScreen(
                         onHighlightSelection = { text, start, end ->
                             viewModel.addAnnotation(text, start, end)
                         },
-                        onBookmarkSelection = { text, start, end ->
-                            viewModel.addBookmark(text.ifBlank { "选中文本书签" }, start)
+                        onBookmarkSelection = { text, _, _ ->
+                            viewModel.addBookmark(text.ifBlank { "选中文本书签" })
                         },
                         onPositionChanged = { position ->
                             viewModel.updatePosition(position, chapterFraction)

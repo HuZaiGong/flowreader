@@ -31,6 +31,14 @@ interface ReadingStatsDao {
     @Query("SELECT * FROM reading_stats ORDER BY date DESC LIMIT :limit")
     fun getRecentStats(limit: Int = 30): Flow<List<ReadingStatsEntity>>
 
+    /**
+     * Every row on or after [startDate] (inclusive), `yyyy-MM-dd`. Unbounded on purpose: the table
+     * holds one row per book per day, so a row limit is not a day limit — see
+     * `ReadingStatsRepositoryImpl.getRecentDailyStats`.
+     */
+    @Query("SELECT * FROM reading_stats WHERE date >= :startDate ORDER BY date DESC")
+    fun getStatsSince(startDate: String): Flow<List<ReadingStatsEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertStats(stats: ReadingStatsEntity): Long
 

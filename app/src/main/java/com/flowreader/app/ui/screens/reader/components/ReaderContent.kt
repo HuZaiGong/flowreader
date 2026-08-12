@@ -350,18 +350,17 @@ internal fun ReaderParagraph(
         val startBox = layout.getBoundingBox(selection.start)
         val endBox = layout.getBoundingBox(selection.end - 1)
 
+        // Exclusive-end conversion and the text slice both live in selectionSpan() so they are unit
+        // tested — a Composable's selection callbacks are not.
+        val span = content.selectionSpan(selection.start, selection.end, paragraph, paragraphStart)
+
         ReaderSelectionBar(
             windowTopLeft = coordinates.localToWindow(startBox.topLeft),
             windowBottomRight = coordinates.localToWindow(endBox.bottomRight),
             palette = palette,
             onHighlight = {
-                val range = content.rawRange(selection.start, selection.end)
-                if (range != null && !range.isEmpty()) {
-                    val text = paragraph.substring(
-                        (range.first - paragraphStart).coerceIn(0, paragraph.length),
-                        (range.last - paragraphStart).coerceIn(0, paragraph.length)
-                    )
-                    onHighlightSelection(text, range.first, range.last)
+                if (span != null) {
+                    onHighlightSelection(span.text, span.startPosition, span.endPosition)
                 }
                 selectionState.value = null
             },
@@ -370,13 +369,8 @@ internal fun ReaderParagraph(
                 selectionState.value = null
             },
             onBookmark = {
-                val range = content.rawRange(selection.start, selection.end)
-                if (range != null && !range.isEmpty()) {
-                    val text = paragraph.substring(
-                        (range.first - paragraphStart).coerceIn(0, paragraph.length),
-                        (range.last - paragraphStart).coerceIn(0, paragraph.length)
-                    )
-                    onBookmarkSelection(text, range.first, range.last)
+                if (span != null) {
+                    onBookmarkSelection(span.text, span.startPosition, span.endPosition)
                 }
                 selectionState.value = null
             },
