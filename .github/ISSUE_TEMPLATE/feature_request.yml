@@ -1,0 +1,42 @@
+name: 功能建议 / Feature request
+description: 提出新功能或改进建议 / Suggest a new feature or improvement
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢建议！FlowReader 是离线优先、隐私优先的项目：不做账号/云同步/遥测，全应用只有一个 INTERNET 权限，且无 WebView。与这些约束冲突的建议会被拒绝，详见 CONTRIBUTING.md。
+        Thanks for the suggestion! FlowReader is offline-first and privacy-minded: no accounts / cloud sync / telemetry, a single INTERNET permission, and no WebView. Requests conflicting with these constraints will be declined — see CONTRIBUTING.md.
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 使用场景与动机 / Use case & motivation
+      description: 你在什么场景下遇到不便？想解决什么问题？/ What situation are you in and what problem are you trying to solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的行为 / Desired behavior
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 考虑过的替代方案 / Alternatives considered
+    validations:
+      required: false
+  - type: dropdown
+    id: network
+    attributes:
+      label: 该功能是否需要网络或新权限？/ Does this require network or new permissions?
+      description: 帮助判断与项目约束的兼容性 / Helps judge compatibility with the project's constraints
+      options:
+        - 完全离线，无需新权限 / Fully offline, no new permission
+        - 仅局域网（类似 OPDS / 备份互传）/ LAN only (like OPDS / backup transfer)
+        - 需要公网访问 / Needs public internet access
+        - 需要新权限 / Needs a new permission
+        - 不确定 / Not sure
+    validations:
+      required: true

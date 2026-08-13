@@ -148,6 +148,18 @@ CI（`.github/workflows/ci.yml`）严格按此顺序跑这六项：
 
 ---
 
+## 社区与贡献 / Community & Contributing
+
+- 提 Issue 或 PR 之前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)：环境搭建、CI 门禁、代码约定与安全红线都在里面（中英双语）。
+- 所有参与者请遵守 [行为准则 / Code of Conduct](CODE_OF_CONDUCT.md)。
+- 安全漏洞请勿开设公开 Issue，请按 [SECURITY.md](SECURITY.md) 通过私密漏洞报告渠道提交。
+
+- Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or PR (setup, CI gates, conventions, security constraints; bilingual).
+- All participants are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+- Security vulnerabilities: report privately per [SECURITY.md](SECURITY.md) — never as a public issue.
+
+---
+
 ## 许可证
 
 基于 [GNU General Public License v3.0](LICENSE) 开源。

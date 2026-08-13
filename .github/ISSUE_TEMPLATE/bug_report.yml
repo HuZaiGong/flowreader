@@ -1,0 +1,83 @@
+name: Bug 报告 / Bug report
+description: 报告功能缺陷 / Report a defect
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢报告！本应用不收集任何崩溃数据，请尽量提供完整的复现信息；如方便请附 logcat 输出。
+        Thanks for the report! The app collects no crash data, so please provide as much reproduction info as you can; logcat output helps a lot.
+  - type: input
+    id: version
+    attributes:
+      label: 版本号 / Version
+      description: 设置页底部显示，例如 v56.4.4 / Shown at the bottom of the Settings screen, e.g. v56.4.4
+      placeholder: "v56.4.4"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Android 版本与设备型号 / Android version & device
+      placeholder: "Android 14, Pixel 8"
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: 涉及的书籍格式 / Affected book format
+      description: 与书籍文件无关时选「无关」/ Select "N/A" if not related to book files
+      options:
+        - EPUB
+        - TXT
+        - PDF
+        - Markdown
+        - FB2
+        - MOBI
+        - ZIP / CBZ
+        - 图片 JPG/PNG/WebP / Image JPG/PNG/WebP
+        - 无关 / N/A
+    validations:
+      required: false
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      placeholder: |
+        1. 导入一本 EPUB
+        2. 打开阅读器
+        3. ……
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为 / Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / Actual behavior
+      description: 可附截图或录屏 / Screenshots or screen recordings are welcome
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 日志与其他信息 / Logs & other info
+      description: |
+        可附 logcat 输出。请勿上传包含个人阅读数据的完整备份；如与特定文件相关，可附最小可复现的示例文件。
+        Logcat output is welcome. Do NOT upload full backups containing personal reading data; if a specific file triggers the bug, attach a minimal sample instead.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认 / Checks
+      options:
+        - label: 我已搜索现有 Issue，确认不是重复报告 / I have searched existing issues and this is not a duplicate
+          required: true
+        - label: 我确认该问题在最新版本上仍存在 / I can reproduce this on the latest version
+          required: true
