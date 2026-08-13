@@ -128,7 +128,12 @@ The project is offline-first and privacy-minded — keep it that way. v56.3/v56.
 
 ## Version bookkeeping
 
-`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5643 / "56.4.3") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5644 / "56.4.4") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+
+**v56.4.4 safe-area fix (2026-08-12)** — 「顶栏遮蔽页面内容」 on the entry pages:
+- `FlowStateHost` applied its `modifier` in the error / loading / empty branches but not in the success branch (`else -> content()`). `LibraryScreen`, `StatsScreen` and `BookDetailScreen` pass the `Scaffold`'s inset padding in through that `modifier`, so once a page had data it lost all 88dp of safe area and drew from y=0 under the `TopAppBar` — while the very same screen's loading and empty states were placed correctly. Success branch is now `Box(modifier = modifier) { content() }`.
+- `SettingsScreen` was never affected (it pads its `Column` directly); screens on `FlowScaffold` were immune because it pads inside its own `Box`; `ReaderScreen` passes no `modifier` and stays full-bleed.
+- v56.4.2's `ShellWindowInsetsTest` stayed green because its `FakeScreen` pads its own `Box` and never routes through `FlowStateHost`. Two cases now reproduce the real chain. See `AGENTS.md`.
 
 **v56.4.3 functional bug sweep (2026-08-12)** — two user-visible features were entirely dead:
 - **Book-scoped full-text search matched nothing.** `book_content_fts` is an FTS5 *external content* table, so its columns have no declared type and no affinity, and `rawQuery()` can only bind `String`. SQLite never equates INTEGER `5` with TEXT `'5'` without an affinity to convert one side, so `WHERE book_id = ?` was silently always false. The SQL now lives in `FullTextSearch.SEARCH_IN_BOOK_SQL` and uses `CAST(? AS INTEGER)`. `searchAll()` (no book filter) and `deleteBookContent()` (regular table, declared `INTEGER`) were never affected. Robolectric's SQLite has no fts5 module, so `FullTextSearchQueryTest` asserts the SQL shape and the underlying comparison semantics rather than running the query.

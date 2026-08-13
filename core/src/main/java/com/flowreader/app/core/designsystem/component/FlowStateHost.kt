@@ -78,7 +78,11 @@ fun FlowStateHost(
             action = emptyAction
         )
 
-        else -> content()
+        // The success branch has to honour [modifier] like the other three do. Library, Stats and
+        // BookDetail pass their `Scaffold`'s inset padding in through it, so dropping it here drew
+        // loaded content from y=0 — under the status bar and the TopAppBar — while the loading,
+        // empty and error states of the very same screen were positioned correctly (v56.4.4).
+        else -> Box(modifier = modifier) { content() }
     }
 }
 

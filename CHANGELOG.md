@@ -4,6 +4,27 @@
 
 ---
 
+## [v56.4.4] - 2026-08-12
+> 修复三个页面加载出数据后内容被顶栏遮挡：`FlowStateHost` 的成功分支丢弃了 `modifier`。
+
+### 修复
+- **书架、统计、书籍详情三个页面的内容一旦加载出来就被状态栏与顶栏压住**。`FlowStateHost` 的 `when` 里，error / isLoading / isEmpty 三个分支都把 `modifier` 传给了各自的状态组件，只有成功分支是裸的 `content()`——`modifier` 被直接丢掉。而这三个页面恰好都把 `Scaffold` 的 inset padding 通过这个 `modifier` 传进去：
+  ```kotlin
+  ) { paddingValues ->
+      FlowStateHost(
+          modifier = Modifier.fillMaxSize().padding(paddingValues),   // 成功分支里被丢弃
+  ```
+  于是 88dp（24dp 状态栏 + 64dp `TopAppBar`）的安全区在成功状态下消失，`LazyColumn` 从 y=0 开始绘制。加载中／空／错误三个状态反而是正确的，所以现象是「页面一有数据，顶部内容就被遮住」。成功分支改为 `Box(modifier = modifier) { content() }`。
+  - 受影响的调用点只有传了 padding 的三处：`LibraryScreen`、`StatsScreen`、`BookDetailScreen`。`NotesScreen`／`OpdsScreen`／`ReadingListsScreen` 只传 `fillMaxSize()`，且走 `FlowScaffold`（自己用 `Box` 加 padding），不受影响；`ReaderScreen` 不传 `modifier`，全屏出血设计，行为不变。
+  - **设置页不受影响**：它直接给 `Column` 加 `padding(paddingValues)`，不经过 `FlowStateHost`。
+
+### 测试
+- `ShellWindowInsetsTest` 新增 2 例，单测 260 → 262（0 失败）。此前的 `tabScreenAppliesEachInsetExactlyOnce` 一直是绿的却抓不到这个 bug——它的 `FakeScreen` 自己给 `Box` 加 padding，从不经过 `FlowStateHost`。
+  - `stateHostSuccessContentClearsTheTopBar` 复刻真实形状（padding 经 `FlowStateHost` 的 `modifier` 传入），断言内容顶边 = 24dp + 64dp。还原旧代码后该例 FAILED（`ShellWindowInsetsTest.kt:136`），确认能抓住。
+  - `stateHostLoadingAndSuccessShareTheSameContentTop` 把加载态钉在同一偏移，防止将来修好一个状态又弄坏另一个。
+
+---
+
 ## [v56.4.3] - 2026-08-12
 > 功能性 bug 排查：书内全文搜索恒返回空结果、翻页模式阅读统计全部丢失，另修八处缺陷。
 

@@ -2,337 +2,154 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=flat&logo=android" alt="Platform">
-  <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=flat&logo=kotlin" alt="Language">
-  <img src="https://img.shields.io/badge/Architecture-Clean%20Architecture-lightgrey?style=flat" alt="Architecture">
+  <img src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=flat&logo=kotlin" alt="Kotlin">
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat&logo=jetpackcompose" alt="UI">
+  <img src="https://img.shields.io/badge/minSdk-26-red?style=flat" alt="minSdk">
   <img src="https://img.shields.io/badge/License-GPL--3.0-orange?style=flat" alt="License">
-  <img src="https://img.shields.io/badge/MinSDK-26+-red?style=flat" alt="MinSDK">
 </p>
 
 <p align="center">
-  <b>一款简洁优雅的 Android 离线电子书阅读器</b><br>
-  专为沉浸式阅读体验而设计，兼顾性能与美观
+  <b>离线优先的 Android 电子书阅读器</b><br>
+  没有账号，没有云同步，没有遥测 —— 书和阅读数据只留在这台设备上
 </p>
 
 ---
 
-## 📖 概述
+## 概述
 
-FlowReader 是一款采用 **Jetpack Compose** 构建的 **Android 电子书阅读应用**。我们遵循 **Clean Architecture + MVVM** 设计，打造了一个纯本地、离线优先的阅读环境，支持 **EPUB、TXT、PDF、Markdown** 等多种格式。应用提供了可高度定制的阅读体验、强大的书籍管理系统以及多维度的阅读数据统计，帮助用户找回阅读心流。
+FlowReader 用 **Jetpack Compose + Material 3** 构建，**Clean Architecture + MVVM** 多模块分层。它刻意不做账号体系、云同步、数据上报和崩溃收集：整个应用只申请一个 `INTERNET` 权限，仅供局域网 OPDS 书目与局域网备份互传使用；应用内没有任何 WebView。
 
----
+当前版本 **v56.4.4**（versionCode 5644）。
 
-## ✨ 核心特性
+**支持格式**：EPUB、TXT、PDF、Markdown、FB2、MOBI，以及漫画 —— 单张 JPG / PNG / WebP 与纯图片 ZIP / CBZ 包。FB2 与 MOBI 是只读导入，在导入时像 EPUB 一样切成章节；**带 DRM 的 MOBI / AZW 直接拒绝导入，不做任何解密**，HUFF/CDIC 压缩的文件也是整体拒绝而非半解码。
 
-### 📚 书库与书籍管理
-*   **多格式导入**：支持 EPUB、TXT、PDF、Markdown文件的本地导入与批量导入。
-*   **智能书架**：支持按添加时间、阅读时间、书名、作者等多种维度排序；书籍元数据（作者、描述、封面）可编辑；**网格/列表双视图**与「继续阅读」大卡。
-*   **全库搜索**：独立搜索页——历史记录、书籍/章节两段结果、分页加载。
-*   **搜索与筛选**：快速定位书架中的目标书籍；支持查看最近阅读记录。
-*   **数据持久化**：3秒延迟写入的阅读进度自动保存机制，有效减少数据库 IO。
-
-### 📖 沉浸式阅读体验
-*   **个性化页面**：12 套内置阅读色板（纸白、米黄、护眼绿、亚麻、晨雾、冷灰、电子墨水、夜黑、墨蓝、深棕、曜石、纯黑），全部通过 WCAG AA 正文对比度校验；12sp-32sp 字号、1.0-2.5 倍行间距、段间距与首行缩进均可调，中文正文按 34 字上限控制行宽。
-*   **翻页与手势**：滑动（动画）、**真实分页**（逐页测量、横滑翻页、点按翻页）与无动画三种翻页模式——只提供真实实现的选项；点击分区、双击、长按、左右滑动与边缘热区宽度全部可自定义并真实生效。
-*   **原生文本选中**：长按即选中——按词选中、拖拽扩选、双端手柄；浮动操作栏一键高亮（颜色标注）、复制或添加书签，选中范围与正文精确对应。
-*   **智能交互**：左/右 30% 区域点击翻页，中间呼出菜单；底部可拖拽进度条快速跳转；支持屏幕常亮、TTS 朗读、专注模式及自动夜间模式。
-*   **PDF 专精渲染**：内置流畅的 PDF 渲染引擎，支持缩放、拖拽翻页与**框选区域标注**。
-*   **自定义主题**：背景/文字色自由组合，自动对比度校验保证可读。
-*   **分享与传输**：一键生成**阅读分享卡片**（图片）；书架导出 CSV/JSON；**局域网备份传输**——同一 WiFi 下设备间互传备份，无需互联网。
-
-### ☁️ 阅读云服务 (本地)
-*   **备份与恢复**：支持将书籍及阅读进度导出为备份文件；支持从备份文件恢复数据。
-
-### 📊 阅读数据统计
-*   **目标管理**：自定义每日阅读时长目标，实时查看当日完成进度。
-*   **多维统计**：按日统计阅读时长、阅读页数、阅读速度；提供阅读时长趋势分析（柱状图）。
-
-### 🎡 决策转盘 (灵感工具)
-*   **决策辅助**：内置可定制的决策转盘工具，支持自定义选项和颜色，帮助用户解决阅读选择困难症。自 v52 起从底部一级导航移出，改由书架顶栏「更多」进入。
-
-### ⚙️ 更多贴心功能
-*   **全局搜索**：基于 SQLite FTS5 实现单本书籍内部全文检索，关键词高亮，快速定位。
-*   **笔记与批注**：支持文字高亮（黄、绿、蓝、粉、橙 5 色标注）、添加批注想法。
-*   **EPUB 图片与排版**：自动提取 EPUB 内嵌图片并渲染，保留标题/粗体/斜体排版样式。
-*   **自定义字体**：支持导入 .ttf/.otf 外部字体文件。
-*   **护眼提醒**：支持 15/20/30/45/60 分钟提醒间隔，保护视力。
-*   **阅读进度 Widget**：主屏幕显示最近阅读书籍与当前进度。
+界面与文档为中文，代码标识符为英文。应用内可切换 9 种语言（中、英、日、韩、德、西、法、葡、俄）。
 
 ---
 
-## 📂 项目架构
+## 功能
 
-我们采用 **Clean Architecture + 多模块** 分层架构，实现关注点分离与高度解耦：
+### 书库
 
-**`UI` → `Domain` → `Data`**
+- **导入**：单本或批量导入；系统「用其他应用打开」也走同一条受限管线，且只消费一次（配置变更不会重复导入）。
+- **书架**：按添加时间／最近阅读／书名／作者排序，网格与列表双视图，「继续阅读」大卡；作者、简介、封面、标签均可编辑。
+- **全库搜索**：基于 SQLite **FTS5** 的跨书全文检索，书名与章节两段结果，分页加载 + 搜索历史。
+- **书单**：自建书单归类书籍。
+- **局域网 OPDS**：连接同一局域网内的 OPDS 书目并下载。**仅限内网** —— 回环地址、RFC1918 / RFC4193 私有网段与 `.local` 式名称之外的主机一律不可达，且**每一次重定向都重新校验**。
+- **进度持久化**：阅读进度 3 秒防抖写入，减少数据库 IO。
 
-Gradle 模块为 `:app`、`:core`、`:data`、`:domain`、`:feature:library`、`:feature:reader`。`:app` 负责 Hilt、导航和遗留 UI 装配，`:domain` 提供模型/仓库契约，`:data` 承载 Room 本地层，`:core` 自 v52 起承载设计系统（Token、`FlowTheme`、12 套阅读色板、与 Compose 解耦的排版/进度/手势/对比度纯函数），`:feature:*` 是书架/阅读器继续迁移的功能边界。
+### 阅读器
 
-### 1. UI 层
-*   **职责**：负责页面渲染与用户交互。
-*   **构成**：`ui/screens/` 按屏幕维度组织（`library`, `reader`, `wheel`, `stats`, `settings`, `bookdetail`），每个 Screen 包含 Composable 与 `*ViewModel`。根导航由 `Navigation.kt` 与 `FlowReaderApp.kt` 统一管理。
+- **12 套阅读色板**：纸白、米黄、护眼绿、亚麻、晨雾、冷灰、电子墨水、夜黑、墨蓝、深棕、曜石、纯黑，全部通过 WCAG AA 正文对比度自动断言；也可自定义背景／文字色，同样带对比度校验。
+- **排版可调**：12–32sp 字号、1.0–2.5 倍行距、段间距、首行缩进，可导入 `.ttf` / `.otf` 外部字体。中文正文按每行 34 字上限控制行宽。
+- **三种翻页模式**：滑动（动画滚动）、**真实分页**（逐页测量 + 横滑／点按翻页）、无动画跳转。只提供真正实现了的选项 —— 仿真、卷曲、覆盖三种曾经只有 UI 入口的模式已连同入口一并删除。
+- **原生文本选中**：长按即选中，按词选中、拖拽扩选、双端手柄；浮动操作栏可高亮（5 色）、复制或加书签，选中范围与章节原文精确对应。
+- **漫画**：横向逐页翻页，或纵向虚拟化长列表。
+- **PDF**：缩放、拖拽翻页、框选区域标注。
+- **手势全可配**：点击分区、双击、长按、左右滑动与边缘热区宽度都能改，且真实生效。
+- **其他**：TTS 朗读、专注模式（全屏沉浸）、屏幕常亮、定时自动夜间模式（19:00–07:00，每分钟重估）、护眼提醒（15/20/30/45/60 分钟）、底部可拖拽进度条。
 
-### 2. Domain 层
-*   **职责**：定义业务规则与数据契约。
-*   **构成**：`domain/model/` 存放数据载体（`Book`, `ReadingSettings` 等）；`domain/repository/` 定义 8 个数据仓库接口。`domain/usecase/` 已删除（逻辑内聚到各 ViewModel）。
+### 笔记与数据
 
-### 3. Data 层
-*   **职责**：负责数据的获取与持久化。
-*   **构成**：`:data` 模块的 `data/local/` 基于 **Room** 实现本地数据库存储（6 DAO + 6 Entity）；app 层的 `data/repository/` 继续提供 Repository 接口实现并逐步迁移到 `:data`。
-
----
-
-## 🌳 项目目录结构
-
-```
-flowreader/
-│
-├── .github/workflows           # CI/CD 工作流 (GitHub Actions)
-├── app/
-│   ├── build.gradle.kts        # App 级别构建配置
-│   ├── proguard-rules.pro      # R8/ProGuard 混淆规则
-│   └── src/
-│       ├── main/
-│       │   ├── AndroidManifest.xml
-│       │   ├── java/com/flowreader/app/
-│       │   │   ├── MainActivity.kt                    # 应用主入口，设置 Compose Content
-│       │   │   ├── FlowReaderApplication.kt           # @HiltAndroidApp 注入点
-│       │   │   │
-│       │   │   ├── data/                            # Repository 实现（Room local 已迁至 :data）
-│       │   │   │   ├── local/                       # 见 :data，本地数据库 version 6
-│       │   │   │   │   ├── AppDatabase.kt           # Room 数据库 (v6)
-│       │   │   │   │   ├── dao/                     # Data Access Objects
-│       │   │   │   │   │   ├── AnnotationDao.kt
-│       │   │   │   │   │   ├── BookDao.kt
-│       │   │   │   │   │   ├── BookmarkDao.kt
-│       │   │   │   │   │   ├── CategoryDao.kt
-│       │   │   │   │   │   ├── ChapterDao.kt
-│       │   │   │   │   │   └── ReadingStatsDao.kt
-│       │   │   │   │   └── entity/                  # 数据库实体
-│       │   │   │   │       ├── AnnotationEntity.kt
-│       │   │   │   │       ├── BookEntity.kt
-│       │   │   │   │       ├── BookmarkEntity.kt
-│       │   │   │   │       ├── CategoryEntity.kt
-│       │   │   │   │       ├── ChapterEntity.kt
-│       │   │   │   │       └── ReadingStatsEntity.kt
-│       │   │   │   └── repository/                  # Repository 实现
-│       │   │   │       ├── AnnotationRepositoryImpl.kt
-│       │   │   │       ├── BackupRepository.kt
-│       │   │   │       ├── BookRepositoryImpl.kt
-│       │   │   │       ├── BookmarkRepositoryImpl.kt
-│       │   │   │       ├── CategoryRepositoryImpl.kt
-│       │   │   │       ├── DataManager.kt
-│       │   │   │       ├── ReadingStatsRepositoryImpl.kt
-│       │   │   │       └── SettingsRepository.kt
-│       │   │   │
-│       │   │   ├── di/
-│       │   │   │   └── AppModule.kt                 # Hilt 注入模块 (Database + Repository)
-│       │   │   │
-│       │   │   │   ├── domain/                          # 领域层
-│       │   │   │   │   ├── model/                       # 业务模型
-│       │   │   │   │   │   ├── Annotation.kt
-│       │   │   │   │   │   ├── Book.kt
-│       │   │   │   │   │   ├── Bookmark.kt
-│       │   │   │   │   │   ├── ReadingSettings.kt
-│       │   │   │   │   │   ├── ReadingStats.kt
-│       │   │   │   │   │   └── WheelItem.kt
-│       │   │   │   │   ├── repository/                  # 数据仓库接口
-│       │   │   │   │   │   ├── AnnotationRepository.kt
-│       │   │   │   │   │   ├── BackupRepository.kt
-│       │   │   │   │   │   ├── BookRepository.kt
-│       │   │   │   │   │   ├── BookmarkRepository.kt
-│       │   │   │   │   │   ├── CategoryRepository.kt
-│       │   │   │   │   │   ├── ChapterRepository.kt
-│       │   │   │   │   │   ├── ReadingStatsRepository.kt
-│       │   │   │   │   │   └── SettingsRepository.kt
-│       │   │   │   │   └── usecase/                     # （已删除）
-│       │   │   │
-│       │   │   ├── ui/                              # 表现层 (UI Layer)
-│       │   │   │   ├── FlowReaderApp.kt             # 根 Composable
-│       │   │   │   ├── Navigation.kt                # 导航配置 (3个Tab + 二级目的地)
-│       │   │   │   ├── AppShellViewModel.kt          # 应用外壳主题/配色来源
-│       │   │   │   └── screens/
-│       │   │   │       ├── bookdetail/              # 书籍详情页
-│       │   │   │       │   ├── BookDetailScreen.kt
-│       │   │   │       │   └── BookDetailViewModel.kt
-│       │   │   │       ├── library/                 # 书库主页
-│       │   │   │       │   ├── LibraryScreen.kt
-│       │   │   │       │   └── LibraryViewModel.kt
-│       │   │   │       ├── reader/                  # 阅读器页面
-│       │   │   │       │   ├── ReaderScreen.kt
-│       │   │   │       │   ├── ReaderViewModel.kt
-│       │   │   │       │   └── components/          # 阅读器子组件
-│       │   │   │       │       ├── BookmarksDialog.kt
-│       │   │   │       │       ├── ChapterListDialog.kt
-│       │   │   │       │       ├── Dialogs.kt
-│       │   │   │       │       ├── PdfViewer.kt
-│       │   │   │       │       ├── ReaderContent.kt
-│       │   │   │       │       ├── ReaderControls.kt
-│       │   │   │       │       └── ReaderSettingsDialog.kt
-│       │   │   │       ├── settings/                # 设置页面
-│       │   │   │       │   ├── SettingsScreen.kt
-│       │   │   │       │   └── SettingsViewModel.kt
-│       │   │   │       ├── stats/                       # 阅读统计页面
-│       │   │   │       │   ├── StatsScreen.kt
-│       │   │   │       │   └── StatsViewModel.kt
-│       │   │   │       └── wheel/                   # 决策转盘页面
-│       │   │   │           ├── WheelScreen.kt
-│       │   │   │           ├── WheelViewModel.kt
-│       │   │   │           └── components/
-│       │   │   │               └── WheelSpinner.kt
-│       │   │   │
-│       │   │   └── util/                            # 工具类模块
-│       │   │       ├── BookLoader.kt                # 书籍加载器
-│       │   │       ├── BookParser.kt                # 书籍解析 (EPUB/TXT/PDF/MD)
-│       │   │       ├── CacheManager.kt              # LRU 缓存管理
-│       │   │       ├── FullTextSearch.kt            # 全文搜索 (FTS5)
-│       │   │       └── MemoryManager.kt             # 内存压力监控与管理
-│       │   │
-│       │   └── res/                               # Android 资源文件
-│       │       ├── drawable/
-│       │       ├── mipmap-*/
-│       │       ├── values/ (含多种语言 strings: en, ja, ko, zh)
-│       │       └── xml/
-│       │
-│       └── test/java/com/flowreader/app/util/     # 单元测试
-│           └── BookParserTest.kt
-│
-├── build.gradle.kts              # 项目根目录构建脚本
-├── gradle.properties             # Gradle 属性配置
-├── gradlew / gradlew.bat       # Gradle Wrapper
-├── settings.gradle.kts           # 项目配置
-├── .editorconfig                 # 代码格式统一配置
-└── README.md                     # 本文件
-```
+- **笔记与批注**：黄／绿／蓝／粉／橙 5 色高亮，可加想法备注；书籍详情页可导出为 Markdown / HTML / 纯文本（导出时做转义）。
+- **阅读统计**：按日统计时长、页数、速度，柱状图趋势，周报／月报，最快阅读日与最常读书籍；支持自定义每日／每周／每月阅读目标。
+- **分享与传输**：一键生成阅读分享卡片（图片）；书架导出 CSV / JSON；**局域网备份互传** —— 同一 WiFi 下设备间直传，随机令牌保护，绑定实际局域网网卡而非 `0.0.0.0`，对话框关闭即停止服务。
+- **备份恢复**：导出／导入书籍与阅读进度，导入是**单个原子事务**，上限 200MB。
+- **主屏 Widget**：显示最近阅读的书籍与当前进度。
+- **决策转盘**：可自定义选项与颜色的小工具，自 v52 起从底部一级导航移到书架顶栏「更多」中。
 
 ---
 
-## 🛠️ 技术栈
+## 架构
 
-| 类别 | 技术 |
+允许的依赖方向：`feature:* → core / domain`，`data → core / domain`，`app → core / data / domain / feature:*`。`:domain` 不含 app / Room / Compose / Hilt 任何依赖。
+
+| 模块 | 内容 |
 |------|------|
-| **UI** | Jetpack Compose + Material 3 (Material You) |
-| **架构** | MVVM + Clean Architecture |
-| **依赖注入** | Hilt |
-| **异步** | Kotlin Coroutines + Flow |
-| **数据库** | Room + SQLite (FTS5 全文检索) |
-| **PDF 渲染** | 内置 PDF 渲染引擎 |
-| **构建系统** | Gradle (AGP 8.6.0) |
+| `:app` | 组装根：`MainActivity`、Hilt 装配（`di/AppModule.kt`）、导航、全部界面与 ViewModel、**全部 10 个 Repository 实现**、`util/`、`widget/` |
+| `:core` | 设计系统（v52 起）：Token、`FlowTheme`、12 套阅读色板、通用组件，以及一批与 Compose 解耦、可在 JVM 上直接测的纯函数 |
+| `:data` | 仅 Room：`AppDatabase` + 7 个 DAO + 7 个 Entity |
+| `:domain` | 10 个 Repository 接口 + 领域模型。`domain/usecase/` 已删除 —— 业务逻辑有意内聚在各 ViewModel |
+| `:feature:reader` | `ChapterPaginator`、`ReaderProgressEngine`、`ReaderSessionTracker`、`ReaderPositionUnit`（均有单测覆盖） |
+| `:feature:library` | **目前还没有源文件**，是已接入编译／lint／测试的占位模块 |
+
+数据流：`Composable → ViewModel → domain 仓库接口 → data 仓库实现 → Room DAO / DataStore`。每个 ViewModel 暴露一个不可变 `StateFlow<XxxUiState>`，错误用 Kotlin 内置 `Result`。
+
+注意一处命名错位：模块 namespace 是 `com.flowreader.domain` / `com.flowreader.data` 这类，但源码包名统一是 `com.flowreader.app.*`。新文件请沿用 `com.flowreader.app.*`。
+
+### 三套互相独立的持久化
+
+1. **Room**（`flowreader_db`）—— `AppDatabase` 当前 version 7，`exportSchema = true`。**没有** `fallbackToDestructiveMigration()`，每次 schema 变更都要手写迁移。
+2. **第二个裸 SQLite 库**（`flowreader_fts.db`）—— 由 `util/FullTextSearch.kt` 直接管理的 FTS5 虚拟表，完全在 Room 之外，同时支撑书内搜索与全库搜索。
+3. **DataStore Preferences**（`settings`）—— `SettingsRepositoryImpl` 独占所有偏好键。
+
+`util/CacheManager.kt` 是唯一的章节／元数据／封面缓存，按 `MemoryManager` 的建议值定容，实现 `ComponentCallbacks2` 响应内存压力，并按命中率自适应每本书的章节容量。不要再加第二个章节缓存。
 
 ---
 
-## 🚀 快速开始
+## 构建
 
-### 环境要求
-- 操作系统: Windows / macOS / Linux
-- JDK: 17 (Temurin 推荐)
-- Android SDK: 35
-
-### 构建与运行
+环境：**JDK 17**、**Android SDK 35**（compileSdk 35 / minSdk 26）、AGP 8.6.0。Gradle wrapper 从腾讯云镜像拉取 Gradle 9.6.1，wrapper 下载失败通常是镜像问题而不是项目问题。
 
 ```bash
-# 1. 克隆仓库
 git clone https://github.com/HuZaiGong/flowreader.git
 cd flowreader
 
-# 2. 构建 Debug 版本 (用于开发调试)
-./gradlew assembleDebug
-
-# 3. 构建 Release 版本 (启用 R8 混淆压缩)
-./gradlew assembleRelease
-
-# 4. 运行单元测试
-./gradlew testDebugUnitTest
+./gradlew assembleDebug          # 开发包
+./gradlew assembleRelease        # R8 full-mode 混淆 + 资源压缩（有意使用 debug 签名配置）
+./gradlew testDebugUnitTest      # 全部 JVM 单测
 ```
 
----
+### 验证门禁
 
-## 📝 近期更新日志
+CI（`.github/workflows/ci.yml`）严格按此顺序跑这六项：
 
-### v50.0.0 (最新发布)
-- **开始阅读闪退修复**：TTS 改为懒初始化，进入阅读器不再立即启动系统 TTS 引擎
-- **架构补强**：新增 `:domain` 模块，抽离领域模型和仓库接口
-- **测试与规范门禁**：新增核心 JVM 测试、轻量 Kotlin 风格检查和覆盖率摘要任务
-- **三模块重构**：阅读统计、TTS、全局搜索重构为可独立工作的仓库/管理器能力
-- **全局搜索 v2**：书架搜索框展示跨书全文命中，包含书名、章节和片段
-- **阅读报告**：统计页新增周报/月报、最快阅读日、最常读书籍
-- **标注导出**：书籍详情页支持 Markdown / HTML / 纯文本导出预览
-- **阅读目标进阶**：支持周目标、月目标与未达成提示
-- **阅读标签与书签索引**：书籍详情可编辑标签，数据库升级至 Room v6 schema，并为书签导航新增复合索引
+```bash
+./gradlew verifyKotlinStyle      # ktlint（:app 以外的模块）+ 全仓空白字符检查
+./gradlew testDebugUnitTest      # :app / :core / :domain / :feature:reader
+./gradlew coverageSummary        # 测试广度文件比 ≥ 40%（当前 75.8%）
+./gradlew assembleDebug
+./gradlew verifyRoborazziDebug   # 截图回归
+./gradlew performanceBaseline    # APK 体积对比 baseline/apk-size.properties
+```
 
-### v49.0.0
-- **书签系统回归**：阅读器恢复书签入口，长按段落可添加带备注书签
-- **TTS 朗读回归**：基于系统 TextToSpeech API 支持朗读/暂停，不引入第三方 SDK
-- **阅读进度 Widget**：主屏幕 Widget 显示当前阅读书籍与进度
-- **阅读专注模式**：阅读器支持隐藏状态栏/导航栏的全屏沉浸阅读
-- **夜间模式自动切换**：阅读设置支持按本地时间自动切换深色/浅色阅读配色
+两个容易踩的点：
 
-### v48.0.0
-- **阅读统计精确化**：按章节真实字符位置累计阅读页数，并在暂停超过 5 分钟后切分新会话
-- **护眼提醒可配置**：阅读设置支持 15/20/30/45/60 分钟提醒间隔
-- **章节滚动位置记忆**：每章独立记忆滚动位置，切换回来自动恢复
-- **书架筛选增强**：书架支持按分类筛选，搜索同时匹配书名和作者
-- **阅读器错误重试**：加载失败状态新增重试按钮
-- **Release 体积优化**：启用 R8 full mode，继续使用资源压缩
-
-### v47.0.0
-- **阅读统计保存修复**：新增每 30 秒定期保存、章节切换保存和异常保护
-- **搜索空结果体验修复**：未点击搜索前不再提前显示“未找到匹配结果”
-- **书籍详情目录跳转**：章节列表可直接跳转到阅读器指定章节
-- **书签入口隐藏**：保留数据层，隐藏当前屏幕入口
-
-### v46.0.0
-- **移除 TTS 朗读模块**：删除 TtsManager 及所有 UI 入口，Hilt 自动发现模式无需额外清理
-- **修复批注位置错误**：`ReaderContent` 中 long-press 选中位置改为 chapter-absolute（原为 paragraph-relative，导致仅第一段可正确渲染高亮）
-- **修复高亮颜色失效**：`HighlightMenu` 选择的颜色现在完整传递到 `ReaderViewModel.addAnnotation()`，不再始终写入 YELLOW
-- **备份新增标注导出**：`BackupRepository` 导出/导入流程新增 `annotations` 数组，AnnotationEntity 支持 JSON 序列化
-- **新增 `(bookId, chapterIndex)` 复合索引**：优化按章节查询标注的性能
-- **修复 FTS5 特殊字符**：`FullTextSearch` 新增 `escapeFtsQuery()` 处理 `^ * - + ~ ( )` 等运算符，避免搜索崩溃
-- **搜索历史持久化**：`searchInBook()` 现在调用 `settingsRepository.addSearchHistory()`
-
-### v45.0.2
-- **章节切换白屏修复**：`goToChapter()` 中 content 异步加载完成后未更新 `currentChapter`，导致首次切换章节正文空白；改为在协程内同步加载完 content 后再统一设置状态
-
-### v45.0.1
-- 按书籍统计：BookDetailScreen 阅读统计卡片（每本书阅读时长/页数）
-- 趋势图表：StatsScreen Canvas 柱状图展示最近 7 天阅读趋势
-- EPUB 图片：自动提取 EPUB 内嵌图片并渲染
-- EPUB 排版：保留标题（##）、粗体（**）、斜体（*）标记
-- 自定义字体：支持导入 .ttf/.otf 外部字体文件
-- 动态缓存：CacheManager 集成 MemoryManager，根据可用内存动态调整缓存上限
-
-### v45.0.0
-- 字体选择：阅读设置面板 8 种字体 FilterChips
-- 全文搜索：FTS5 集成，阅读器搜索入口 + SearchDialog
-- 标注高亮：`buildAnnotatedString` + `SpanStyle` 渲染标注背景色
-- 书籍详情标注 Tab：标注颜色、文本、备注展示，支持删除
-- 缓存整合：移除 `ChapterRepositoryImpl.contentCache`，统一走 `CacheManager`
-- 领域接口拆分：Chapter/Bookmark/Annotation/Category 独立文件
-- SettingsRepository 抽象：创建领域接口，实现类更名
-- 移除死代码：`GetBookUseCase`、`SaveProgressUseCase`、`TextPaginator`、`ParagraphMode`、`BackgroundTexture`、`AmbientSound` 及 11 个未用的 `ReadingSettings` 字段
-- 主题简化：阅读主题仅保留"深色"和"浅色"两种模式，全局统一生效
-
-### v52.0.0
-- UI 重构第一阶段：`:core` 设计系统落地（Token / `FlowTheme` / 12 套阅读色板 / 排版纯函数）
-- 死设置清账：字体族、自定义字体、段间距、手势设置全部真实生效；仿真与卷曲等 3 个未实现的翻页模式连同 UI 入口一并删除
-- 动态取色改为可选（默认品牌配色）；应用主题新增「跟随系统」
-- 自动夜间模式改为定时驱动，进度条纳入章内位置，控制层正确避让系统栏
-- 转盘从底部一级 Tab 降级为书架二级入口，底部导航收敛为 3 项
-- 书架导入错误不再被静默吞掉；千章书籍详情页章节列表扁平化
-- 测试广度 41.9% → 55.8%，新增 12 套阅读主题的 WCAG AA 对比度自动断言
-
-*(查看 [CHANGELOG.md](CHANGELOG.md) 获取更详细的历史更新记录)*
+- **ktlint 不作用于 `:app`**。`:app` 的 Kotlin 只由 `verifyKotlinStyle` 里的空白字符门禁检查 —— 全仓任意 `.kt` / `.kts` 里出现一个 tab 或行尾空格，整个构建就失败。`.editorconfig` 规定 4 空格缩进、LF、行宽上限 140。
+- **`coverageSummary` 是文件数量比，不是行覆盖率**。分母包含 `:core` 的每个主源文件、领域模型、仓库接口、ViewModel 等。**新增一个领域模型或 `:core` 文件却不加测试，就算别处一行没动也会挂**。
 
 ---
 
-## 📄 许可证
+## 安全约束
 
-本项目基于 [GNU General Public License v3.0](LICENSE) 开源。
+项目是离线优先且注重隐私的，这些是硬约束：
+
+- **只有一个 `INTERNET` 权限**，仅供局域网 OPDS 使用。无账号、无统计、无崩溃上报、无同步。
+- **导入处处设上限**：EPUB 单章 16MB、内嵌图片 24MB、TXT/MD/FB2/MOBI 整文件 128MB；ZIP / CBZ 拒绝绝对路径与 `..`（zip-slip），跳过 `__MACOSX` 与隐藏项，限制条目数与单条大小，只放行解析器支持的扩展名。
+- **不做 DRM 破解**。
+- **备份不含可执行内容**，导入是单个原子事务；云备份只含 shared prefs，数据库不经 Android Backup 离开设备。
+- **ContentProvider**（`com.flowreader.app.provider`）只暴露只读的书籍元数据与进度 —— 不含文件路径，不含正文，写入一律拒绝。
+- **FileProvider 只授权 `share_cards/` 一个子目录**（全仓仅一处 `getUriForFile()` 调用点）。
+- **全应用无 WebView**；FTS 查询、HTML / Markdown 导出均做转义；审计门禁要求不新增 `!!`。
 
 ---
 
-## 🤝 致谢
+## 更新日志
 
-感谢所有反馈问题与提交建议的用户。
+最近几个版本：
 
-<p align="center"> Made with ❤️ by HuZaiGong </p>
+- **v56.4.4** —— 修复书架／统计／书籍详情三页「加载出数据后内容被顶栏遮挡」：`FlowStateHost` 的成功分支丢弃了 `modifier`，导致 88dp 安全区在成功状态下消失，而同一页面的加载／空／错误状态反而正常。
+- **v56.4.3** —— 功能性 bug 排查 11 处。书内全文搜索因 FTS5 列无亲和性而恒返回空结果；PAGED 与漫画的阅读统计整段丢失；划词高亮少存一个字符、重叠高亮重复渲染；「最近 7 天」趋势图实际只显示 2–3 天。
+- **v56.4.2** —— 修复 issue #6：外层 shell 只「应用」而未「消费」窗口 inset，下层 9 个界面又各应用一遍，顶部多出整条状态栏高度。
+- **v56.4.1** —— 安全加固：移除 ContentProvider 中的 `runBlocking`；FileProvider 授权从三棵完整目录树收紧到一个子目录；修复令牌生成中的潜伏缺陷。
+- **v56.3.0 / v56.4.0** —— 两轮专项安全审计。
+
+完整历史见 [CHANGELOG.md](CHANGELOG.md)，更长期的规划与已知技术债见 `ROADMAP.md`，逐条行为陷阱见 `AGENTS.md`。
+
+---
+
+## 许可证
+
+基于 [GNU General Public License v3.0](LICENSE) 开源。
+
+<p align="center">Made with ❤️ by HuZaiGong</p>

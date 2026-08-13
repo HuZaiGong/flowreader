@@ -24,6 +24,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.Insets
+import com.flowreader.app.core.designsystem.component.FlowStateHost
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import org.junit.Assert.assertEquals
@@ -112,6 +113,49 @@ class ShellWindowInsetsTest {
             .assertTopPositionInRootIsEqualTo(STATUS_BAR_DP)
     }
 
+    /**
+     * The shape Library / Stats / BookDetail actually use: the inset padding is handed to
+     * [FlowStateHost] as its `modifier` rather than applied to a `Box` directly.
+     *
+     * [tabScreenAppliesEachInsetExactlyOnce] passed all along while those three screens were
+     * visibly broken, because [FakeScreen] applies the padding itself and never routes through
+     * `FlowStateHost` — whose success branch used to drop the modifier on the floor.
+     */
+    @Test
+    fun stateHostSuccessContentClearsTheTopBar() {
+        composeRule.setContent {
+            MaterialTheme {
+                FlowShellScaffold(bottomBar = {}) {
+                    FakeStateHostScreen(isLoading = false)
+                }
+            }
+        }
+        composeRule.injectSystemBars()
+
+        composeRule.onNodeWithTag(TAG_SCREEN_CONTENT)
+            .assertTopPositionInRootIsEqualTo(STATUS_BAR_DP + TOP_APP_BAR_DP)
+    }
+
+    /**
+     * The loading state was always positioned correctly, which is why the bug looked like "content
+     * is fine until the page has data". Pin both states to the same offset so a future change
+     * cannot fix one and regress the other.
+     */
+    @Test
+    fun stateHostLoadingAndSuccessShareTheSameContentTop() {
+        composeRule.setContent {
+            MaterialTheme {
+                FlowShellScaffold(bottomBar = {}) {
+                    FakeStateHostScreen(isLoading = true)
+                }
+            }
+        }
+        composeRule.injectSystemBars()
+
+        composeRule.onNodeWithTag(TAG_LOADING_CONTENT)
+            .assertTopPositionInRootIsEqualTo(STATUS_BAR_DP + TOP_APP_BAR_DP)
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     private fun FakeScreen() {
@@ -125,6 +169,28 @@ class ShellWindowInsetsTest {
                     .fillMaxSize()
                     .testTag(TAG_SCREEN_CONTENT)
             )
+        }
+    }
+
+    @OptIn(ExperimentalMaterial3Api::class)
+    @Composable
+    private fun FakeStateHostScreen(isLoading: Boolean) {
+        Scaffold(
+            topBar = { TopAppBar(title = { Text("title") }) }
+        ) { padding ->
+            FlowStateHost(
+                isLoading = isLoading,
+                isEmpty = false,
+                error = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding),
+                loadingContent = {
+                    Box(modifier = Modifier.fillMaxSize().testTag(TAG_LOADING_CONTENT))
+                }
+            ) {
+                Box(modifier = Modifier.fillMaxSize().testTag(TAG_SCREEN_CONTENT))
+            }
         }
     }
 
@@ -149,6 +215,7 @@ class ShellWindowInsetsTest {
 
     private companion object {
         const val TAG_SCREEN_CONTENT = "screenContent"
+        const val TAG_LOADING_CONTENT = "loadingContent"
         const val TAG_NAV_BAR = "shellNavBar"
 
         /** 420dpi qualifier gives density 2.625, so these land on whole dp values. */
