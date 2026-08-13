@@ -11,10 +11,23 @@
     <string name="action_more">More</string>
     <string name="action_search">Search</string>
     <string name="action_dismiss">Got it</string>
+    <string name="action_back">Back</string>
 
     <string name="stats_title">Stats</string>
     <string name="book_detail_title">Book details</string>
     <string name="reader_title">Reading</string>
+
+    <!-- Reader menu and dialogs -->
+    <string name="reader_menu_settings">Reading settings</string>
+    <string name="reader_menu_annotations">Highlights and notes</string>
+    <string name="reader_menu_search">Full-text search</string>
+    <string name="reader_menu_focus">Focus mode</string>
+    <string name="reader_menu_share">Share progress</string>
+    <string name="reader_bookmarks_title">Bookmarks</string>
+    <string name="reader_bookmarks_empty">No bookmarks yet</string>
+    <string name="reader_chapters_title">Contents</string>
+    <string name="reader_bookmark_entry">Chapter %1$d · position %2$d</string>
+    <string name="reader_bookmark_current"> · current chapter</string>
 
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Search titles, authors or full text</string>

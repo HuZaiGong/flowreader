@@ -43,7 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.reader.ReaderPalette
 import com.flowreader.app.core.designsystem.reader.background
 import com.flowreader.app.core.designsystem.reader.secondaryText
@@ -109,15 +111,27 @@ fun ReaderControls(
             },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", tint = palette.text)
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.action_back),
+                        tint = palette.text
+                    )
                 }
             },
             actions = {
                 IconButton(onClick = onChapterClick) {
-                    Icon(Icons.AutoMirrored.Filled.List, contentDescription = "目录", tint = palette.text)
+                    Icon(
+                        Icons.AutoMirrored.Filled.List,
+                        contentDescription = stringResource(R.string.reader_chapters_title),
+                        tint = palette.text
+                    )
                 }
                 IconButton(onClick = onBookmarkClick) {
-                    Icon(Icons.Default.Bookmark, contentDescription = "书签", tint = palette.text)
+                    Icon(
+                        Icons.Default.Bookmark,
+                        contentDescription = stringResource(R.string.reader_bookmarks_title),
+                        tint = palette.text
+                    )
                 }
                 IconButton(onClick = onTtsClick) {
                     Icon(
@@ -128,11 +142,11 @@ fun ReaderControls(
                 }
                 Box {
                     IconButton(onClick = { overflowExpanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "更多", tint = palette.text)
+                        Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more), tint = palette.text)
                     }
                     DropdownMenu(expanded = overflowExpanded, onDismissRequest = { overflowExpanded = false }) {
                         DropdownMenuItem(
-                            text = { Text("阅读设置") },
+                            text = { Text(stringResource(R.string.reader_menu_settings)) },
                             leadingIcon = { Icon(Icons.Default.Settings, contentDescription = null) },
                             onClick = {
                                 overflowExpanded = false
@@ -140,7 +154,7 @@ fun ReaderControls(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("高亮与笔记") },
+                            text = { Text(stringResource(R.string.reader_menu_annotations)) },
                             leadingIcon = { Icon(Icons.Default.Highlight, contentDescription = null) },
                             onClick = {
                                 overflowExpanded = false
@@ -148,7 +162,7 @@ fun ReaderControls(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("全文搜索") },
+                            text = { Text(stringResource(R.string.reader_menu_search)) },
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             onClick = {
                                 overflowExpanded = false
@@ -156,7 +170,7 @@ fun ReaderControls(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("专注模式") },
+                            text = { Text(stringResource(R.string.reader_menu_focus)) },
                             leadingIcon = { Icon(Icons.Default.Fullscreen, contentDescription = null) },
                             onClick = {
                                 overflowExpanded = false
@@ -164,7 +178,7 @@ fun ReaderControls(
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("分享进度") },
+                            text = { Text(stringResource(R.string.reader_menu_share)) },
                             leadingIcon = { Icon(Icons.Default.Share, contentDescription = null) },
                             onClick = {
                                 overflowExpanded = false

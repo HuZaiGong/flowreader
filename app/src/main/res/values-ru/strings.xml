@@ -13,6 +13,18 @@
     <string name="stats_title">Статистика</string>
     <string name="book_detail_title">О книге</string>
     <string name="reader_title">Чтение</string>
+
+    <!-- Меню и диалоги читалки -->
+    <string name="reader_menu_settings">Настройки чтения</string>
+    <string name="reader_menu_annotations">Выделения и заметки</string>
+    <string name="reader_menu_search">Полнотекстовый поиск</string>
+    <string name="reader_menu_focus">Режим концентрации</string>
+    <string name="reader_menu_share">Поделиться прогрессом</string>
+    <string name="reader_bookmarks_title">Закладки</string>
+    <string name="reader_bookmarks_empty">Закладок пока нет</string>
+    <string name="reader_chapters_title">Содержание</string>
+    <string name="reader_bookmark_entry">Глава %1$d · позиция %2$d</string>
+    <string name="reader_bookmark_current"> · текущая глава</string>
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Поиск по названию, автору или тексту</string>
     <string name="library_search_exit">Выйти из поиска</string>

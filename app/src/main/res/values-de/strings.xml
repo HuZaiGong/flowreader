@@ -13,6 +13,18 @@
     <string name="stats_title">Statistiken</string>
     <string name="book_detail_title">Buchdetails</string>
     <string name="reader_title">Lesen</string>
+
+    <!-- Reader-Menü und Dialoge -->
+    <string name="reader_menu_settings">Leseeinstellungen</string>
+    <string name="reader_menu_annotations">Markierungen und Notizen</string>
+    <string name="reader_menu_search">Volltextsuche</string>
+    <string name="reader_menu_focus">Fokusmodus</string>
+    <string name="reader_menu_share">Fortschritt teilen</string>
+    <string name="reader_bookmarks_title">Lesezeichen</string>
+    <string name="reader_bookmarks_empty">Noch keine Lesezeichen</string>
+    <string name="reader_chapters_title">Inhalt</string>
+    <string name="reader_bookmark_entry">Kapitel %1$d · Position %2$d</string>
+    <string name="reader_bookmark_current"> · aktuelles Kapitel</string>
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Titel, Autoren oder Volltext durchsuchen</string>
     <string name="library_search_exit">Suche beenden</string>

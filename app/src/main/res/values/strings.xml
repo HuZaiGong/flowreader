@@ -18,6 +18,18 @@
     <string name="book_detail_title">书籍详情</string>
     <string name="reader_title">阅读</string>
 
+    <!-- 阅读器菜单与对话框 -->
+    <string name="reader_menu_settings">阅读设置</string>
+    <string name="reader_menu_annotations">高亮与笔记</string>
+    <string name="reader_menu_search">全文搜索</string>
+    <string name="reader_menu_focus">专注模式</string>
+    <string name="reader_menu_share">分享进度</string>
+    <string name="reader_bookmarks_title">书签</string>
+    <string name="reader_bookmarks_empty">暂无书签</string>
+    <string name="reader_chapters_title">目录</string>
+    <string name="reader_bookmark_entry">第 %1$d 章 · 位置 %2$d</string>
+    <string name="reader_bookmark_current"> · 当前章节</string>
+
     <!-- 书架 -->
     <string name="library_title">心流阅读</string>
     <string name="library_search_placeholder">搜索书名、作者或全文</string>

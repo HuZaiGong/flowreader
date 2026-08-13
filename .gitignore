@@ -83,7 +83,10 @@ Thumbs.db
 .mtj.tmp/
 
 # Package Files
+# NOTE: gradle/wrapper/gradle-wrapper.jar is force-added and must stay committed —
+# without it ./gradlew cannot bootstrap on a fresh clone. Keep the negation below.
 *.jar
+!gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
@@ -95,9 +98,23 @@ Thumbs.db
 hs_err_pid*
 replay_pid*
 
-# AI tool config — contains API keys; never commit real keys
-providers.yaml
+# AI tool config — may contain API keys; never commit real keys.
+# providers.yaml is already tracked (it holds only a public free-tier placeholder key),
+# so this pattern does NOT apply to it — .gitignore never affects tracked files. If you
+# ever put a real key in it, run `git rm --cached providers.yaml` first, otherwise the
+# change will be committed silently. Copy providers.yaml.example for local overrides.
+providers.yaml.local
 
 # AI tool session data (may contain sensitive conversation content) and deps
 .opencode/goals/
 .opencode/node_modules/
+
+# AI assistant local state. These hold machine-specific paths and permission grants,
+# not project config. Previously only ignored via a global ~/.config/git/ignore, so a
+# fresh clone on another machine would have surfaced them as untracked.
+.claude/settings.local.json
+.claude/settings.local.json.tmp.*
+.claude/worktrees/
+
+# Working notes written during development sessions; not part of the project
+HANDOFF.md

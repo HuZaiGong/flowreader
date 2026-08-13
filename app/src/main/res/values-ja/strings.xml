@@ -11,10 +11,23 @@
     <string name="action_more">その他</string>
     <string name="action_search">検索</string>
     <string name="action_dismiss">了解</string>
+    <string name="action_back">戻る</string>
 
     <string name="stats_title">統計</string>
     <string name="book_detail_title">書籍詳細</string>
     <string name="reader_title">読書</string>
+
+    <!-- リーダーのメニューとダイアログ -->
+    <string name="reader_menu_settings">読書設定</string>
+    <string name="reader_menu_annotations">ハイライトとメモ</string>
+    <string name="reader_menu_search">全文検索</string>
+    <string name="reader_menu_focus">集中モード</string>
+    <string name="reader_menu_share">進捗を共有</string>
+    <string name="reader_bookmarks_title">ブックマーク</string>
+    <string name="reader_bookmarks_empty">ブックマークはまだありません</string>
+    <string name="reader_chapters_title">目次</string>
+    <string name="reader_bookmark_entry">第 %1$d 章 · 位置 %2$d</string>
+    <string name="reader_bookmark_current"> · 現在の章</string>
 
     <string name="library_title">フローリーダー</string>
     <string name="library_search_placeholder">書名・著者・全文を検索</string>
