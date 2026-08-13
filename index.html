@@ -596,7 +596,7 @@
             <div class="hero-orb"></div>
         </div>
         <div class="hero-content">
-            <div class="hero-badge" data-i18n="hero.badge">开源 · GPL-3.0 · v56.4.4</div>
+            <div class="hero-badge"><span data-i18n="hero.badge">开源 · GPL-3.0</span><span id="heroVersion"></span></div>
             <h1 data-i18n="hero.title">离线优先的阅读<br>只属于<span class="grad">你和你的书</span></h1>
             <p class="hero-desc" data-i18n="hero.desc">FlowReader 是一款 Android 电子书阅读器：没有账号，没有云同步，没有遥测 —— 书和阅读数据只留在这台设备上。</p>
             <div class="hero-stats">
@@ -974,8 +974,8 @@
             'nav.tech': { zh: '技术栈', en: 'Tech' },
             'nav.community': { zh: '社区', en: 'Community' },
             'hero.badge': {
-                zh: '开源 · GPL-3.0 · v56.4.4',
-                en: 'Open source · GPL-3.0 · v56.4.4'
+                zh: '开源 · GPL-3.0',
+                en: 'Open source · GPL-3.0'
             },
             'hero.title': {
                 zh: '离线优先的阅读<br>只属于<span class="grad">你和你的书</span>',
@@ -1165,6 +1165,18 @@
         }, { threshold: 0.1 });
 
         document.querySelectorAll('.reveal').forEach(function (el) { observer.observe(el); });
+
+        // ===== 版本号自动匹配：同源读取 CHANGELOG.md，解析最新的版本标题 =====
+        // 发布新版本只需更新 CHANGELOG.md，页面无需再改；拉取失败时静默降级为不显示版本号
+        fetch('CHANGELOG.md', { cache: 'no-cache' })
+            .then(function (res) { return res.ok ? res.text() : ''; })
+            .then(function (text) {
+                var match = text.match(/^##\s*\[?v?(\d+(?:\.\d+)+)\]?/m);
+                if (match) {
+                    document.getElementById('heroVersion').textContent = ' · v' + match[1];
+                }
+            })
+            .catch(function () { /* ignore */ });
     </script>
 </body>
 </html>
