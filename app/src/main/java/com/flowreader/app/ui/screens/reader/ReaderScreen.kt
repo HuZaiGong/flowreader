@@ -1,6 +1,8 @@
 package com.flowreader.app.ui.screens.reader
 
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -22,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import android.content.Intent
@@ -42,8 +45,10 @@ import com.flowreader.app.core.util.ReadingProgress
 import com.flowreader.app.domain.model.BookFormat
 import com.flowreader.app.domain.model.GestureAction
 import com.flowreader.app.domain.model.PageMode
+import com.flowreader.app.R
 import com.flowreader.app.ui.screens.reader.components.AnnotationsDialog
 import com.flowreader.app.ui.screens.reader.components.BookmarksDialog
+import com.flowreader.app.ui.screens.reader.components.ReaderBackground
 import com.flowreader.app.ui.screens.reader.components.ChapterListDialog
 import com.flowreader.app.ui.screens.reader.components.ComicReader
 import com.flowreader.app.ui.screens.reader.components.PagedReader
@@ -66,6 +71,12 @@ fun ReaderScreen(
     val activity = context as? ComponentActivity
     val view = LocalView.current
     val settings = uiState.readingSettings
+
+    // GetContent rather than OpenDocument: no persistable permission is needed because the importer
+    // copies the image into filesDir straight away and never touches the content:// uri again.
+    val backgroundPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> if (uri != null) viewModel.onBackgroundImageSelected(uri) }
 
     val contentScrollState = rememberScrollState()
 
@@ -159,13 +170,16 @@ fun ReaderScreen(
         }
     }
 
-    Box(
+    val toggleControlsLabel = stringResource(R.string.reader_toggle_controls)
+    ReaderBackground(
+        palette = palette,
+        backgroundImagePath = uiState.readingSettings.backgroundImagePath,
+        scrimAlpha = uiState.readingSettings.backgroundScrimAlpha,
         modifier = Modifier
             .fillMaxSize()
-            .background(palette.background)
             // TalkBack custom action: body double-tap toggles the control bar.
             .semantics {
-                onClick(label = "切换阅读控制栏") {
+                onClick(label = toggleControlsLabel) {
                     viewModel.toggleControls()
                     true
                 }
@@ -323,6 +337,8 @@ fun ReaderScreen(
             ReaderSettingsSheet(
                 settings = settings,
                 onSettingsChange = { viewModel.updateReadingSettings(it) },
+                onPickBackgroundImage = { backgroundPickerLauncher.launch("image/*") },
+                onClearBackgroundImage = { viewModel.clearBackgroundImage() },
                 onDismiss = { viewModel.showSettings(false) }
             )
         }

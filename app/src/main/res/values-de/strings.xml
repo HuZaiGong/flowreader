@@ -25,6 +25,7 @@
     <string name="reader_chapters_title">Inhalt</string>
     <string name="reader_bookmark_entry">Kapitel %1$d · Position %2$d</string>
     <string name="reader_bookmark_current"> · aktuelles Kapitel</string>
+    <string name="reader_toggle_controls">Lesesteuerung ein-/ausblenden</string>
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Titel, Autoren oder Volltext durchsuchen</string>
     <string name="library_search_exit">Suche beenden</string>

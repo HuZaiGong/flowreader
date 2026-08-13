@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.flowreader.app.core.util.ReaderBackgroundImage
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.AppThemeMode
@@ -79,6 +80,8 @@ class SettingsRepositoryImpl @Inject constructor(
         val LIBRARY_VIEW_MODE = stringPreferencesKey("library_view_mode")
         val CUSTOM_TEXT_COLOR = longPreferencesKey("reader_custom_text_color")
         val CUSTOM_BACKGROUND_COLOR = longPreferencesKey("reader_custom_background_color")
+        val READER_BACKGROUND_PATH = stringPreferencesKey("reader_background_path")
+        val READER_BACKGROUND_SCRIM = floatPreferencesKey("reader_background_scrim")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
@@ -120,6 +123,12 @@ class SettingsRepositoryImpl @Inject constructor(
             tapZoneRatio = (preferences[PreferencesKeys.TAP_ZONE_RATIO] ?: 0.3f).coerceIn(0.1f, 0.45f),
             customTextColorArgb = preferences[PreferencesKeys.CUSTOM_TEXT_COLOR],
             customBackgroundColorArgb = preferences[PreferencesKeys.CUSTOM_BACKGROUND_COLOR],
+            backgroundImagePath = preferences[PreferencesKeys.READER_BACKGROUND_PATH],
+            // Clamped on read as well as on write: a value persisted by an older build (or an
+            // interrupted write) must not be able to render text over a bare image.
+            backgroundScrimAlpha = ReaderBackgroundImage.clampScrimAlpha(
+                preferences[PreferencesKeys.READER_BACKGROUND_SCRIM] ?: ReaderBackgroundImage.DEFAULT_SCRIM_ALPHA
+            ),
             gestureSettings = readGestureSettings(preferences)
         )
     }
@@ -197,6 +206,14 @@ class SettingsRepositoryImpl @Inject constructor(
             } else {
                 preferences.remove(PreferencesKeys.CUSTOM_FONT_PATH)
             }
+            val backgroundImagePath = settings.backgroundImagePath?.takeIf { it.isNotBlank() }
+            if (backgroundImagePath != null) {
+                preferences[PreferencesKeys.READER_BACKGROUND_PATH] = backgroundImagePath
+            } else {
+                preferences.remove(PreferencesKeys.READER_BACKGROUND_PATH)
+            }
+            preferences[PreferencesKeys.READER_BACKGROUND_SCRIM] =
+                ReaderBackgroundImage.clampScrimAlpha(settings.backgroundScrimAlpha)
         }
     }
 

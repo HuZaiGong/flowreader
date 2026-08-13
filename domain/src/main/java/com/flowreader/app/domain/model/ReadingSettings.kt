@@ -150,6 +150,13 @@ data class ReadingSettings(
     val tapZoneRatio: Float = 0.3f,
     val customTextColorArgb: Long? = null,
     val customBackgroundColorArgb: Long? = null,
+    /**
+     * Absolute path to a user-imported reader background under `filesDir/backgrounds/`, or null for
+     * the palette's flat colour. Always rendered under a scrim — see `ReaderBackgroundImage`.
+     */
+    val backgroundImagePath: String? = null,
+    /** Scrim opacity over [backgroundImagePath]. Clamped by `ReaderBackgroundImage.clampScrimAlpha`. */
+    val backgroundScrimAlpha: Float = 0.85f,
     val gestureSettings: GestureSettings = GestureSettings()
 ) {
     companion object {

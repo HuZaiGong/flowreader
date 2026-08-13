@@ -25,6 +25,7 @@
     <string name="reader_chapters_title">Sumário</string>
     <string name="reader_bookmark_entry">Capítulo %1$d · posição %2$d</string>
     <string name="reader_bookmark_current"> · capítulo atual</string>
+    <string name="reader_toggle_controls">Mostrar ou ocultar controles de leitura</string>
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Pesquisar títulos, autores ou texto completo</string>
     <string name="library_search_exit">Sair da pesquisa</string>

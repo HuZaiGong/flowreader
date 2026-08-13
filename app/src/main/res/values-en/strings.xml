@@ -28,6 +28,7 @@
     <string name="reader_chapters_title">Contents</string>
     <string name="reader_bookmark_entry">Chapter %1$d · position %2$d</string>
     <string name="reader_bookmark_current"> · current chapter</string>
+    <string name="reader_toggle_controls">Toggle reading controls</string>
 
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Search titles, authors or full text</string>

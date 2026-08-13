@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.math.abs
@@ -81,7 +82,8 @@ class ReaderViewModel @Inject constructor(
     private val cacheManager: CacheManager,
     private val bookLoader: com.flowreader.app.util.BookLoader,
     private val fullTextSearch: FullTextSearch,
-    private val ttsManager: TtsManager
+    private val ttsManager: TtsManager,
+    private val backgroundImporter: com.flowreader.app.util.ReaderBackgroundImporter
 ) : ViewModel() {
 
     private val progressEngine = ReaderProgressEngine()
@@ -704,6 +706,35 @@ class ReaderViewModel @Inject constructor(
         if (settings.eyeProtectionIntervalMinutes != previousInterval) {
             startEyeProtectionTimer()
         }
+    }
+
+    /**
+     * Imports a picked image as the reader background. Decoding and re-encoding happen off the main
+     * thread; the resulting path is applied through [updateReadingSettings] so the background is
+     * persisted by the same single entry point as every other reader preference.
+     */
+    fun onBackgroundImageSelected(uri: android.net.Uri) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { backgroundImporter.import(uri) }
+            result.fold(
+                onSuccess = { path ->
+                    // The importer prunes older files, so the previous background is already gone.
+                    updateReadingSettings(_uiState.value.readingSettings.copy(backgroundImagePath = path))
+                },
+                onFailure = { error ->
+                    // Keep the existing background on failure rather than clearing to a blank state.
+                    _uiState.update { it.copy(error = "导入背景图失败: ${error.message}") }
+                }
+            )
+        }
+    }
+
+    /** Removes the reader background image and deletes the stored file. */
+    fun clearBackgroundImage() {
+        val current = _uiState.value.readingSettings
+        val path = current.backgroundImagePath
+        updateReadingSettings(current.copy(backgroundImagePath = null))
+        viewModelScope.launch(Dispatchers.IO) { backgroundImporter.clear(path) }
     }
 
     /** Jumps to whichever chapter the reader progress slider was released over. */

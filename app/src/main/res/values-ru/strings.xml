@@ -25,6 +25,7 @@
     <string name="reader_chapters_title">Содержание</string>
     <string name="reader_bookmark_entry">Глава %1$d · позиция %2$d</string>
     <string name="reader_bookmark_current"> · текущая глава</string>
+    <string name="reader_toggle_controls">Показать или скрыть панель управления</string>
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Поиск по названию, автору или тексту</string>
     <string name="library_search_exit">Выйти из поиска</string>

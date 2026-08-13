@@ -37,6 +37,7 @@ import com.flowreader.app.core.designsystem.reader.background
 import com.flowreader.app.core.designsystem.reader.text
 import com.flowreader.app.core.designsystem.token.FlowRadius
 import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.core.util.ReaderBackgroundImage
 import com.flowreader.app.domain.model.PageMode
 import com.flowreader.app.domain.model.ReaderFontFamily
 import com.flowreader.app.domain.model.ReaderPaletteId
@@ -53,6 +54,8 @@ import com.flowreader.app.domain.model.ReadingSettings
 fun ReaderSettingsSheet(
     settings: ReadingSettings,
     onSettingsChange: (ReadingSettings) -> Unit,
+    onPickBackgroundImage: () -> Unit,
+    onClearBackgroundImage: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -145,6 +148,13 @@ fun ReaderSettingsSheet(
 
             CustomThemeEditor(
                 settings = settings,
+                onSettingsChange = onSettingsChange
+            )
+
+            BackgroundImageEditor(
+                settings = settings,
+                onPickImage = onPickBackgroundImage,
+                onClearImage = onClearBackgroundImage,
                 onSettingsChange = onSettingsChange
             )
 
@@ -254,6 +264,68 @@ private fun CustomThemeEditor(settings: ReadingSettings, onSettingsChange: (Read
             onClick = { onSettingsChange(settings.copy(customTextColorArgb = null, customBackgroundColorArgb = null)) }
         ) {
             Text("恢复色板默认")
+        }
+    }
+}
+
+/**
+ * Reader background image: pick, clear, and set the scrim opacity.
+ *
+ * The scrim slider deliberately has no "off" position. Reader contrast is asserted against a flat
+ * background colour, so text over a bare photo has no measurable readability at all — the image is
+ * always behind the palette colour at [ReaderBackgroundImage.MIN_SCRIM_ALPHA] or more. The floor is
+ * a range bound, not a guarantee: the minimum that actually clears AA depends on the palette (0.5
+ * for e-ink, 0.8 for the lighter dark palettes), so the safe value is computed here and surfaced.
+ */
+@Composable
+private fun BackgroundImageEditor(
+    settings: ReadingSettings,
+    onPickImage: () -> Unit,
+    onClearImage: () -> Unit,
+    onSettingsChange: (ReadingSettings) -> Unit
+) {
+    SectionTitle("背景图片")
+    Text(
+        text = "导入的图片始终位于当前色板颜色的半透明遮罩之下——正文的对比度是按纯色背景校验的，" +
+            "裸图之上无法保证可读性，因此遮罩不可完全关闭。",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    val hasImage = ReaderBackgroundImage.isActive(settings.backgroundImagePath)
+    Row(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
+        androidx.compose.material3.TextButton(onClick = onPickImage) {
+            Text(if (hasImage) "更换图片" else "选择图片")
+        }
+        if (hasImage) {
+            androidx.compose.material3.TextButton(onClick = onClearImage) {
+                Text("移除图片")
+            }
+        }
+    }
+
+    if (hasImage) {
+        val palette = ReaderPalettes.of(settings.palette)
+        val safeAlpha = ReaderBackgroundImage.minimumReadableAlpha(
+            textArgb = palette.textArgb,
+            scrimArgb = palette.backgroundArgb,
+            paletteIsDark = palette.isDark
+        )
+        val alpha = ReaderBackgroundImage.clampScrimAlpha(settings.backgroundScrimAlpha)
+        LabelledValue("遮罩不透明度", "${(alpha * 100).toInt()}%")
+        Slider(
+            value = alpha,
+            onValueChange = {
+                onSettingsChange(settings.copy(backgroundScrimAlpha = ReaderBackgroundImage.clampScrimAlpha(it)))
+            },
+            valueRange = ReaderBackgroundImage.MIN_SCRIM_ALPHA..ReaderBackgroundImage.MAX_SCRIM_ALPHA
+        )
+        if (safeAlpha != null && alpha < safeAlpha) {
+            Text(
+                text = "当前色板需要至少 ${(safeAlpha * 100).toInt()}% 的遮罩才能保证正文对比度达标。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
     }
 }

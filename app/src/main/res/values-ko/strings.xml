@@ -28,6 +28,7 @@
     <string name="reader_chapters_title">목차</string>
     <string name="reader_bookmark_entry">%1$d장 · 위치 %2$d</string>
     <string name="reader_bookmark_current"> · 현재 장</string>
+    <string name="reader_toggle_controls">읽기 컨트롤 표시 전환</string>
 
     <string name="library_title">플로우리더</string>
     <string name="library_search_placeholder">제목, 저자 또는 전문 검색</string>
