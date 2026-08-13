@@ -182,4 +182,120 @@
     <string name="library_view_grid">Вид сеткой</string>
     <string name="library_view_list">Вид списком</string>
     <string name="library_continue_hint">Продолжить с места остановки</string>
+
+    <!-- v56.5.1: общие действия -->
+    <string name="action_edit">Изменить</string>
+    <string name="action_share">Поделиться</string>
+    <string name="action_add">Добавить</string>
+    <string name="action_retry">Повторить</string>
+
+    <!-- v56.5.1: статистика чтения -->
+    <string name="stats_today_section">Чтение за сегодня</string>
+    <string name="stats_total_section">За всё время</string>
+    <string name="stats_read_time">Время чтения</string>
+    <string name="stats_read_pages">Прочитано страниц</string>
+    <string name="stats_total_time">Всего времени</string>
+    <string name="stats_total_pages">Всего страниц</string>
+    <string name="stats_books_read">Прочитано книг</string>
+    <string name="stats_streak">Серия дней</string>
+    <string name="stats_subtitle_today">сегодня</string>
+    <string name="stats_subtitle_total">всего</string>
+    <string name="stats_unit_pages">стр.</string>
+    <string name="stats_unit_books">кн.</string>
+    <string name="stats_unit_days">дн.</string>
+    <string name="stats_trend_section">Последние 7 дней</string>
+    <string name="stats_trend_card_title">Время чтения за 7 дней</string>
+    <string name="stats_trend_peak">Максимум %1$s</string>
+    <string name="stats_trend_empty">Записей о чтении пока нет</string>
+    <string name="stats_report_section">Отчёты и цели</string>
+    <string name="stats_goal_weekly">Цель на неделю</string>
+    <string name="stats_goal_monthly">Цель на месяц</string>
+    <string name="stats_goal_button">Цель %1$d мин</string>
+    <string name="stats_report_summary">%1$s · %2$d стр.</string>
+    <string name="stats_fastest_day">Самый быстрый день: %1$s</string>
+    <string name="stats_most_read_book">Больше всего читали: %1$s</string>
+    <string name="stats_value_none">Нет</string>
+    <string name="stats_goal_remaining">До цели осталось %1$d мин</string>
+    <string name="stats_minutes">%1$d мин</string>
+
+    <!-- v56.5.1: сведения о книге -->
+    <string name="book_detail_tab_chapters">Главы (%1$d)</string>
+    <string name="book_detail_tab_annotations">Заметки (%1$d)</string>
+    <string name="book_detail_tab_bookmarks">Закладки (%1$d)</string>
+    <string name="book_detail_export_annotations">Экспортировать заметки</string>
+    <string name="book_detail_tags_title">Метки чтения</string>
+    <string name="book_detail_tags_empty">Меток пока нет</string>
+    <string name="book_detail_tags_edit_title">Изменить метки</string>
+    <string name="book_detail_tags_hint">Разделяйте запятыми или пробелами</string>
+    <string name="book_detail_cover_of">Обложка книги «%1$s»</string>
+    <string name="book_detail_chapter_count">%1$d гл.</string>
+    <string name="book_detail_read_percent">Прочитано %1$s</string>
+    <string name="book_detail_description">Описание</string>
+    <string name="book_detail_not_found">Книга не найдена</string>
+    <string name="book_detail_export_title">Экспорт заметок</string>
+    <string name="book_detail_chapters_empty">Глав нет</string>
+    <string name="book_detail_annotations_empty">Заметок нет</string>
+    <string name="book_detail_bookmarks_empty">Закладок нет</string>
+    <string name="book_detail_continue_reading">Продолжить чтение</string>
+    <string name="book_detail_start_reading">Начать чтение</string>
+    <string name="book_detail_entry_meta">Глава %1$d · %2$s</string>
+    <string name="book_detail_annotation_note">Примечание: %1$s</string>
+    <string name="book_detail_delete_annotation">Удалить заметку</string>
+    <string name="book_detail_delete_bookmark">Удалить закладку</string>
+
+    <!-- v56.5.1: диалоги читалки -->
+    <string name="reader_annotations_empty">Выделений и заметок пока нет\n\nВыделите текст и нажмите кнопку выделения</string>
+    <string name="reader_annotation_note">Заметка: %1$s</string>
+    <string name="reader_edit_note">Изменить заметку</string>
+    <string name="reader_note_label">Текст заметки</string>
+    <string name="reader_share_progress_title">Поделиться прогрессом</string>
+    <string name="reader_share_card">Создать карточку (изображение)</string>
+    <string name="reader_search_title">Полнотекстовый поиск</string>
+    <string name="reader_search_placeholder">Введите ключевое слово</string>
+
+    <!-- v56.5.1: настройки читалки -->
+    <string name="reader_custom_font">Свой шрифт</string>
+    <string name="reader_first_line_indent">Отступ первой строки</string>
+    <string name="reader_auto_night">Автоматический ночной режим (19:00–07:00)</string>
+    <string name="reader_timer_minutes">%1$d мин</string>
+    <string name="reader_palette_label">Тема чтения %1$s</string>
+    <string name="reader_custom_color_label">Свой цвет темы %1$s</string>
+    <string name="reader_custom_color_notice">Свои цвета фона и текста перекрывают выбранную палитру; если контраст окажется недостаточным, читаемая палитра будет восстановлена автоматически.</string>
+    <string name="reader_restore_palette">Вернуть палитру по умолчанию</string>
+    <string name="reader_background_notice">Импортированное изображение всегда находится под полупрозрачной вуалью цвета текущей палитры — контраст текста проверяется по однотонному фону, поэтому вуаль нельзя отключить.</string>
+    <string name="reader_background_remove">Убрать изображение</string>
+    <string name="reader_background_min_alpha">Для этой палитры нужна вуаль не менее %1$d%%, чтобы текст остался читаемым.</string>
+
+    <!-- v56.5.1: колесо решений -->
+    <string name="wheel_result_inline">🎉 Результат</string>
+    <string name="wheel_result_dialog">🎯 Результат колеса</string>
+    <string name="wheel_edit_options">Изменить варианты</string>
+    <string name="wheel_new_option">Новый вариант</string>
+    <string name="wheel_reset_options">Сбросить к вариантам по умолчанию</string>
+
+    <!-- v56.5.1: панель выделения текста -->
+    <string name="reader_selection_highlight">Выделить</string>
+    <string name="reader_selection_copy">Копировать</string>
+    <string name="reader_selection_highlight_desc">Выделить выбранный текст</string>
+    <string name="reader_selection_copy_desc">Копировать выбранный текст</string>
+    <string name="reader_selection_bookmark_desc">Добавить выбранный текст в закладки</string>
+
+    <!-- v56.5.1: содержимое и режимы чтения -->
+    <string name="reader_pdf_load_failed">Не удалось загрузить этот PDF</string>
+    <string name="reader_pdf_page">Страница PDF %1$d</string>
+    <string name="reader_illustration">Иллюстрация</string>
+    <string name="reader_illustration_missing">Иллюстрация отсутствует</string>
+    <string name="reader_comic_page">Страница комикса %1$d</string>
+    <string name="reader_chapter_indicator">Глава %1$d из %2$d</string>
+    <string name="reader_chapter_empty">В этой главе нет содержимого</string>
+
+    <!-- v56.5.1: длительность и даты (единицы были жёстко заданы в FlowFormatters в :core) -->
+    <string name="duration_seconds">%1$d с</string>
+    <string name="duration_minutes">%1$d мин</string>
+    <string name="duration_hours">%1$d ч</string>
+    <string name="duration_hours_minutes">%1$d ч %2$d мин</string>
+    <string name="spoken_date">%2$d.%1$d</string>
+    <string name="stats_chart_empty_desc">Нет недавних записей о чтении</string>
+    <string name="stats_chart_entry">%1$s: %2$s</string>
+    <string name="stats_chart_separator">, </string>
 </resources>

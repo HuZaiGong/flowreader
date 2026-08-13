@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -26,6 +27,9 @@ import com.flowreader.app.core.designsystem.component.FlowStateHost
 import com.flowreader.app.core.designsystem.token.FlowSpacing
 import com.flowreader.app.core.util.FlowFormatters
 import com.flowreader.app.domain.model.DailyStats
+import com.flowreader.app.ui.components.durationString
+import com.flowreader.app.ui.components.durationText
+import com.flowreader.app.ui.components.spokenDateString
 import com.flowreader.app.domain.model.ReadingReport
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -61,7 +65,7 @@ fun StatsScreen(
             ) {
                 item {
                     Text(
-                        text = "今日阅读",
+                        text = stringResource(R.string.stats_today_section),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -75,16 +79,16 @@ fun StatsScreen(
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Timer,
-                            title = "阅读时长",
-                            value = FlowFormatters.duration(uiState.todayReadTime),
-                            subtitle = "今日"
+                            title = stringResource(R.string.stats_read_time),
+                            value = durationText(uiState.todayReadTime),
+                            subtitle = stringResource(R.string.stats_subtitle_today)
                         )
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.AutoMirrored.Filled.MenuBook,
-                            title = "阅读页数",
+                            title = stringResource(R.string.stats_read_pages),
                             value = "${uiState.todayReadPages}",
-                            subtitle = "页"
+                            subtitle = stringResource(R.string.stats_unit_pages)
                         )
                     }
                 }
@@ -92,7 +96,7 @@ fun StatsScreen(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "累计阅读",
+                        text = stringResource(R.string.stats_total_section),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -106,16 +110,16 @@ fun StatsScreen(
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.AccessTime,
-                            title = "总时长",
-                            value = FlowFormatters.duration(uiState.totalReadTime),
-                            subtitle = "累计"
+                            title = stringResource(R.string.stats_total_time),
+                            value = durationText(uiState.totalReadTime),
+                            subtitle = stringResource(R.string.stats_subtitle_total)
                         )
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.AutoStories,
-                            title = "总页数",
+                            title = stringResource(R.string.stats_total_pages),
                             value = "${uiState.totalReadPages}",
-                            subtitle = "页"
+                            subtitle = stringResource(R.string.stats_unit_pages)
                         )
                     }
                 }
@@ -128,16 +132,16 @@ fun StatsScreen(
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Book,
-                            title = "阅读书籍",
+                            title = stringResource(R.string.stats_books_read),
                             value = "${uiState.totalBooks}",
-                            subtitle = "本"
+                            subtitle = stringResource(R.string.stats_unit_books)
                         )
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.LocalFireDepartment,
-                            title = "连续阅读",
+                            title = stringResource(R.string.stats_streak),
                             value = "${uiState.currentStreak}",
-                            subtitle = "天"
+                            subtitle = stringResource(R.string.stats_unit_days)
                         )
                     }
                 }
@@ -146,7 +150,7 @@ fun StatsScreen(
                     item {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "最近7天趋势",
+                            text = stringResource(R.string.stats_trend_section),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -164,7 +168,7 @@ fun StatsScreen(
 
                 item {
                     Text(
-                        text = "阅读报告与目标",
+                        text = stringResource(R.string.stats_report_section),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -195,7 +199,7 @@ fun StatsScreen(
 
     if (showWeeklyGoalDialog) {
         GoalDialog(
-            title = "周目标",
+            title = stringResource(R.string.stats_goal_weekly),
             currentGoal = uiState.weeklyGoalMinutes,
             onGoalChange = { viewModel.updateWeeklyGoal(it) },
             onDismiss = { showWeeklyGoalDialog = false }
@@ -204,7 +208,7 @@ fun StatsScreen(
 
     if (showMonthlyGoalDialog) {
         GoalDialog(
-            title = "月目标",
+            title = stringResource(R.string.stats_goal_monthly),
             currentGoal = uiState.monthlyGoalMinutes,
             onGoalChange = { viewModel.updateMonthlyGoal(it) },
             onDismiss = { showMonthlyGoalDialog = false }
@@ -224,15 +228,25 @@ private fun ReadingReportCard(
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(report.rangeLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                TextButton(onClick = onGoalClick) { Text("目标 ${goalMinutes}分钟") }
+                TextButton(onClick = onGoalClick) { Text(stringResource(R.string.stats_goal_button, goalMinutes)) }
             }
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-            Text("时长 ${FlowFormatters.duration(report.totalReadTime)} · 页数 ${report.totalReadPages}")
-            Text("最快阅读日：${report.fastestReadingDay?.date ?: "暂无"}")
-            Text("最常读书籍：${report.mostReadBookTitle ?: "暂无"}")
+            Text(
+                stringResource(
+                    R.string.stats_report_summary,
+                    durationText(report.totalReadTime),
+                    report.totalReadPages
+                )
+            )
+            val noneLabel = stringResource(R.string.stats_value_none)
+            Text(stringResource(R.string.stats_fastest_day, report.fastestReadingDay?.date ?: noneLabel))
+            Text(stringResource(R.string.stats_most_read_book, report.mostReadBookTitle ?: noneLabel))
             if (progress < 1f) {
                 Text(
-                    text = "还差 ${((goalSeconds - report.totalReadTime).coerceAtLeast(0) / 60)} 分钟达成目标",
+                    text = stringResource(
+                        R.string.stats_goal_remaining,
+                        ((goalSeconds - report.totalReadTime).coerceAtLeast(0) / 60).toInt()
+                    ),
                     color = MaterialTheme.colorScheme.primary
                 )
             }
@@ -253,14 +267,14 @@ private fun GoalDialog(
         title = { Text(title) },
         text = {
             Column {
-                Text("${goal.toInt()} 分钟")
+                Text(stringResource(R.string.stats_minutes, goal.toInt()))
                 Slider(value = goal, onValueChange = { goal = it }, valueRange = 30f..3000f)
             }
         },
         confirmButton = {
-            TextButton(onClick = { onGoalChange(goal.toInt()); onDismiss() }) { Text("保存") }
+            TextButton(onClick = { onGoalChange(goal.toInt()); onDismiss() }) { Text(stringResource(R.string.action_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -322,16 +336,22 @@ private fun ReadTimeBarChart(
     val maxReadTime = dailyStats.maxOfOrNull { it.totalReadTime } ?: 0L
     val todayDate = dailyStats.lastOrNull()?.date
 
-    // Each column carries semantics so TalkBack reads "7 月 20 日阅读 35 分钟" instead of
-    // announcing an unlabelled Canvas. The v51 chart also painted every bar twice — an identical
-    // surfaceVariant rect completely covered by the primary one — so the track is now the full
-    // column height and the value bar is drawn once.
-    val chartDescription = remember(dailyStats) {
+    // Each column carries semantics so TalkBack reads the date and duration instead of announcing an
+    // unlabelled Canvas. Built from resources via Context rather than stringResource because this runs
+    // inside remember. The v51 chart also painted every bar twice — an identical surfaceVariant rect
+    // completely covered by the primary one — so the track is now the full column height and the value
+    // bar is drawn once.
+    val context = LocalContext.current
+    val chartDescription = remember(dailyStats, context) {
         if (dailyStats.isEmpty()) {
-            "近期无阅读记录"
+            context.getString(R.string.stats_chart_empty_desc)
         } else {
-            dailyStats.joinToString("，") { stat ->
-                "${FlowFormatters.spokenDate(stat.date)}阅读${FlowFormatters.duration(stat.totalReadTime)}"
+            dailyStats.joinToString(context.getString(R.string.stats_chart_separator)) { stat ->
+                context.getString(
+                    R.string.stats_chart_entry,
+                    context.spokenDateString(stat.date),
+                    context.durationString(stat.totalReadTime)
+                )
             }
         }
     }
@@ -345,9 +365,13 @@ private fun ReadTimeBarChart(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("近 7 日阅读时长", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Text(
-                    text = "峰值 ${FlowFormatters.duration(maxReadTime)}",
+                    stringResource(R.string.stats_trend_card_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = stringResource(R.string.stats_trend_peak, durationText(maxReadTime)),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -362,7 +386,7 @@ private fun ReadTimeBarChart(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("暂无阅读记录", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.stats_trend_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             } else {
                 Canvas(

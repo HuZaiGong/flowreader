@@ -182,4 +182,120 @@
     <string name="library_view_grid">Rasteransicht</string>
     <string name="library_view_list">Listenansicht</string>
     <string name="library_continue_hint">Weiterlesen, wo Sie aufgehört haben</string>
+
+    <!-- v56.5.1: allgemeine Aktionen -->
+    <string name="action_edit">Bearbeiten</string>
+    <string name="action_share">Teilen</string>
+    <string name="action_add">Hinzufügen</string>
+    <string name="action_retry">Erneut versuchen</string>
+
+    <!-- v56.5.1: Lesestatistik -->
+    <string name="stats_today_section">Heute gelesen</string>
+    <string name="stats_total_section">Insgesamt</string>
+    <string name="stats_read_time">Lesezeit</string>
+    <string name="stats_read_pages">Gelesene Seiten</string>
+    <string name="stats_total_time">Gesamtzeit</string>
+    <string name="stats_total_pages">Seiten insgesamt</string>
+    <string name="stats_books_read">Gelesene Bücher</string>
+    <string name="stats_streak">Lesestreak</string>
+    <string name="stats_subtitle_today">heute</string>
+    <string name="stats_subtitle_total">insgesamt</string>
+    <string name="stats_unit_pages">Seiten</string>
+    <string name="stats_unit_books">Bücher</string>
+    <string name="stats_unit_days">Tage</string>
+    <string name="stats_trend_section">Letzte 7 Tage</string>
+    <string name="stats_trend_card_title">Lesezeit der letzten 7 Tage</string>
+    <string name="stats_trend_peak">Spitze %1$s</string>
+    <string name="stats_trend_empty">Noch keine Leseaufzeichnungen</string>
+    <string name="stats_report_section">Berichte und Ziele</string>
+    <string name="stats_goal_weekly">Wochenziel</string>
+    <string name="stats_goal_monthly">Monatsziel</string>
+    <string name="stats_goal_button">Ziel %1$d Min.</string>
+    <string name="stats_report_summary">%1$s · %2$d Seiten</string>
+    <string name="stats_fastest_day">Schnellster Tag: %1$s</string>
+    <string name="stats_most_read_book">Meistgelesen: %1$s</string>
+    <string name="stats_value_none">Keine</string>
+    <string name="stats_goal_remaining">Noch %1$d Min. bis zum Ziel</string>
+    <string name="stats_minutes">%1$d Min.</string>
+
+    <!-- v56.5.1: Buchdetails -->
+    <string name="book_detail_tab_chapters">Kapitel (%1$d)</string>
+    <string name="book_detail_tab_annotations">Anmerkungen (%1$d)</string>
+    <string name="book_detail_tab_bookmarks">Lesezeichen (%1$d)</string>
+    <string name="book_detail_export_annotations">Anmerkungen exportieren</string>
+    <string name="book_detail_tags_title">Lese-Tags</string>
+    <string name="book_detail_tags_empty">Noch keine Tags</string>
+    <string name="book_detail_tags_edit_title">Tags bearbeiten</string>
+    <string name="book_detail_tags_hint">Mit Komma oder Leerzeichen trennen</string>
+    <string name="book_detail_cover_of">Cover von %1$s</string>
+    <string name="book_detail_chapter_count">%1$d Kapitel</string>
+    <string name="book_detail_read_percent">%1$s gelesen</string>
+    <string name="book_detail_description">Beschreibung</string>
+    <string name="book_detail_not_found">Buch nicht gefunden</string>
+    <string name="book_detail_export_title">Anmerkungsexport</string>
+    <string name="book_detail_chapters_empty">Keine Kapitel</string>
+    <string name="book_detail_annotations_empty">Keine Anmerkungen</string>
+    <string name="book_detail_bookmarks_empty">Keine Lesezeichen</string>
+    <string name="book_detail_continue_reading">Weiterlesen</string>
+    <string name="book_detail_start_reading">Lesen beginnen</string>
+    <string name="book_detail_entry_meta">Kapitel %1$d · %2$s</string>
+    <string name="book_detail_annotation_note">Notiz: %1$s</string>
+    <string name="book_detail_delete_annotation">Anmerkung löschen</string>
+    <string name="book_detail_delete_bookmark">Lesezeichen löschen</string>
+
+    <!-- v56.5.1: Lesedialoge -->
+    <string name="reader_annotations_empty">Noch keine Markierungen oder Notizen\n\nText auswählen und dann auf die Markieren-Schaltfläche tippen</string>
+    <string name="reader_annotation_note">Notiz: %1$s</string>
+    <string name="reader_edit_note">Notiz bearbeiten</string>
+    <string name="reader_note_label">Notizinhalt</string>
+    <string name="reader_share_progress_title">Lesefortschritt teilen</string>
+    <string name="reader_share_card">Teilen-Karte erstellen (Bild)</string>
+    <string name="reader_search_title">Volltextsuche</string>
+    <string name="reader_search_placeholder">Suchbegriff eingeben</string>
+
+    <!-- v56.5.1: Leseeinstellungen -->
+    <string name="reader_custom_font">Eigene Schriftart</string>
+    <string name="reader_first_line_indent">Erste Zeile einrücken</string>
+    <string name="reader_auto_night">Automatischer Nachtmodus (19:00–07:00)</string>
+    <string name="reader_timer_minutes">%1$d Min.</string>
+    <string name="reader_palette_label">Lesethema %1$s</string>
+    <string name="reader_custom_color_label">Eigene Themenfarbe %1$s</string>
+    <string name="reader_custom_color_notice">Eigene Hintergrund- und Textfarben überschreiben die gewählte Palette. Reicht der Kontrast nicht aus, wird automatisch eine lesbare Palette wiederhergestellt.</string>
+    <string name="reader_restore_palette">Palette zurücksetzen</string>
+    <string name="reader_background_notice">Ein importiertes Bild liegt immer unter einem halbtransparenten Schleier in der Farbe der aktuellen Palette – der Textkontrast wird gegen eine einfarbige Fläche geprüft, deshalb lässt sich der Schleier nicht abschalten.</string>
+    <string name="reader_background_remove">Bild entfernen</string>
+    <string name="reader_background_min_alpha">Diese Palette braucht einen Schleier von mindestens %1$d%%, damit der Text lesbar bleibt.</string>
+
+    <!-- v56.5.1: Entscheidungsrad -->
+    <string name="wheel_result_inline">🎉 Ergebnis</string>
+    <string name="wheel_result_dialog">🎯 Rad-Ergebnis</string>
+    <string name="wheel_edit_options">Optionen bearbeiten</string>
+    <string name="wheel_new_option">Neue Option</string>
+    <string name="wheel_reset_options">Auf Standard zurücksetzen</string>
+
+    <!-- v56.5.1: Textauswahlleiste -->
+    <string name="reader_selection_highlight">Markieren</string>
+    <string name="reader_selection_copy">Kopieren</string>
+    <string name="reader_selection_highlight_desc">Ausgewählten Text markieren</string>
+    <string name="reader_selection_copy_desc">Ausgewählten Text kopieren</string>
+    <string name="reader_selection_bookmark_desc">Ausgewählten Text als Lesezeichen speichern</string>
+
+    <!-- v56.5.1: Leseinhalt und Ansichten -->
+    <string name="reader_pdf_load_failed">Dieses PDF konnte nicht geladen werden</string>
+    <string name="reader_pdf_page">PDF-Seite %1$d</string>
+    <string name="reader_illustration">Illustration</string>
+    <string name="reader_illustration_missing">Illustration fehlt</string>
+    <string name="reader_comic_page">Comicseite %1$d</string>
+    <string name="reader_chapter_indicator">Kapitel %1$d von %2$d</string>
+    <string name="reader_chapter_empty">Dieses Kapitel ist leer</string>
+
+    <!-- v56.5.1: Dauer und Datum (Einheiten waren früher in FlowFormatters in :core fest verdrahtet) -->
+    <string name="duration_seconds">%1$d s</string>
+    <string name="duration_minutes">%1$d Min.</string>
+    <string name="duration_hours">%1$d Std.</string>
+    <string name="duration_hours_minutes">%1$d Std. %2$d Min.</string>
+    <string name="spoken_date">%2$d.%1$d.</string>
+    <string name="stats_chart_empty_desc">Keine Leseaufzeichnungen der letzten Zeit</string>
+    <string name="stats_chart_entry">%1$s: %2$s</string>
+    <string name="stats_chart_separator">, </string>
 </resources>

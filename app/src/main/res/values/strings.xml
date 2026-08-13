@@ -198,4 +198,120 @@
     <string name="opds_downloading">正在下载《%1$s》</string>
     <string name="opds_imported">已导入《%1$s》</string>
     <string name="opds_next_page">下一页</string>
+
+    <!-- v56.5.1 国际化补齐：通用动作 -->
+    <string name="action_edit">编辑</string>
+    <string name="action_share">分享</string>
+    <string name="action_add">添加</string>
+    <string name="action_retry">重试</string>
+
+    <!-- v56.5.1：阅读统计 -->
+    <string name="stats_today_section">今日阅读</string>
+    <string name="stats_total_section">累计阅读</string>
+    <string name="stats_read_time">阅读时长</string>
+    <string name="stats_read_pages">阅读页数</string>
+    <string name="stats_total_time">总时长</string>
+    <string name="stats_total_pages">总页数</string>
+    <string name="stats_books_read">阅读书籍</string>
+    <string name="stats_streak">连续阅读</string>
+    <string name="stats_subtitle_today">今日</string>
+    <string name="stats_subtitle_total">累计</string>
+    <string name="stats_unit_pages">页</string>
+    <string name="stats_unit_books">本</string>
+    <string name="stats_unit_days">天</string>
+    <string name="stats_trend_section">最近7天趋势</string>
+    <string name="stats_trend_card_title">近 7 日阅读时长</string>
+    <string name="stats_trend_peak">峰值 %1$s</string>
+    <string name="stats_trend_empty">暂无阅读记录</string>
+    <string name="stats_report_section">阅读报告与目标</string>
+    <string name="stats_goal_weekly">周目标</string>
+    <string name="stats_goal_monthly">月目标</string>
+    <string name="stats_goal_button">目标 %1$d 分钟</string>
+    <string name="stats_report_summary">时长 %1$s · 页数 %2$d</string>
+    <string name="stats_fastest_day">最快阅读日：%1$s</string>
+    <string name="stats_most_read_book">最常读书籍：%1$s</string>
+    <string name="stats_value_none">暂无</string>
+    <string name="stats_goal_remaining">还差 %1$d 分钟达成目标</string>
+    <string name="stats_minutes">%1$d 分钟</string>
+
+    <!-- v56.5.1：书籍详情 -->
+    <string name="book_detail_tab_chapters">目录 (%1$d)</string>
+    <string name="book_detail_tab_annotations">标注 (%1$d)</string>
+    <string name="book_detail_tab_bookmarks">书签 (%1$d)</string>
+    <string name="book_detail_export_annotations">导出标注</string>
+    <string name="book_detail_tags_title">阅读标签</string>
+    <string name="book_detail_tags_empty">暂无标签</string>
+    <string name="book_detail_tags_edit_title">编辑标签</string>
+    <string name="book_detail_tags_hint">用逗号或空格分隔</string>
+    <string name="book_detail_cover_of">《%1$s》封面</string>
+    <string name="book_detail_chapter_count">%1$d 章</string>
+    <string name="book_detail_read_percent">已读 %1$s</string>
+    <string name="book_detail_description">简介</string>
+    <string name="book_detail_not_found">未找到书籍</string>
+    <string name="book_detail_export_title">标注导出</string>
+    <string name="book_detail_chapters_empty">暂无目录</string>
+    <string name="book_detail_annotations_empty">暂无标注</string>
+    <string name="book_detail_bookmarks_empty">暂无书签</string>
+    <string name="book_detail_continue_reading">继续阅读</string>
+    <string name="book_detail_start_reading">开始阅读</string>
+    <string name="book_detail_entry_meta">第 %1$d 章 · %2$s</string>
+    <string name="book_detail_annotation_note">备注: %1$s</string>
+    <string name="book_detail_delete_annotation">删除标注</string>
+    <string name="book_detail_delete_bookmark">删除书签</string>
+
+    <!-- v56.5.1：阅读器对话框 -->
+    <string name="reader_annotations_empty">暂无高亮或笔记\n\n选中文字后点击高亮按钮添加</string>
+    <string name="reader_annotation_note">笔记: %1$s</string>
+    <string name="reader_edit_note">编辑笔记</string>
+    <string name="reader_note_label">笔记内容</string>
+    <string name="reader_share_progress_title">分享阅读进度</string>
+    <string name="reader_share_card">生成分享卡片（图片）</string>
+    <string name="reader_search_title">全文搜索</string>
+    <string name="reader_search_placeholder">输入搜索关键词</string>
+
+    <!-- v56.5.1：阅读设置面板 -->
+    <string name="reader_custom_font">自定义字体</string>
+    <string name="reader_first_line_indent">首行缩进两字</string>
+    <string name="reader_auto_night">自动夜间模式 (19:00–07:00)</string>
+    <string name="reader_timer_minutes">%1$d 分钟</string>
+    <string name="reader_palette_label">阅读主题 %1$s</string>
+    <string name="reader_custom_color_label">自定义主题色 %1$s</string>
+    <string name="reader_custom_color_notice">自定义背景与文字色会覆盖所选色板；若对比度不达标会自动回退到可读配色。</string>
+    <string name="reader_restore_palette">恢复色板默认</string>
+    <string name="reader_background_notice">导入的图片始终位于当前色板颜色的半透明遮罩之下——正文的对比度是按纯色背景校验的，遮罩不可关闭。</string>
+    <string name="reader_background_remove">移除图片</string>
+    <string name="reader_background_min_alpha">当前色板需要至少 %1$d%% 的遮罩才能保证正文对比度达标。</string>
+
+    <!-- v56.5.1：决策转盘 -->
+    <string name="wheel_result_inline">🎉 结果</string>
+    <string name="wheel_result_dialog">🎯 转盘结果</string>
+    <string name="wheel_edit_options">编辑选项</string>
+    <string name="wheel_new_option">新选项</string>
+    <string name="wheel_reset_options">重置为默认选项</string>
+
+    <!-- v56.5.1：文本选择操作栏 -->
+    <string name="reader_selection_highlight">高亮</string>
+    <string name="reader_selection_copy">复制</string>
+    <string name="reader_selection_highlight_desc">高亮选中文本</string>
+    <string name="reader_selection_copy_desc">复制选中文本</string>
+    <string name="reader_selection_bookmark_desc">为选中文本添加书签</string>
+
+    <!-- v56.5.1：阅读器内容与阅读视图 -->
+    <string name="reader_pdf_load_failed">PDF 文件无法加载</string>
+    <string name="reader_pdf_page">PDF第%1$d页</string>
+    <string name="reader_illustration">插图</string>
+    <string name="reader_illustration_missing">插图缺失</string>
+    <string name="reader_comic_page">漫画第 %1$d 页</string>
+    <string name="reader_chapter_indicator">第 %1$d / %2$d 章</string>
+    <string name="reader_chapter_empty">本章暂无内容</string>
+
+    <!-- v56.5.1：时长与日期（单位词过去硬编码在 :core 的 FlowFormatters 里） -->
+    <string name="duration_seconds">%1$d秒</string>
+    <string name="duration_minutes">%1$d分钟</string>
+    <string name="duration_hours">%1$d小时</string>
+    <string name="duration_hours_minutes">%1$d小时%2$d分钟</string>
+    <string name="spoken_date">%1$d 月 %2$d 日</string>
+    <string name="stats_chart_empty_desc">近期无阅读记录</string>
+    <string name="stats_chart_entry">%1$s阅读%2$s</string>
+    <string name="stats_chart_separator">，</string>
 </resources>

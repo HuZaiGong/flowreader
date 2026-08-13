@@ -1,22 +1,38 @@
 package com.flowreader.app.core.util
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class FlowFormattersTest {
 
     @Test
     fun durationPicksTheCoarsestUsefulUnit() {
-        assertEquals("0秒", FlowFormatters.duration(0))
-        assertEquals("45秒", FlowFormatters.duration(45))
-        assertEquals("1分钟", FlowFormatters.duration(95))
-        assertEquals("1小时", FlowFormatters.duration(3600))
-        assertEquals("1小时2分钟", FlowFormatters.duration(3_720))
+        assertEquals(FlowFormatters.DurationParts.Seconds(0), FlowFormatters.durationParts(0))
+        assertEquals(FlowFormatters.DurationParts.Seconds(45), FlowFormatters.durationParts(45))
+        assertEquals(FlowFormatters.DurationParts.Minutes(1), FlowFormatters.durationParts(95))
+        assertEquals(FlowFormatters.DurationParts.Hours(1), FlowFormatters.durationParts(3600))
+        assertEquals(FlowFormatters.DurationParts.HoursMinutes(1, 2), FlowFormatters.durationParts(3_720))
     }
 
     @Test
     fun durationNeverReportsNegativeTime() {
-        assertEquals("0秒", FlowFormatters.duration(-90))
+        assertEquals(FlowFormatters.DurationParts.Seconds(0), FlowFormatters.durationParts(-90))
+    }
+
+    @Test
+    fun durationDropsAZeroMinuteRemainderRatherThanSayingZeroMinutes() {
+        // 2h exactly, and 2h00m05s: both are Hours, not HoursMinutes(2, 0).
+        assertEquals(FlowFormatters.DurationParts.Hours(2), FlowFormatters.durationParts(7_200))
+        assertEquals(FlowFormatters.DurationParts.Hours(2), FlowFormatters.durationParts(7_205))
+    }
+
+    @Test
+    fun durationPartsCarryNoUnitWords() {
+        // The whole point of the v56.5.1 split: :core must not emit a localizable word. If someone
+        // reintroduces a String return here, the units stop following the app language again.
+        val parts = FlowFormatters.durationParts(3_720)
+        assertEquals(FlowFormatters.DurationParts.HoursMinutes(1, 2), parts)
     }
 
     @Test
@@ -53,8 +69,18 @@ class FlowFormattersTest {
     }
 
     @Test
-    fun spokenDateReadsNaturally() {
-        assertEquals("7 月 20 日", FlowFormatters.spokenDate("2026-07-20"))
-        assertEquals("oops", FlowFormatters.spokenDate("oops"))
+    fun spokenDatePartsSplitsMonthAndDay() {
+        assertEquals(FlowFormatters.SpokenDate(7, 20), FlowFormatters.spokenDateParts("2026-07-20"))
+        // Single-digit forms parse too; only the phrasing is the caller's problem.
+        assertEquals(FlowFormatters.SpokenDate(7, 2), FlowFormatters.spokenDateParts("2026-7-2"))
+    }
+
+    @Test
+    fun spokenDatePartsReturnsNullForUnparseableInput() {
+        // null rather than an exception: the caller falls back to showing the raw string, which is
+        // what the removed spokenDate() did by returning its input unchanged.
+        assertNull(FlowFormatters.spokenDateParts("oops"))
+        assertNull(FlowFormatters.spokenDateParts("2026-07"))
+        assertNull(FlowFormatters.spokenDateParts("2026-ab-20"))
     }
 }

@@ -167,4 +167,145 @@
     <string name="opds_downloading">『%1$s』をダウンロード中</string>
     <string name="opds_imported">『%1$s』を取り込みました</string>
     <string name="opds_next_page">次のページ</string>
+
+    <!-- v56.5.1: このロケールで欠落していた項目 -->
+    <string name="library_continue_hint">読書を続ける</string>
+    <string name="library_view_grid">グリッド表示</string>
+    <string name="library_view_list">リスト表示</string>
+    <string name="search_title">ライブラリ検索</string>
+    <string name="search_section_books">書籍 (%1$d)</string>
+    <string name="search_section_chapters">章の一致 (%1$d)</string>
+    <string name="search_no_books">タイトルまたは著者が一致する書籍はありません</string>
+    <string name="search_load_more">章の検索結果をさらに読み込む</string>
+    <string name="search_history_title">検索履歴</string>
+    <string name="search_history_empty">キーワードを入力して全書籍・全章を検索</string>
+    <string name="search_clear_history">クリア</string>
+    <string name="settings_lan_transfer">LAN転送</string>
+    <string name="settings_lan_transfer_desc">同じWi-Fi上の端末間でバックアップを転送します。インターネットは使いません</string>
+    <string name="settings_lan_transfer_hint">送信側がバックアップリンクを作成し、受信側が貼り付けて取り込みます。リンクにはランダムなトークンが含まれ、このセッション中のみ有効です。</string>
+    <string name="settings_lan_serve">バックアップリンクを作成</string>
+    <string name="settings_lan_copy">リンクをコピー</string>
+    <string name="settings_lan_stop">配信を停止</string>
+    <string name="settings_lan_receive">リンクから受信して取り込む</string>
+    <string name="settings_lan_receive_hint">http:// の受信リンクを貼り付け</string>
+    <string name="settings_lan_ip_hint">この端末のLANアドレス：%1$s（接続できない場合は両端末が同じWi-Fiにあるか確認してください）</string>
+    <string name="settings_export_shelf">本棚情報を書き出す</string>
+    <string name="settings_export_shelf_desc">書名・著者・進捗・分類・読書リストをCSVまたはJSONで書き出します</string>
+    <string name="settings_export_shelf_choice">書き出し形式を選択</string>
+
+    <!-- v56.5.1: 共通アクション -->
+    <string name="action_edit">編集</string>
+    <string name="action_share">共有</string>
+    <string name="action_add">追加</string>
+    <string name="action_retry">再試行</string>
+
+    <!-- v56.5.1: 読書統計 -->
+    <string name="stats_today_section">今日の読書</string>
+    <string name="stats_total_section">累計</string>
+    <string name="stats_read_time">読書時間</string>
+    <string name="stats_read_pages">読んだページ</string>
+    <string name="stats_total_time">合計時間</string>
+    <string name="stats_total_pages">合計ページ</string>
+    <string name="stats_books_read">読んだ書籍</string>
+    <string name="stats_streak">連続日数</string>
+    <string name="stats_subtitle_today">今日</string>
+    <string name="stats_subtitle_total">累計</string>
+    <string name="stats_unit_pages">ページ</string>
+    <string name="stats_unit_books">冊</string>
+    <string name="stats_unit_days">日</string>
+    <string name="stats_trend_section">直近7日間の推移</string>
+    <string name="stats_trend_card_title">直近7日間の読書時間</string>
+    <string name="stats_trend_peak">ピーク %1$s</string>
+    <string name="stats_trend_empty">読書記録がありません</string>
+    <string name="stats_report_section">レポートと目標</string>
+    <string name="stats_goal_weekly">週間目標</string>
+    <string name="stats_goal_monthly">月間目標</string>
+    <string name="stats_goal_button">目標 %1$d 分</string>
+    <string name="stats_report_summary">時間 %1$s · %2$d ページ</string>
+    <string name="stats_fastest_day">最速の日：%1$s</string>
+    <string name="stats_most_read_book">最も読んだ書籍：%1$s</string>
+    <string name="stats_value_none">なし</string>
+    <string name="stats_goal_remaining">目標まであと %1$d 分</string>
+    <string name="stats_minutes">%1$d 分</string>
+
+    <!-- v56.5.1: 書籍詳細 -->
+    <string name="book_detail_tab_chapters">目次 (%1$d)</string>
+    <string name="book_detail_tab_annotations">注釈 (%1$d)</string>
+    <string name="book_detail_tab_bookmarks">ブックマーク (%1$d)</string>
+    <string name="book_detail_export_annotations">注釈を書き出す</string>
+    <string name="book_detail_tags_title">読書タグ</string>
+    <string name="book_detail_tags_empty">タグがありません</string>
+    <string name="book_detail_tags_edit_title">タグを編集</string>
+    <string name="book_detail_tags_hint">カンマまたはスペースで区切ります</string>
+    <string name="book_detail_cover_of">『%1$s』の表紙</string>
+    <string name="book_detail_chapter_count">%1$d 章</string>
+    <string name="book_detail_read_percent">%1$s 読了</string>
+    <string name="book_detail_description">概要</string>
+    <string name="book_detail_not_found">書籍が見つかりません</string>
+    <string name="book_detail_export_title">注釈の書き出し</string>
+    <string name="book_detail_chapters_empty">目次がありません</string>
+    <string name="book_detail_annotations_empty">注釈がありません</string>
+    <string name="book_detail_bookmarks_empty">ブックマークがありません</string>
+    <string name="book_detail_continue_reading">読書を続ける</string>
+    <string name="book_detail_start_reading">読み始める</string>
+    <string name="book_detail_entry_meta">第 %1$d 章 · %2$s</string>
+    <string name="book_detail_annotation_note">メモ: %1$s</string>
+    <string name="book_detail_delete_annotation">注釈を削除</string>
+    <string name="book_detail_delete_bookmark">ブックマークを削除</string>
+
+    <!-- v56.5.1: リーダーのダイアログ -->
+    <string name="reader_annotations_empty">ハイライトやメモがありません\n\nテキストを選択してハイライトボタンをタップしてください</string>
+    <string name="reader_annotation_note">メモ: %1$s</string>
+    <string name="reader_edit_note">メモを編集</string>
+    <string name="reader_note_label">メモの内容</string>
+    <string name="reader_share_progress_title">読書進捗を共有</string>
+    <string name="reader_share_card">共有カードを作成（画像）</string>
+    <string name="reader_search_title">全文検索</string>
+    <string name="reader_search_placeholder">キーワードを入力</string>
+
+    <!-- v56.5.1: リーダー設定 -->
+    <string name="reader_custom_font">カスタムフォント</string>
+    <string name="reader_first_line_indent">行頭を字下げ</string>
+    <string name="reader_auto_night">自動ナイトモード (19:00–07:00)</string>
+    <string name="reader_timer_minutes">%1$d 分</string>
+    <string name="reader_palette_label">リーダーテーマ %1$s</string>
+    <string name="reader_custom_color_label">カスタムテーマ色 %1$s</string>
+    <string name="reader_custom_color_notice">カスタムの背景色と文字色は選択中のパレットを上書きします。コントラストが不足する場合は読みやすい配色に自動で戻します。</string>
+    <string name="reader_restore_palette">パレットの既定に戻す</string>
+    <string name="reader_background_notice">取り込んだ画像は常に現在のパレット色の半透明スクリムの下に置かれます。本文のコントラストは単色背景を基準に検証しているため、スクリムは無効にできません。</string>
+    <string name="reader_background_remove">画像を削除</string>
+    <string name="reader_background_min_alpha">このパレットで本文を読みやすく保つには、少なくとも %1$d%% のスクリムが必要です。</string>
+
+    <!-- v56.5.1: ルーレット -->
+    <string name="wheel_result_inline">🎉 結果</string>
+    <string name="wheel_result_dialog">🎯 ルーレットの結果</string>
+    <string name="wheel_edit_options">選択肢を編集</string>
+    <string name="wheel_new_option">新しい選択肢</string>
+    <string name="wheel_reset_options">既定の選択肢に戻す</string>
+
+    <!-- v56.5.1: テキスト選択バー -->
+    <string name="reader_selection_highlight">ハイライト</string>
+    <string name="reader_selection_copy">コピー</string>
+    <string name="reader_selection_highlight_desc">選択したテキストをハイライト</string>
+    <string name="reader_selection_copy_desc">選択したテキストをコピー</string>
+    <string name="reader_selection_bookmark_desc">選択したテキストをブックマーク</string>
+
+    <!-- v56.5.1: リーダーの本文と表示 -->
+    <string name="reader_pdf_load_failed">このPDFを読み込めません</string>
+    <string name="reader_pdf_page">PDF %1$d ページ</string>
+    <string name="reader_illustration">挿絵</string>
+    <string name="reader_illustration_missing">挿絵がありません</string>
+    <string name="reader_comic_page">コミック %1$d ページ</string>
+    <string name="reader_chapter_indicator">第 %1$d / %2$d 章</string>
+    <string name="reader_chapter_empty">この章には内容がありません</string>
+
+    <!-- v56.5.1: 時間と日付（単位は以前 :core の FlowFormatters に直書きされていた） -->
+    <string name="duration_seconds">%1$d秒</string>
+    <string name="duration_minutes">%1$d分</string>
+    <string name="duration_hours">%1$d時間</string>
+    <string name="duration_hours_minutes">%1$d時間%2$d分</string>
+    <string name="spoken_date">%1$d月%2$d日</string>
+    <string name="stats_chart_empty_desc">最近の読書記録はありません</string>
+    <string name="stats_chart_entry">%1$sに%2$s</string>
+    <string name="stats_chart_separator">、</string>
 </resources>
