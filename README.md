@@ -1,6 +1,10 @@
 # FlowReader 心流阅读
 
 <p align="center">
+  <b>中文</b> | <a href="README_EN.md">English</a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=flat&logo=android" alt="Platform">
   <img src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?style=flat&logo=kotlin" alt="Kotlin">
   <img src="https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4?style=flat&logo=jetpackcompose" alt="UI">
