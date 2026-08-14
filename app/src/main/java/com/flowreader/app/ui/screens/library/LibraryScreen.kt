@@ -36,6 +36,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Check
@@ -45,7 +46,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FolderZip
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Wifi
@@ -207,7 +207,7 @@ fun LibraryScreen(
                         IconButton(onClick = { viewModel.setViewMode(uiState.viewMode.toggle()) }) {
                             if (uiState.viewMode == LibraryViewMode.GRID) {
                                 Icon(
-                                    Icons.Default.ViewList,
+                                    Icons.AutoMirrored.Filled.ViewList,
                                     contentDescription = stringResource(R.string.library_view_list)
                                 )
                             } else {

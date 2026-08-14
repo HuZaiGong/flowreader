@@ -60,18 +60,29 @@ class FullTextSearch @Inject constructor(
      */
     private val indexMutex = Mutex()
 
+    /**
+     * Serializes database initialization. Without this, concurrent callers can both pass
+     * `if (database?.isOpen == true)` and both open a handle, leaking the first one.
+     */
+    private val initMutex = Mutex()
+
     /** Runs [block] with exclusive access to the index. Not re-entrant — never nest calls. */
     suspend fun <T> withIndexLock(block: suspend () -> T): T = indexMutex.withLock { block() }
 
     suspend fun initialize() = withContext(Dispatchers.IO) {
         if (database?.isOpen == true) return@withContext
 
-        try {
-            database = context.openOrCreateDatabase(DB_NAME, Context.MODE_PRIVATE, null)
-            createTablesAndTriggers()
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize FTS database", e)
-            throw FtsException("Failed to initialize FTS database", e)
+        initMutex.withLock {
+            // Re-check inside the lock — another coroutine may have initialized while we waited.
+            if (database?.isOpen == true) return@withContext
+
+            try {
+                database = context.openOrCreateDatabase(DB_NAME, Context.MODE_PRIVATE, null)
+                createTablesAndTriggers()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize FTS database", e)
+                throw FtsException("Failed to initialize FTS database", e)
+            }
         }
     }
 

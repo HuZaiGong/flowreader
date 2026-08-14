@@ -145,7 +145,10 @@ class CacheManager @Inject constructor(
         coverCache[coverPath] = CoverCacheEntry(coverPath)
     }
 
-    private fun evictBook(bookId: Long) {
+    /**
+     * Evicts a book from all caches. MUST be called under `synchronized(chapterCache)`.
+     */
+    private fun evictBookLocked(bookId: Long) {
         chapterCache.remove(bookId)?.let { chapters ->
             releaseMemory(chapters.values.sumOf { it.length })
         }
@@ -173,14 +176,14 @@ class CacheManager @Inject constructor(
                     // Evict the least-used books first, keeping the hottest one in memory.
                     val ranked = chapterCache.keys
                         .sortedBy { bookId -> bookUsage[bookId]?.get() ?: 0 }
-                    ranked.dropLast(1).forEach { evictBook(it) }
+                    ranked.dropLast(1).forEach { evictBookLocked(it) }
                 }
             }
             ComponentCallbacks2.TRIM_MEMORY_BACKGROUND -> {
                 synchronized(chapterCache) {
                     if (chapterCache.size > 1) {
                         val firstKey = chapterCache.keys.firstOrNull()
-                        firstKey?.let { evictBook(it) }
+                        firstKey?.let { evictBookLocked(it) }
                     }
                 }
             }

@@ -56,7 +56,7 @@ android {
     composeCompiler {
         // :domain has no Compose compiler, so its models are inferred unstable and every book card
         // re-executed on any state change. See compose_compiler_config.conf for the promise this makes.
-        stabilityConfigurationFile = rootProject.layout.projectDirectory.file("compose_compiler_config.conf")
+        stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_compiler_config.conf"))
         // Opt-in: ./gradlew :app:compileDebugKotlin --rerun-tasks -PcomposeReports=true
         // writes app/build/compose_reports/*-classes.txt and *-composables.txt. Left off by default
         // so ordinary builds do not pay for the report emission.
