@@ -298,4 +298,37 @@
     <string name="stats_chart_empty_desc">Aucun historique de lecture récent</string>
     <string name="stats_chart_entry">%1$s : %2$s</string>
     <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1 : nouvelles chaînes restantes -->
+    <string name="reader_search_results">Résultats (%1$d)</string>
+    <string name="reader_search_no_results">Aucun résultat correspondant</string>
+    <string name="reader_share_chooser">Partager via</string>
+    <string name="reader_share_card_chooser">Partager la carte de lecture</string>
+    <string name="wheel_spinning">En rotation…</string>
+    <string name="wheel_spin">Tourner</string>
+    <string name="action_done">Terminé</string>
+    <string name="reader_selection_bookmark">Signet</string>
+    <string name="reader_background_pick">Choisir une image</string>
+    <string name="reader_background_change">Changer l\'image</string>
+    <string name="reader_section_typography">Typographie</string>
+    <string name="reader_section_palette">Thème de lecture</string>
+    <string name="reader_section_page_mode">Mode de page</string>
+    <string name="reader_section_eye_protection">Intervalle de protection oculaire</string>
+    <string name="reader_section_custom_theme">Thème personnalisé</string>
+    <string name="reader_section_background">Image de fond</string>
+    <string name="reader_setting_font">Police</string>
+    <string name="reader_setting_font_size">Taille de police</string>
+    <string name="reader_setting_line_spacing">Interligne</string>
+    <string name="reader_setting_para_spacing">Espacement des paragraphes</string>
+    <string name="reader_setting_para_spacing_value">%1$s × taille de police</string>
+    <string name="reader_setting_night_palette">Palette nocturne</string>
+    <string name="reader_setting_scrim_alpha">Opacité du voile</string>
+    <string name="reader_setting_bg_color">Couleur de fond</string>
+    <string name="reader_setting_text_color">Couleur du texte</string>
+    <string name="reader_setting_color_none">Suivre la palette</string>
+    <string name="reader_tts_play">Démarrer la lecture à voix haute</string>
+    <string name="reader_tts_pause">Mettre en pause la lecture</string>
+    <string name="reader_bookmark_default">Signet de texte sélectionné</string>
+    <string name="reader_pdf_annotation_on">Mode annotation</string>
+    <string name="reader_pdf_annotation_off">Quitter le mode annotation</string>
 </resources>

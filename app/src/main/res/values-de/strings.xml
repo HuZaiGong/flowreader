@@ -298,4 +298,37 @@
     <string name="stats_chart_empty_desc">Keine Leseaufzeichnungen der letzten Zeit</string>
     <string name="stats_chart_entry">%1$s: %2$s</string>
     <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1: verbleibende neue Strings -->
+    <string name="reader_search_results">Suchergebnisse (%1$d)</string>
+    <string name="reader_search_no_results">Keine Treffer gefunden</string>
+    <string name="reader_share_chooser">Teilen mit</string>
+    <string name="reader_share_card_chooser">Lesekarte teilen</string>
+    <string name="wheel_spinning">Dreht sich…</string>
+    <string name="wheel_spin">Drehen</string>
+    <string name="action_done">Fertig</string>
+    <string name="reader_selection_bookmark">Lesezeichen</string>
+    <string name="reader_background_pick">Bild wählen</string>
+    <string name="reader_background_change">Bild ändern</string>
+    <string name="reader_section_typography">Typografie</string>
+    <string name="reader_section_palette">Lesethema</string>
+    <string name="reader_section_page_mode">Seitenmodus</string>
+    <string name="reader_section_eye_protection">Augenschutz-Intervall</string>
+    <string name="reader_section_custom_theme">Benutzerdefiniertes Thema</string>
+    <string name="reader_section_background">Hintergrundbild</string>
+    <string name="reader_setting_font">Schriftart</string>
+    <string name="reader_setting_font_size">Schriftgröße</string>
+    <string name="reader_setting_line_spacing">Zeilenabstand</string>
+    <string name="reader_setting_para_spacing">Absatzabstand</string>
+    <string name="reader_setting_para_spacing_value">%1$s × Schriftgröße</string>
+    <string name="reader_setting_night_palette">Nacht-Palette</string>
+    <string name="reader_setting_scrim_alpha">Scrim-Deckkraft</string>
+    <string name="reader_setting_bg_color">Hintergrundfarbe</string>
+    <string name="reader_setting_text_color">Textfarbe</string>
+    <string name="reader_setting_color_none">Palette folgen</string>
+    <string name="reader_tts_play">Vorlesen starten</string>
+    <string name="reader_tts_pause">Vorlesen pausieren</string>
+    <string name="reader_bookmark_default">Ausgewählter Text Lesezeichen</string>
+    <string name="reader_pdf_annotation_on">Anmerkungsmodus</string>
+    <string name="reader_pdf_annotation_off">Anmerkungsmodus beenden</string>
 </resources>

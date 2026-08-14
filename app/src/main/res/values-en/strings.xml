@@ -308,4 +308,37 @@
     <string name="stats_chart_empty_desc">No recent reading records</string>
     <string name="stats_chart_entry">%1$s: %2$s</string>
     <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1: remaining new strings -->
+    <string name="reader_search_results">Search Results (%1$d)</string>
+    <string name="reader_search_no_results">No matching results</string>
+    <string name="reader_share_chooser">Share to</string>
+    <string name="reader_share_card_chooser">Share Reading Card</string>
+    <string name="wheel_spinning">Spinning…</string>
+    <string name="wheel_spin">Spin</string>
+    <string name="action_done">Done</string>
+    <string name="reader_selection_bookmark">Bookmark</string>
+    <string name="reader_background_pick">Choose Image</string>
+    <string name="reader_background_change">Change Image</string>
+    <string name="reader_section_typography">Typography</string>
+    <string name="reader_section_palette">Reading Theme</string>
+    <string name="reader_section_page_mode">Page Mode</string>
+    <string name="reader_section_eye_protection">Eye Protection Interval</string>
+    <string name="reader_section_custom_theme">Custom Theme</string>
+    <string name="reader_section_background">Background Image</string>
+    <string name="reader_setting_font">Font</string>
+    <string name="reader_setting_font_size">Font Size</string>
+    <string name="reader_setting_line_spacing">Line Spacing</string>
+    <string name="reader_setting_para_spacing">Paragraph Spacing</string>
+    <string name="reader_setting_para_spacing_value">%1$s × font size</string>
+    <string name="reader_setting_night_palette">Night Palette</string>
+    <string name="reader_setting_scrim_alpha">Scrim Opacity</string>
+    <string name="reader_setting_bg_color">Background Color</string>
+    <string name="reader_setting_text_color">Text Color</string>
+    <string name="reader_setting_color_none">Follow Palette</string>
+    <string name="reader_tts_play">Start Reading Aloud</string>
+    <string name="reader_tts_pause">Pause Reading Aloud</string>
+    <string name="reader_bookmark_default">Selected text bookmark</string>
+    <string name="reader_pdf_annotation_on">Annotation mode</string>
+    <string name="reader_pdf_annotation_off">Exit annotation mode</string>
 </resources>

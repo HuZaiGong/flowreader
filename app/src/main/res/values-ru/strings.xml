@@ -298,4 +298,37 @@
     <string name="stats_chart_empty_desc">Нет недавних записей о чтении</string>
     <string name="stats_chart_entry">%1$s: %2$s</string>
     <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1: оставшиеся новые строки -->
+    <string name="reader_search_results">Результаты (%1$d)</string>
+    <string name="reader_search_no_results">Совпадений не найдено</string>
+    <string name="reader_share_chooser">Поделиться через</string>
+    <string name="reader_share_card_chooser">Поделиться карточкой чтения</string>
+    <string name="wheel_spinning">Вращается…</string>
+    <string name="wheel_spin">Крутить</string>
+    <string name="action_done">Готово</string>
+    <string name="reader_selection_bookmark">Закладка</string>
+    <string name="reader_background_pick">Выбрать изображение</string>
+    <string name="reader_background_change">Изменить изображение</string>
+    <string name="reader_section_typography">Типографика</string>
+    <string name="reader_section_palette">Тема чтения</string>
+    <string name="reader_section_page_mode">Режим страниц</string>
+    <string name="reader_section_eye_protection">Интервал защиты зрения</string>
+    <string name="reader_section_custom_theme">Пользовательская тема</string>
+    <string name="reader_section_background">Фоновое изображение</string>
+    <string name="reader_setting_font">Шрифт</string>
+    <string name="reader_setting_font_size">Размер шрифта</string>
+    <string name="reader_setting_line_spacing">Межстрочный интервал</string>
+    <string name="reader_setting_para_spacing">Межабзацный интервал</string>
+    <string name="reader_setting_para_spacing_value">%1$s × размер шрифта</string>
+    <string name="reader_setting_night_palette">Ночная палитра</string>
+    <string name="reader_setting_scrim_alpha">Непрозрачность затемнения</string>
+    <string name="reader_setting_bg_color">Цвет фона</string>
+    <string name="reader_setting_text_color">Цвет текста</string>
+    <string name="reader_setting_color_none">Следовать палитре</string>
+    <string name="reader_tts_play">Начать чтение вслух</string>
+    <string name="reader_tts_pause">Приостановить чтение</string>
+    <string name="reader_bookmark_default">Закладка выделенного текста</string>
+    <string name="reader_pdf_annotation_on">Режим аннотаций</string>
+    <string name="reader_pdf_annotation_off">Выйти из режима аннотаций</string>
 </resources>

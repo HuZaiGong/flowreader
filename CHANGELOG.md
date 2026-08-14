@@ -4,6 +4,25 @@
 
 ---
 
+## [v56.5.1] - 2026-08-14
+> 国际化完成：全部 UI 字符串本地化至 9 种语言（zh / en / ja / ko / de / es / fr / pt / ru）。
+
+### 新增
+- **9 语言全覆盖**：新增 31 个字符串资源键（搜索、分享、滚轮、阅读器控件、PDF 标注模式），完成阅读器、搜索对话框、分享流程、滚轮页面的本地化。
+  - 德语（de）、西班牙语（es）、法语（fr）、葡萄牙语（pt）、俄语（ru）补全所有 v56.5.1 新增键。
+  - 英语（en）、日语（ja）、韩语（ko）补全 PDF 标注模式 2 键。
+- **消除所有硬编码中文字符串**：`ReaderScreen`、`ReaderSettingsSheet`、`PaletteGrid` 全部改用 `stringResource()` 或 `Context.getString()`，支持运行时语言切换。
+  - `ReaderScreen.kt`：书签默认标签、分享阅读卡片选择器标题。
+  - `ReaderSettingsSheet.kt`：`formatArgb()` 的 fallback 参数化，`ColorSwatch` / `PaletteGrid` 无障碍描述本地化。
+
+### 变更
+- 阅读器色板预设名称（`BACKGROUND_PRESETS` / `TEXT_PRESETS`）保留中文，因这些名称是颜色的语义标签，不是 UI 文案。
+
+### 测试
+- 全量门禁通过：`verifyKotlinStyle` → `testDebugUnitTest`（262 测试，0 失败）→ `coverageSummary`（48/63 = 76.2%）。
+
+---
+
 ## [v56.4.4] - 2026-08-12
 > 修复三个页面加载出数据后内容被顶栏遮挡：`FlowStateHost` 的成功分支丢弃了 `modifier`。
 

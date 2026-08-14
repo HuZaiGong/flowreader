@@ -298,4 +298,37 @@
     <string name="stats_chart_empty_desc">Sem registros de leitura recentes</string>
     <string name="stats_chart_entry">%1$s: %2$s</string>
     <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1: novas strings restantes -->
+    <string name="reader_search_results">Resultados (%1$d)</string>
+    <string name="reader_search_no_results">Nenhum resultado encontrado</string>
+    <string name="reader_share_chooser">Compartilhar com</string>
+    <string name="reader_share_card_chooser">Compartilhar cartão de leitura</string>
+    <string name="wheel_spinning">Girando…</string>
+    <string name="wheel_spin">Girar</string>
+    <string name="action_done">Concluído</string>
+    <string name="reader_selection_bookmark">Marcador</string>
+    <string name="reader_background_pick">Escolher imagem</string>
+    <string name="reader_background_change">Alterar imagem</string>
+    <string name="reader_section_typography">Tipografia</string>
+    <string name="reader_section_palette">Tema de leitura</string>
+    <string name="reader_section_page_mode">Modo de página</string>
+    <string name="reader_section_eye_protection">Intervalo de proteção visual</string>
+    <string name="reader_section_custom_theme">Tema personalizado</string>
+    <string name="reader_section_background">Imagem de fundo</string>
+    <string name="reader_setting_font">Fonte</string>
+    <string name="reader_setting_font_size">Tamanho da fonte</string>
+    <string name="reader_setting_line_spacing">Espaçamento de linha</string>
+    <string name="reader_setting_para_spacing">Espaçamento de parágrafo</string>
+    <string name="reader_setting_para_spacing_value">%1$s × tamanho da fonte</string>
+    <string name="reader_setting_night_palette">Paleta noturna</string>
+    <string name="reader_setting_scrim_alpha">Opacidade do véu</string>
+    <string name="reader_setting_bg_color">Cor de fundo</string>
+    <string name="reader_setting_text_color">Cor do texto</string>
+    <string name="reader_setting_color_none">Seguir paleta</string>
+    <string name="reader_tts_play">Iniciar leitura em voz alta</string>
+    <string name="reader_tts_pause">Pausar leitura em voz alta</string>
+    <string name="reader_bookmark_default">Marcador de texto selecionado</string>
+    <string name="reader_pdf_annotation_on">Modo de anotação</string>
+    <string name="reader_pdf_annotation_off">Sair do modo de anotação</string>
 </resources>

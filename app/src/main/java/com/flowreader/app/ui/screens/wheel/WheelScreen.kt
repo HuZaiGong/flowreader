@@ -62,7 +62,7 @@ fun WheelScreen(
                     IconButton(onClick = { viewModel.toggleEditMode() }) {
                         Icon(
                             if (uiState.editingMode) Icons.Default.Check else Icons.Default.Edit,
-                            contentDescription = if (uiState.editingMode) "完成" else "编辑"
+                            contentDescription = if (uiState.editingMode) stringResource(R.string.action_done) else stringResource(R.string.action_edit)
                         )
                     }
                 }
@@ -112,7 +112,7 @@ fun WheelScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (uiState.isSpinning) "旋转中..." else "开始旋转",
+                    text = if (uiState.isSpinning) stringResource(R.string.wheel_spinning) else stringResource(R.string.wheel_spin),
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -138,7 +138,7 @@ fun WheelScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         TextButton(onClick = { viewModel.clearError() }) {
-                            Text("确定")
+                            Text(stringResource(R.string.action_confirm))
                         }
                     }
                 }
@@ -158,7 +158,7 @@ fun WheelScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "🎉 结果",
+                            text = stringResource(R.string.wheel_result_inline),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
@@ -189,7 +189,7 @@ fun WheelScreen(
         if (uiState.showResultDialog && dialogResult != null) {
             AlertDialog(
                 onDismissRequest = { viewModel.dismissResult() },
-                title = { Text("🎯 转盘结果") },
+                title = { Text(stringResource(R.string.wheel_result_dialog)) },
                 text = {
                     Text(
                         text = dialogResult.item.label,
@@ -199,7 +199,7 @@ fun WheelScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { viewModel.dismissResult() }) {
-                        Text("确定")
+                        Text(stringResource(R.string.action_confirm))
                     }
                 }
             )
@@ -223,7 +223,7 @@ private fun EditPanel(
             modifier = Modifier.padding(16.dp)
         ) {
             Text(
-                text = "编辑选项",
+                text = stringResource(R.string.wheel_edit_options),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -239,7 +239,7 @@ private fun EditPanel(
                     value = newItemLabel,
                     onValueChange = onNewItemLabelChange,
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("新选项") },
+                    placeholder = { Text(stringResource(R.string.wheel_new_option)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(
@@ -247,7 +247,7 @@ private fun EditPanel(
                     )
                 )
                 Button(onClick = onAddItem) {
-                    Icon(Icons.Default.Add, contentDescription = "添加")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.action_add))
                 }
             }
 
@@ -288,7 +288,7 @@ private fun EditPanel(
                             onClick = { onRemoveItem(item.id) },
                             enabled = items.size > 2
                         ) {
-                            Icon(Icons.Default.Delete, contentDescription = "删除")
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                         }
                     }
                 }
@@ -303,7 +303,7 @@ private fun EditPanel(
             ) {
                 Icon(Icons.Default.Restore, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("重置为默认选项")
+                Text(stringResource(R.string.wheel_reset_options))
             }
         }
     }

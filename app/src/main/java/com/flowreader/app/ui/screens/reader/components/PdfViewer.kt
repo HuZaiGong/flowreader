@@ -42,11 +42,13 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import com.flowreader.app.R
 import com.flowreader.app.domain.model.Annotation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -217,7 +219,7 @@ fun PdfViewer(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedButton(onClick = { retryTrigger++ }) {
-                        Text("重试")
+                        Text(stringResource(R.string.action_retry))
                     }
                 }
             }
@@ -231,7 +233,7 @@ fun PdfViewer(
                 Box(modifier = Modifier.fillMaxSize()) {
                     Image(
                         bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "PDF第${currentPage + 1}页",
+                        contentDescription = stringResource(R.string.reader_pdf_page, currentPage + 1),
                         modifier = Modifier
                             .fillMaxWidth()
                             .graphicsLayer(
@@ -291,7 +293,7 @@ fun PdfViewer(
             ) {
                 Icon(
                     imageVector = Icons.Default.BorderColor,
-                    contentDescription = if (annotationMode) "退出标注模式" else "标注模式",
+                    contentDescription = if (annotationMode) stringResource(R.string.reader_pdf_annotation_off) else stringResource(R.string.reader_pdf_annotation_on),
                     tint = if (annotationMode) MaterialTheme.colorScheme.onPrimary else textColor
                 )
             }

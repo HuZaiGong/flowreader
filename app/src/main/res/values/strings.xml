@@ -314,4 +314,37 @@
     <string name="stats_chart_empty_desc">近期无阅读记录</string>
     <string name="stats_chart_entry">%1$s阅读%2$s</string>
     <string name="stats_chart_separator">，</string>
+
+    <!-- v56.5.1：剩余待接线的新字符串 -->
+    <string name="reader_search_results">搜索结果 (%1$d)</string>
+    <string name="reader_search_no_results">未找到匹配结果</string>
+    <string name="reader_share_chooser">分享到</string>
+    <string name="reader_share_card_chooser">分享阅读卡片</string>
+    <string name="wheel_spinning">旋转中...</string>
+    <string name="wheel_spin">开始旋转</string>
+    <string name="action_done">完成</string>
+    <string name="reader_selection_bookmark">书签</string>
+    <string name="reader_background_pick">选择图片</string>
+    <string name="reader_background_change">更换图片</string>
+    <string name="reader_section_typography">排版</string>
+    <string name="reader_section_palette">阅读主题</string>
+    <string name="reader_section_page_mode">翻页</string>
+    <string name="reader_section_eye_protection">护眼提醒间隔</string>
+    <string name="reader_section_custom_theme">自定义主题</string>
+    <string name="reader_section_background">背景图片</string>
+    <string name="reader_setting_font">字体</string>
+    <string name="reader_setting_font_size">字号</string>
+    <string name="reader_setting_line_spacing">行间距</string>
+    <string name="reader_setting_para_spacing">段间距</string>
+    <string name="reader_setting_para_spacing_value">%1$s 倍字号</string>
+    <string name="reader_setting_night_palette">夜间色板</string>
+    <string name="reader_setting_scrim_alpha">遮罩不透明度</string>
+    <string name="reader_setting_bg_color">背景色</string>
+    <string name="reader_setting_text_color">文字色</string>
+    <string name="reader_setting_color_none">跟随色板</string>
+    <string name="reader_tts_play">开始朗读</string>
+    <string name="reader_tts_pause">暂停朗读</string>
+    <string name="reader_bookmark_default">选中文本书签</string>
+    <string name="reader_pdf_annotation_on">标注模式</string>
+    <string name="reader_pdf_annotation_off">退出标注模式</string>
 </resources>

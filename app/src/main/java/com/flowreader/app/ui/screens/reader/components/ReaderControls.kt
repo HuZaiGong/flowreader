@@ -136,7 +136,7 @@ fun ReaderControls(
                 IconButton(onClick = onTtsClick) {
                     Icon(
                         imageVector = if (isTtsPlaying) Icons.Default.PauseCircle else Icons.Default.RecordVoiceOver,
-                        contentDescription = if (isTtsPlaying) "暂停朗读" else "开始朗读",
+                        contentDescription = if (isTtsPlaying) stringResource(R.string.reader_tts_pause) else stringResource(R.string.reader_tts_play),
                         tint = palette.text
                     )
                 }

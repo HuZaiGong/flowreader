@@ -308,4 +308,37 @@
     <string name="stats_chart_empty_desc">최근 독서 기록이 없습니다</string>
     <string name="stats_chart_entry">%1$s %2$s</string>
     <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1: 나머지 새 문자열 -->
+    <string name="reader_search_results">검색 결과 (%1$d)</string>
+    <string name="reader_search_no_results">일치하는 결과가 없습니다</string>
+    <string name="reader_share_chooser">공유</string>
+    <string name="reader_share_card_chooser">독서 카드 공유</string>
+    <string name="wheel_spinning">돌아가는 중...</string>
+    <string name="wheel_spin">돌리기</string>
+    <string name="action_done">완료</string>
+    <string name="reader_selection_bookmark">북마크</string>
+    <string name="reader_background_pick">이미지 선택</string>
+    <string name="reader_background_change">이미지 변경</string>
+    <string name="reader_section_typography">타이포그래피</string>
+    <string name="reader_section_palette">독서 테마</string>
+    <string name="reader_section_page_mode">페이지 모드</string>
+    <string name="reader_section_eye_protection">눈 보호 간격</string>
+    <string name="reader_section_custom_theme">커스텀 테마</string>
+    <string name="reader_section_background">배경 이미지</string>
+    <string name="reader_setting_font">폰트</string>
+    <string name="reader_setting_font_size">글자 크기</string>
+    <string name="reader_setting_line_spacing">줄 간격</string>
+    <string name="reader_setting_para_spacing">단락 간격</string>
+    <string name="reader_setting_para_spacing_value">%1$s × 글자 크기</string>
+    <string name="reader_setting_night_palette">야간 팔레트</string>
+    <string name="reader_setting_scrim_alpha">스크림 불투명도</string>
+    <string name="reader_setting_bg_color">배경색</string>
+    <string name="reader_setting_text_color">글자색</string>
+    <string name="reader_setting_color_none">팔레트 따르기</string>
+    <string name="reader_tts_play">읽기 시작</string>
+    <string name="reader_tts_pause">읽기 일시정지</string>
+    <string name="reader_bookmark_default">선택한 텍스트 북마크</string>
+    <string name="reader_pdf_annotation_on">주석 모드</string>
+    <string name="reader_pdf_annotation_off">주석 모드 종료</string>
 </resources>

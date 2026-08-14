@@ -71,6 +71,7 @@ fun ReaderScreen(
     val activity = context as? ComponentActivity
     val view = LocalView.current
     val settings = uiState.readingSettings
+    val defaultBookmarkLabel = stringResource(R.string.reader_bookmark_default)
 
     // GetContent rather than OpenDocument: no persistable permission is needed because the importer
     // copies the image into filesDir straight away and never touches the content:// uri again.
@@ -157,6 +158,7 @@ fun ReaderScreen(
     }
 
     val fontFamily = rememberReaderFontFamily(settings)
+    val shareCardLabel = stringResource(R.string.reader_share_card_chooser)
 
     // Derived so scroll updates repaint only the control layer, never the body. In PAGED mode
     // the page fraction comes from the ViewModel instead of the (unused) scroll state.
@@ -189,7 +191,7 @@ fun ReaderScreen(
             isLoading = uiState.isLoading,
             isEmpty = uiState.currentChapter == null && uiState.error == null && !uiState.isLoading,
             error = uiState.error,
-            emptyTitle = "本章暂无内容",
+            emptyTitle = stringResource(R.string.reader_chapter_empty),
             onRetry = { viewModel.retryLoadBook() },
             onDismissError = onBackClick,
             contentColor = palette.text
@@ -245,7 +247,7 @@ fun ReaderScreen(
                             viewModel.addAnnotation(text, start, end)
                         },
                         onBookmarkSelection = { text, _, _ ->
-                            viewModel.addBookmark(text.ifBlank { "选中文本书签" })
+                            viewModel.addBookmark(text.ifBlank { defaultBookmarkLabel })
                         }
                     )
                 } else {
@@ -267,7 +269,7 @@ fun ReaderScreen(
                             viewModel.addAnnotation(text, start, end)
                         },
                         onBookmarkSelection = { text, _, _ ->
-                            viewModel.addBookmark(text.ifBlank { "选中文本书签" })
+                            viewModel.addBookmark(text.ifBlank { defaultBookmarkLabel })
                         },
                         onPositionChanged = { position ->
                             viewModel.updatePosition(position, chapterFraction)
@@ -402,7 +404,7 @@ fun ReaderScreen(
                         putExtra(Intent.EXTRA_STREAM, uri)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(Intent.createChooser(intent, "分享阅读卡片"))
+                    context.startActivity(Intent.createChooser(intent, shareCardLabel))
                     viewModel.clearShareText()
                 }
             )

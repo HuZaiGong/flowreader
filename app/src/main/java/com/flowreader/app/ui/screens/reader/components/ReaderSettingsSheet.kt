@@ -28,10 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.reader.ReaderPalettes
 import com.flowreader.app.core.designsystem.reader.background
 import com.flowreader.app.core.designsystem.reader.text
@@ -59,6 +62,7 @@ fun ReaderSettingsSheet(
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
@@ -70,9 +74,9 @@ fun ReaderSettingsSheet(
                 .padding(bottom = FlowSpacing.xl),
             verticalArrangement = Arrangement.spacedBy(FlowSpacing.lg)
         ) {
-            SectionTitle("排版")
+            SectionTitle(stringResource(R.string.reader_section_typography))
 
-            LabelledValue("字体", settings.fontFamily.displayName)
+            LabelledValue(stringResource(R.string.reader_setting_font), settings.fontFamily.displayName)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
                 ReaderFontFamily.entries.forEach { font ->
                     FilterChip(
@@ -85,12 +89,12 @@ fun ReaderSettingsSheet(
                     FilterChip(
                         selected = true,
                         onClick = { },
-                        label = { Text("自定义字体") }
+                        label = { Text(stringResource(R.string.reader_custom_font)) }
                     )
                 }
             }
 
-            LabelledValue("字号", "${settings.fontSize}sp")
+            LabelledValue(stringResource(R.string.reader_setting_font_size), "${settings.fontSize}sp")
             Slider(
                 value = settings.fontSize.toFloat(),
                 onValueChange = { onSettingsChange(settings.copy(fontSize = it.toInt())) },
@@ -98,7 +102,7 @@ fun ReaderSettingsSheet(
                 steps = 19
             )
 
-            LabelledValue("行间距", formatOneDecimal(settings.lineSpacing))
+            LabelledValue(stringResource(R.string.reader_setting_line_spacing), formatOneDecimal(settings.lineSpacing))
             Slider(
                 value = settings.lineSpacing,
                 onValueChange = { onSettingsChange(settings.copy(lineSpacing = it)) },
@@ -106,7 +110,10 @@ fun ReaderSettingsSheet(
                 steps = 14
             )
 
-            LabelledValue("段间距", formatOneDecimal(settings.paragraphSpacing) + " 倍字号")
+            LabelledValue(
+                stringResource(R.string.reader_setting_para_spacing),
+                stringResource(R.string.reader_setting_para_spacing_value, formatOneDecimal(settings.paragraphSpacing))
+            )
             Slider(
                 value = settings.paragraphSpacing,
                 onValueChange = { onSettingsChange(settings.copy(paragraphSpacing = it)) },
@@ -115,12 +122,12 @@ fun ReaderSettingsSheet(
             )
 
             SwitchRow(
-                label = "首行缩进两字",
+                label = stringResource(R.string.reader_first_line_indent),
                 checked = settings.firstLineIndent,
                 onCheckedChange = { onSettingsChange(settings.copy(firstLineIndent = it)) }
             )
 
-            SectionTitle("阅读主题")
+            SectionTitle(stringResource(R.string.reader_section_palette))
             PaletteGrid(
                 ids = ReaderPaletteId.LIGHT_PALETTES,
                 selected = settings.palette,
@@ -133,12 +140,12 @@ fun ReaderSettingsSheet(
             )
 
             SwitchRow(
-                label = "自动夜间模式 (19:00–07:00)",
+                label = stringResource(R.string.reader_auto_night),
                 checked = settings.autoNightMode,
                 onCheckedChange = { onSettingsChange(settings.copy(autoNightMode = it)) }
             )
             if (settings.autoNightMode) {
-                LabelledValue("夜间色板", settings.nightPalette.displayName)
+                LabelledValue(stringResource(R.string.reader_setting_night_palette), settings.nightPalette.displayName)
                 PaletteGrid(
                     ids = ReaderPaletteId.DARK_PALETTES,
                     selected = settings.nightPalette,
@@ -158,7 +165,7 @@ fun ReaderSettingsSheet(
                 onSettingsChange = onSettingsChange
             )
 
-            SectionTitle("翻页")
+            SectionTitle(stringResource(R.string.reader_section_page_mode))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
                 PageMode.entries.forEach { mode ->
                     FilterChip(
@@ -169,13 +176,13 @@ fun ReaderSettingsSheet(
                 }
             }
 
-            SectionTitle("护眼提醒间隔")
+            SectionTitle(stringResource(R.string.reader_section_eye_protection))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
                 listOf(15, 20, 30, 45, 60).forEach { minutes ->
                     FilterChip(
                         selected = settings.eyeProtectionIntervalMinutes == minutes,
                         onClick = { onSettingsChange(settings.copy(eyeProtectionIntervalMinutes = minutes)) },
-                        label = { Text("$minutes 分钟") }
+                        label = { Text(stringResource(R.string.reader_timer_minutes, minutes)) }
                     )
                 }
             }
@@ -185,7 +192,9 @@ fun ReaderSettingsSheet(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PaletteGrid(ids: List<ReaderPaletteId>, selected: ReaderPaletteId, onSelect: (ReaderPaletteId) -> Unit) {    FlowRow(
+private fun PaletteGrid(ids: List<ReaderPaletteId>, selected: ReaderPaletteId, onSelect: (ReaderPaletteId) -> Unit) {
+    val context = LocalContext.current
+    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
         verticalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
         modifier = Modifier.fillMaxWidth()
@@ -204,7 +213,7 @@ private fun PaletteGrid(ids: List<ReaderPaletteId>, selected: ReaderPaletteId, o
                         shape = RoundedCornerShape(FlowRadius.md)
                     )
                     .clickable { onSelect(id) }
-                    .semantics { contentDescription = "阅读主题 ${id.displayName}" },
+                    .semantics { contentDescription = context.getString(R.string.reader_palette_label, id.displayName) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -224,14 +233,16 @@ private fun PaletteGrid(ids: List<ReaderPaletteId>, selected: ReaderPaletteId, o
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CustomThemeEditor(settings: ReadingSettings, onSettingsChange: (ReadingSettings) -> Unit) {
-    SectionTitle("自定义主题")
+    val context = LocalContext.current
+    SectionTitle(stringResource(R.string.reader_section_custom_theme))
     Text(
-        text = "自定义背景与文字色会覆盖所选色板；若对比度不达标会自动回退到可读配色。",
+        text = stringResource(R.string.reader_custom_color_notice),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 
-    LabelledValue("背景色", formatArgb(settings.customBackgroundColorArgb))
+    val fallbackString = stringResource(R.string.reader_setting_color_none)
+    LabelledValue(stringResource(R.string.reader_setting_bg_color), formatArgb(settings.customBackgroundColorArgb, fallbackString))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
         BACKGROUND_PRESETS.forEach { (name, argb) ->
             ColorSwatch(
@@ -240,12 +251,13 @@ private fun CustomThemeEditor(settings: ReadingSettings, onSettingsChange: (Read
                 selected = settings.customBackgroundColorArgb == argb,
                 onClick = {
                     onSettingsChange(settings.copy(customBackgroundColorArgb = if (settings.customBackgroundColorArgb == argb) null else argb))
-                }
+                },
+                context = context
             )
         }
     }
 
-    LabelledValue("文字色", formatArgb(settings.customTextColorArgb))
+    LabelledValue(stringResource(R.string.reader_setting_text_color), formatArgb(settings.customTextColorArgb, fallbackString))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
         TEXT_PRESETS.forEach { (name, argb) ->
             ColorSwatch(
@@ -254,7 +266,8 @@ private fun CustomThemeEditor(settings: ReadingSettings, onSettingsChange: (Read
                 selected = settings.customTextColorArgb == argb,
                 onClick = {
                     onSettingsChange(settings.copy(customTextColorArgb = if (settings.customTextColorArgb == argb) null else argb))
-                }
+                },
+                context = context
             )
         }
     }
@@ -263,7 +276,7 @@ private fun CustomThemeEditor(settings: ReadingSettings, onSettingsChange: (Read
         androidx.compose.material3.TextButton(
             onClick = { onSettingsChange(settings.copy(customTextColorArgb = null, customBackgroundColorArgb = null)) }
         ) {
-            Text("恢复色板默认")
+            Text(stringResource(R.string.reader_restore_palette))
         }
     }
 }
@@ -284,10 +297,9 @@ private fun BackgroundImageEditor(
     onClearImage: () -> Unit,
     onSettingsChange: (ReadingSettings) -> Unit
 ) {
-    SectionTitle("背景图片")
+    SectionTitle(stringResource(R.string.reader_section_background))
     Text(
-        text = "导入的图片始终位于当前色板颜色的半透明遮罩之下——正文的对比度是按纯色背景校验的，" +
-            "裸图之上无法保证可读性，因此遮罩不可完全关闭。",
+        text = stringResource(R.string.reader_background_notice),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
@@ -295,11 +307,11 @@ private fun BackgroundImageEditor(
     val hasImage = ReaderBackgroundImage.isActive(settings.backgroundImagePath)
     Row(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
         androidx.compose.material3.TextButton(onClick = onPickImage) {
-            Text(if (hasImage) "更换图片" else "选择图片")
+            Text(if (hasImage) stringResource(R.string.reader_background_change) else stringResource(R.string.reader_background_pick))
         }
         if (hasImage) {
             androidx.compose.material3.TextButton(onClick = onClearImage) {
-                Text("移除图片")
+                Text(stringResource(R.string.reader_background_remove))
             }
         }
     }
@@ -312,7 +324,7 @@ private fun BackgroundImageEditor(
             paletteIsDark = palette.isDark
         )
         val alpha = ReaderBackgroundImage.clampScrimAlpha(settings.backgroundScrimAlpha)
-        LabelledValue("遮罩不透明度", "${(alpha * 100).toInt()}%")
+        LabelledValue(stringResource(R.string.reader_setting_scrim_alpha), "${(alpha * 100).toInt()}%")
         Slider(
             value = alpha,
             onValueChange = {
@@ -322,7 +334,7 @@ private fun BackgroundImageEditor(
         )
         if (safeAlpha != null && alpha < safeAlpha) {
             Text(
-                text = "当前色板需要至少 ${(safeAlpha * 100).toInt()}% 的遮罩才能保证正文对比度达标。",
+                text = stringResource(R.string.reader_background_min_alpha, (safeAlpha * 100).toInt()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )
@@ -331,7 +343,7 @@ private fun BackgroundImageEditor(
 }
 
 @Composable
-private fun ColorSwatch(name: String, argb: Long, selected: Boolean, onClick: () -> Unit) {
+private fun ColorSwatch(name: String, argb: Long, selected: Boolean, onClick: () -> Unit, context: android.content.Context) {
     Box(
         modifier = Modifier
             .size(44.dp)
@@ -343,11 +355,11 @@ private fun ColorSwatch(name: String, argb: Long, selected: Boolean, onClick: ()
                 shape = RoundedCornerShape(FlowRadius.md)
             )
             .clickable { onClick() }
-            .semantics { contentDescription = "自定义主题色 $name" }
+            .semantics { contentDescription = context.getString(R.string.reader_custom_color_label, name) }
     )
 }
 
-private fun formatArgb(argb: Long?): String = argb?.let { "#%08X".format(it) } ?: "跟随色板"
+private fun formatArgb(argb: Long?, fallback: String): String = argb?.let { "#%08X".format(it) } ?: fallback
 
 private val BACKGROUND_PRESETS = listOf(
     "纯白" to 0xFFFFFFFFL,
