@@ -10,11 +10,18 @@
 ### 优化
 - **恢复 domain 模型的 skippability**：`:domain` 无 Compose 编译器，所以 `Book`/`Chapter`/`Annotation`/`ReadingSettings` 等参数被推断为不稳定，导致每张可见书卡在任意状态变更时都重新执行——无论 `equals()` 检查有多深。
   - 新增 `compose_compiler_config.conf`（仓库根目录），声明 `com.flowreader.app.domain.model.*` 稳定。
-  - 在四个 Compose 模块（`:app`、`:core`、`:feature:library`、`:feature:reader`）通过 `composeCompiler.stabilityConfigurationFile` 接入。
+  - 在四个 Compose 模块（`:app`、`:core`、`:feature:library`、`:feature:reader`）通过 `composeCompiler.stabilityConfigurationFiles.add()` 接入。
   - `LibraryMessage` 添加 `@Immutable` 注解（sealed interface 之前只能走 runtime）。
   - 新增 `ModelStabilityContractTest` 守卫承诺：domain 模型不得有 `var` 或可变集合字段。
 - **编译器报告**：52 个不稳定类 → 37 个（所有 UiState 现在都稳定）；`Book`/`Chapter`/`Annotation`/`ReadingSettings` 现在通过 skip 检查。
 - **报告生成可选**：`./gradlew -PcomposeReports=true` 写入 `app/build/compose_reports/`；普通构建不支付报告生成成本。
+
+### 修复
+- **FTS 数据库初始化竞态**：`FullTextSearch.initialize()` 的双重检查锁定缺少互斥锁，三个并发调用点（`ReaderViewModel`、`SearchRepositoryImpl` 的两处）可能同时通过 `database?.isOpen` 检查并各自 `openOrCreateDatabase()`，泄漏先创建的句柄。现由 `initMutex` 串行化，并在锁内重新检查。
+- **`CacheManager.evictBookLocked()`**：原名 `evictBook()`，要求调用方持有 `synchronized(chapterCache)` 却未在签名或文档中体现。重命名并注明前置条件，避免后续从锁外调用导致 `LinkedHashMap` 并发损坏。
+
+### 变更
+- 替换三处废弃 API：`stabilityConfigurationFile` → `stabilityConfigurationFiles.add()`（四个模块）、`Intent.getParcelableExtra()` → `IntentCompat.getParcelableExtra()`（API 33+）、`Icons.Default.ViewList` → `Icons.AutoMirrored.Filled.ViewList`。
 
 ### 测试
 - 测试覆盖率：76.2% → 77.8%（49/63）。
