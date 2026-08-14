@@ -23,7 +23,7 @@
 
 FlowReader 用 **Jetpack Compose + Material 3** 构建，**Clean Architecture + MVVM** 多模块分层。它刻意不做账号体系、云同步、数据上报和崩溃收集：整个应用只申请一个 `INTERNET` 权限，仅供局域网 OPDS 书目与局域网备份互传使用；应用内没有任何 WebView。
 
-当前版本 **v56.4.4**（versionCode 5644）。
+当前版本 **v56.5.2**（versionCode 5652）。
 
 **支持格式**：EPUB、TXT、PDF、Markdown、FB2、MOBI，以及漫画 —— 单张 JPG / PNG / WebP 与纯图片 ZIP / CBZ 包。FB2 与 MOBI 是只读导入，在导入时像 EPUB 一样切成章节；**带 DRM 的 MOBI / AZW 直接拒绝导入，不做任何解密**，HUFF/CDIC 压缩的文件也是整体拒绝而非半解码。
 
@@ -111,7 +111,7 @@ CI（`.github/workflows/ci.yml`）严格按此顺序跑这六项：
 ```bash
 ./gradlew verifyKotlinStyle      # ktlint（:app 以外的模块）+ 全仓空白字符检查
 ./gradlew testDebugUnitTest      # :app / :core / :domain / :feature:reader
-./gradlew coverageSummary        # 测试广度文件比 ≥ 40%（当前 75.8%）
+./gradlew coverageSummary        # 测试广度文件比 ≥ 40%（当前 77.8%）
 ./gradlew assembleDebug
 ./gradlew verifyRoborazziDebug   # 截图回归
 ./gradlew performanceBaseline    # APK 体积对比 baseline/apk-size.properties
@@ -142,11 +142,11 @@ CI（`.github/workflows/ci.yml`）严格按此顺序跑这六项：
 
 最近几个版本：
 
+- **v56.5.2** —— Compose 稳定性配置消除 domain 模型不稳定推断。`:domain` 模块无 Compose 编译器，导致 `Book`/`Chapter`/`Annotation`/`ReadingSettings` 等参数被推断为不稳定，每个可见书卡在任意状态变更时都重新执行。通过 `compose_compiler_config.conf` 声明 `com.flowreader.app.domain.model.*` 稳定并接入四个 Compose 模块；不稳定类从 52 个降至 37 个，所有 UiState 现在稳定。
+- **v56.5.1** —— 书籍详情与统计页本地化。`:core` 的 `FlowFormatters` 根据 `Locale` 格式化数字、日期与单位；domain 模型现在携带纯数值而非拼接字符串，避免 v53 语言切换冻结中文。
 - **v56.4.4** —— 修复书架／统计／书籍详情三页「加载出数据后内容被顶栏遮挡」：`FlowStateHost` 的成功分支丢弃了 `modifier`，导致 88dp 安全区在成功状态下消失，而同一页面的加载／空／错误状态反而正常。
 - **v56.4.3** —— 功能性 bug 排查 11 处。书内全文搜索因 FTS5 列无亲和性而恒返回空结果；PAGED 与漫画的阅读统计整段丢失；划词高亮少存一个字符、重叠高亮重复渲染；「最近 7 天」趋势图实际只显示 2–3 天。
 - **v56.4.2** —— 修复 issue #6：外层 shell 只「应用」而未「消费」窗口 inset，下层 9 个界面又各应用一遍，顶部多出整条状态栏高度。
-- **v56.4.1** —— 安全加固：移除 ContentProvider 中的 `runBlocking`；FileProvider 授权从三棵完整目录树收紧到一个子目录；修复令牌生成中的潜伏缺陷。
-- **v56.3.0 / v56.4.0** —— 两轮专项安全审计。
 
 完整历史见 [CHANGELOG.md](CHANGELOG.md)，更长期的规划与已知技术债见 `ROADMAP.md`，逐条行为陷阱见 `AGENTS.md`。
 

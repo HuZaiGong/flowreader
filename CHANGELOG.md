@@ -4,6 +4,24 @@
 
 ---
 
+## [v56.5.2] - 2026-08-14
+> 性能优化：domain 模型稳定性配置使书架卡片、阅读器参数可跳过重组。
+
+### 优化
+- **恢复 domain 模型的 skippability**：`:domain` 无 Compose 编译器，所以 `Book`/`Chapter`/`Annotation`/`ReadingSettings` 等参数被推断为不稳定，导致每张可见书卡在任意状态变更时都重新执行——无论 `equals()` 检查有多深。
+  - 新增 `compose_compiler_config.conf`（仓库根目录），声明 `com.flowreader.app.domain.model.*` 稳定。
+  - 在四个 Compose 模块（`:app`、`:core`、`:feature:library`、`:feature:reader`）通过 `composeCompiler.stabilityConfigurationFile` 接入。
+  - `LibraryMessage` 添加 `@Immutable` 注解（sealed interface 之前只能走 runtime）。
+  - 新增 `ModelStabilityContractTest` 守卫承诺：domain 模型不得有 `var` 或可变集合字段。
+- **编译器报告**：52 个不稳定类 → 37 个（所有 UiState 现在都稳定）；`Book`/`Chapter`/`Annotation`/`ReadingSettings` 现在通过 skip 检查。
+- **报告生成可选**：`./gradlew -PcomposeReports=true` 写入 `app/build/compose_reports/`；普通构建不支付报告生成成本。
+
+### 测试
+- 测试覆盖率：76.2% → 77.8%（49/63）。
+- 全量门禁通过。
+
+---
+
 ## [v56.5.1] - 2026-08-14
 > 国际化完成：全部 UI 字符串本地化至 9 种语言（zh / en / ja / ko / de / es / fr / pt / ru）。
 

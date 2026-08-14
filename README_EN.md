@@ -23,7 +23,7 @@
 
 FlowReader is built with **Jetpack Compose + Material 3** and layered as multi-module **Clean Architecture + MVVM**. It deliberately ships no account system, no cloud sync, no analytics and no crash collection: the whole app requests a single `INTERNET` permission, used only for LAN OPDS catalogs and LAN backup transfer. There is no WebView anywhere in the app.
 
-Current version: **v56.4.4** (versionCode 5644).
+Current version: **v56.5.2** (versionCode 5652).
 
 **Supported formats**: EPUB, TXT, PDF, Markdown, FB2, MOBI, and comics — single JPG / PNG / WebP images and image-only ZIP / CBZ archives. FB2 and MOBI are imported read-only, split into chapters at import time just like EPUB. **DRM-protected MOBI / AZW files are rejected outright — no decryption of any kind**; HUFF/CDIC-compressed files are rejected whole rather than half-decoded.
 
@@ -111,7 +111,7 @@ CI (`.github/workflows/ci.yml`) runs these six steps in strict order:
 ```bash
 ./gradlew verifyKotlinStyle      # ktlint (every module except :app) + repo-wide whitespace check
 ./gradlew testDebugUnitTest      # :app / :core / :domain / :feature:reader
-./gradlew coverageSummary        # file-count test breadth ≥ 40% (currently 75.8%)
+./gradlew coverageSummary        # file-count test breadth ≥ 40% (currently 77.8%)
 ./gradlew assembleDebug
 ./gradlew verifyRoborazziDebug   # screenshot regression
 ./gradlew performanceBaseline    # APK size comparison against baseline/apk-size.properties
@@ -142,11 +142,11 @@ The project is offline-first and privacy-minded; these are hard constraints:
 
 Recent releases:
 
+- **v56.5.2** — Compose stability configuration eliminates unstable inference for domain models. The `:domain` module has no Compose compiler, causing `Book`/`Chapter`/`Annotation`/`ReadingSettings` parameters to be inferred unstable, re-executing every visible book card on any state change. Declared `com.flowreader.app.domain.model.*` stable via `compose_compiler_config.conf` and wired into all four Compose modules; unstable classes dropped from 52 to 37, all UiState now stable.
+- **v56.5.1** — Localized book detail and stats pages. `:core`'s `FlowFormatters` formats numbers, dates and units by `Locale`; domain models now carry raw values instead of concatenated strings, surviving the v53 language switch instead of frozen Chinese.
 - **v56.4.4** — fixed "content hidden behind the top bar after data loads" on the bookshelf / stats / book detail pages: the success branch of `FlowStateHost` dropped the `modifier`, so the 88dp safe area vanished in the success state while the loading / empty / error states of the same pages were fine.
 - **v56.4.3** — an 11-fix functional bug sweep. In-book full-text search always returned empty because FTS5 columns lacked affinity; reading stats were lost entirely in PAGED mode and for comics; text-selection highlights saved one character short and overlapping highlights rendered twice; the "last 7 days" trend chart actually showed only 2–3 days.
 - **v56.4.2** — fixed issue #6: the outer shell only "applied" window insets without "consuming" them, and the 9 screens below each applied them again, adding a full status-bar height on top.
-- **v56.4.1** — security hardening: removed `runBlocking` from the ContentProvider; narrowed FileProvider grants from three full directory trees to a single subdirectory; fixed a latent defect in token generation.
-- **v56.3.0 / v56.4.0** — two dedicated security audit rounds.
 
 See [CHANGELOG.md](CHANGELOG.md) for the full history, `ROADMAP.md` for longer-term plans and known tech debt, and `AGENTS.md` for the behavioral pitfalls one by one.
 
