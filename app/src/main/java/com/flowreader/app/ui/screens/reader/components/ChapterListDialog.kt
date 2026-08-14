@@ -27,7 +27,7 @@ fun ChapterListDialog(
             LazyColumn(
                 modifier = Modifier.heightIn(max = 400.dp)
             ) {
-                items(chapters.size) { index ->
+                items(chapters.size, key = { chapters[it].id }) { index ->
                     val isCurrentChapter = index == currentChapter
                     ListItem(
                         headlineContent = {

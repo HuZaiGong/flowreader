@@ -59,7 +59,7 @@ fun AnnotationsDialog(
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 400.dp)
                 ) {
-                    items(annotations.size) { index ->
+                    items(annotations.size, key = { annotations[it].id }) { index ->
                         val annotation = annotations[index]
                         ListItem(
                             headlineContent = {
@@ -237,7 +237,9 @@ fun SearchDialog(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                        items(results.size) { index ->
+                        // book_content is UNIQUE(book_id, chapter_index), so in-book search returns
+                        // at most one row per chapter and chapterIndex is a unique key.
+                        items(results.size, key = { results[it].chapterIndex }) { index ->
                             val result = results[index]
                             Card(
                                 modifier = Modifier

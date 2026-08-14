@@ -19,7 +19,7 @@
 - 阅读器色板预设名称（`BACKGROUND_PRESETS` / `TEXT_PRESETS`）保留中文，因这些名称是颜色的语义标签，不是 UI 文案。
 
 ### 测试
-- 全量门禁通过：`verifyKotlinStyle` → `testDebugUnitTest`（262 测试，0 失败）→ `coverageSummary`（48/63 = 76.2%）。
+- 全量门禁通过：`verifyKotlinStyle` → `testDebugUnitTest`（281 测试，0 失败）→ `coverageSummary`（48/63 = 76.2%）。
 
 ---
 
