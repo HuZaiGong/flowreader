@@ -6,8 +6,40 @@ import android.net.Uri
 import com.flowreader.app.core.util.ReaderBackgroundImage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.InputStream
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * Wraps an [InputStream] to throw once [maxBytes] have been read.
+ *
+ * Used when a content URI returns unknown length — the declared-size check cannot gate it, so the
+ * stream itself must enforce the cap before decode work begins.
+ */
+private class BoundedInputStream(
+    private val source: InputStream,
+    private val maxBytes: Long
+) : InputStream() {
+    private var bytesRead = 0L
+
+    override fun read(): Int {
+        if (bytesRead >= maxBytes) error("stream exceeded ${maxBytes}-byte limit")
+        val b = source.read()
+        if (b >= 0) bytesRead++
+        return b
+    }
+
+    override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+        if (bytesRead >= maxBytes) error("stream exceeded ${maxBytes}-byte limit")
+        val remaining = (maxBytes - bytesRead).coerceAtMost(length.toLong()).toInt()
+        if (remaining <= 0) return -1
+        val count = source.read(buffer, offset, remaining)
+        if (count > 0) bytesRead += count
+        return count
+    }
+
+    override fun close() = source.close()
+}
 
 /**
  * Copies a user-picked image into `filesDir/backgrounds/` for use as the reader background.
@@ -46,7 +78,15 @@ class ReaderBackgroundImporter @Inject constructor(
         }
 
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        appContext.contentResolver.openInputStream(uri)?.use { stream ->
+        val boundStream = if (declaredSize != null) {
+            appContext.contentResolver.openInputStream(uri)
+        } else {
+            // No declared size — wrap the stream to enforce the cap during decoding.
+            appContext.contentResolver.openInputStream(uri)?.let { raw ->
+                BoundedInputStream(raw, ReaderBackgroundImage.MAX_IMAGE_BYTES.toLong())
+            }
+        }
+        boundStream?.use { stream ->
             BitmapFactory.decodeStream(stream, null, bounds)
         } ?: error("cannot open the selected image")
 
@@ -57,7 +97,14 @@ class ReaderBackgroundImporter @Inject constructor(
         val decodeOptions = BitmapFactory.Options().apply {
             inSampleSize = ReaderBackgroundImage.sampleSizeFor(bounds.outWidth, bounds.outHeight)
         }
-        val bitmap = appContext.contentResolver.openInputStream(uri)?.use { stream ->
+        val decodeStream = if (declaredSize != null) {
+            appContext.contentResolver.openInputStream(uri)
+        } else {
+            appContext.contentResolver.openInputStream(uri)?.let { raw ->
+                BoundedInputStream(raw, ReaderBackgroundImage.MAX_IMAGE_BYTES.toLong())
+            }
+        }
+        val bitmap = decodeStream?.use { stream ->
             BitmapFactory.decodeStream(stream, null, decodeOptions)
         } ?: error("cannot decode the selected image")
 

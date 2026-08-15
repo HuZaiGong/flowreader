@@ -118,15 +118,16 @@ class ReaderBackgroundImageTest {
     @Test
     fun minimumReadableAlphaNeverDropsBelowTheFloor() {
         ReaderPalettes.all.forEach { palette ->
-            val minimum = ReaderBackgroundImage.minimumReadableAlpha(
-                textArgb = palette.textArgb,
-                scrimArgb = palette.backgroundArgb,
-                paletteIsDark = palette.isDark
-            )
-            assertNotNull(minimum)
+            val minimum = requireNotNull(
+                ReaderBackgroundImage.minimumReadableAlpha(
+                    textArgb = palette.textArgb,
+                    scrimArgb = palette.backgroundArgb,
+                    paletteIsDark = palette.isDark
+                )
+            ) { "${palette.id} returned null — no alpha satisfies the contrast requirement" }
             assertTrue(
                 "${palette.id} reported $minimum which is below the floor",
-                minimum!! >= ReaderBackgroundImage.MIN_SCRIM_ALPHA
+                minimum >= ReaderBackgroundImage.MIN_SCRIM_ALPHA
             )
         }
     }
@@ -149,15 +150,16 @@ class ReaderBackgroundImageTest {
                     paletteIsDark = palette.isDark
                 )
             )
-            val minimum = ReaderBackgroundImage.minimumReadableAlpha(
-                textArgb = palette.textArgb,
-                scrimArgb = palette.backgroundArgb,
-                paletteIsDark = palette.isDark
-            )
-            assertNotNull(minimum)
+            val minimum = requireNotNull(
+                ReaderBackgroundImage.minimumReadableAlpha(
+                    textArgb = palette.textArgb,
+                    scrimArgb = palette.backgroundArgb,
+                    paletteIsDark = palette.isDark
+                )
+            ) { "${palette.id} returned null — no alpha satisfies the contrast requirement" }
             assertTrue(
                 "${palette.id} should need more than the floor, reported $minimum",
-                minimum!! > ReaderBackgroundImage.MIN_SCRIM_ALPHA
+                minimum > ReaderBackgroundImage.MIN_SCRIM_ALPHA
             )
         }
     }

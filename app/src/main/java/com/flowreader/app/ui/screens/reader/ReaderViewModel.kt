@@ -56,6 +56,7 @@ data class ReaderUiState(
     val hasSearched: Boolean = false,
     val isLoading: Boolean = true,
     val error: String? = null,
+    val message: String? = null,
     val todayReadTime: Long = 0,
     val todayReadPages: Int = 0,
     val shareText: String? = null,
@@ -723,7 +724,7 @@ class ReaderViewModel @Inject constructor(
                 },
                 onFailure = { error ->
                     // Keep the existing background on failure rather than clearing to a blank state.
-                    _uiState.update { it.copy(error = "导入背景图失败: ${error.message}") }
+                    _uiState.update { it.copy(message = "导入背景图失败: ${error.message}") }
                 }
             )
         }
