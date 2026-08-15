@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.res.stringResource
+import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.reader.ReaderPalette
 import com.flowreader.app.core.designsystem.reader.background
 import com.flowreader.app.core.designsystem.reader.text
@@ -61,20 +63,20 @@ fun ReaderSelectionBar(
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 SelectionAction(
-                    label = "高亮",
-                    icon = { Icon(Icons.Default.FormatColorFill, contentDescription = "高亮选中文本", tint = it) },
+                    label = stringResource(R.string.reader_selection_highlight),
+                    icon = { Icon(Icons.Default.FormatColorFill, contentDescription = stringResource(R.string.reader_selection_highlight_desc), tint = it) },
                     tint = palette.text,
                     onClick = onHighlight
                 )
                 SelectionAction(
-                    label = "复制",
-                    icon = { Icon(Icons.Default.ContentCopy, contentDescription = "复制选中文本", tint = it) },
+                    label = stringResource(R.string.reader_selection_copy),
+                    icon = { Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.reader_selection_copy_desc), tint = it) },
                     tint = palette.text,
                     onClick = onCopy
                 )
                 SelectionAction(
-                    label = "书签",
-                    icon = { Icon(Icons.Default.BookmarkAdd, contentDescription = "为选中文本添加书签", tint = it) },
+                    label = stringResource(R.string.reader_selection_bookmark),
+                    icon = { Icon(Icons.Default.BookmarkAdd, contentDescription = stringResource(R.string.reader_selection_bookmark_desc), tint = it) },
                     tint = palette.text,
                     onClick = onBookmark
                 )

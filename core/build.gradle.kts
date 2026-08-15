@@ -22,6 +22,9 @@ android {
     buildFeatures {
         compose = true
     }
+    composeCompiler {
+        stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_compiler_config.conf"))
+    }
     testOptions {
         unitTests.isReturnDefaultValues = true
     }

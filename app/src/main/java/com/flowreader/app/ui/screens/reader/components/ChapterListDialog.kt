@@ -6,7 +6,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.flowreader.app.R
 import com.flowreader.app.domain.model.Chapter
 
 @Composable
@@ -20,12 +22,12 @@ fun ChapterListDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("目录") },
+        title = { Text(stringResource(R.string.reader_chapters_title)) },
         text = {
             LazyColumn(
                 modifier = Modifier.heightIn(max = 400.dp)
             ) {
-                items(chapters.size) { index ->
+                items(chapters.size, key = { chapters[it].id }) { index ->
                     val isCurrentChapter = index == currentChapter
                     ListItem(
                         headlineContent = {
@@ -47,7 +49,7 @@ fun ChapterListDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.action_close))
             }
         }
     )

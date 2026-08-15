@@ -26,11 +26,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
+import com.flowreader.app.R
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.util.FtsSearchResult
 
@@ -49,15 +51,15 @@ fun AnnotationsDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("高亮与笔记") },
+        title = { Text(stringResource(R.string.reader_menu_annotations)) },
         text = {
             if (annotations.isEmpty()) {
-                Text("暂无高亮或笔记\n\n选中文字后点击高亮按钮添加")
+                Text(stringResource(R.string.reader_annotations_empty))
             } else {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 400.dp)
                 ) {
-                    items(annotations.size) { index ->
+                    items(annotations.size, key = { annotations[it].id }) { index ->
                         val annotation = annotations[index]
                         ListItem(
                             headlineContent = {
@@ -70,7 +72,7 @@ fun AnnotationsDialog(
                             supportingContent = {
                                 if (annotation.note.isNotBlank()) {
                                     Text(
-                                        text = "笔记: ${annotation.note}",
+                                        text = stringResource(R.string.reader_annotation_note, annotation.note),
                                         maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
                                         color = MaterialTheme.colorScheme.primary
@@ -93,10 +95,10 @@ fun AnnotationsDialog(
                                         editingNoteId = annotation.id
                                         editingNoteText = annotation.note
                                     }) {
-                                        Icon(Icons.Default.Edit, contentDescription = "编辑笔记")
+                                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.reader_edit_note))
                                     }
                                     IconButton(onClick = { onAnnotationDelete(annotation) }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "删除")
+                                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                                     }
                                 }
                             },
@@ -108,7 +110,7 @@ fun AnnotationsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.action_close))
             }
         }
     )
@@ -116,12 +118,12 @@ fun AnnotationsDialog(
     if (editingNoteId != null) {
         AlertDialog(
             onDismissRequest = { editingNoteId = null },
-            title = { Text("编辑笔记") },
+            title = { Text(stringResource(R.string.reader_edit_note)) },
             text = {
                 OutlinedTextField(
                     value = editingNoteText,
                     onValueChange = { editingNoteText = it },
-                    label = { Text("笔记内容") },
+                    label = { Text(stringResource(R.string.reader_note_label)) },
                     modifier = Modifier.fillMaxWidth(),
                     maxLines = 5
                 )
@@ -133,12 +135,12 @@ fun AnnotationsDialog(
                     }
                     editingNoteId = null
                 }) {
-                    Text("保存")
+                    Text(stringResource(R.string.action_save))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { editingNoteId = null }) {
-                    Text("取消")
+                    Text(stringResource(R.string.action_cancel))
                 }
             }
         )
@@ -152,9 +154,10 @@ fun ShareProgressDialog(
     onShare: (Intent) -> Unit,
     onShareCard: () -> Unit
 ) {
+    val shareLabel = stringResource(R.string.reader_share_chooser)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("分享阅读进度") },
+        title = { Text(stringResource(R.string.reader_share_progress_title)) },
         text = {
             Column {
                 Text(
@@ -164,7 +167,7 @@ fun ShareProgressDialog(
                 TextButton(onClick = onShareCard) {
                     Icon(Icons.Default.Image, contentDescription = null)
                     Spacer(modifier = Modifier.width(FlowSpacing.sm))
-                    Text("生成分享卡片（图片）")
+                    Text(stringResource(R.string.reader_share_card))
                 }
             }
         },
@@ -175,15 +178,15 @@ fun ShareProgressDialog(
                     putExtra(Intent.EXTRA_TEXT, shareText)
                     type = "text/plain"
                 }
-                val shareIntent = Intent.createChooser(sendIntent, "分享到")
+                val shareIntent = Intent.createChooser(sendIntent, shareLabel)
                 onShare(shareIntent)
             }) {
-                Text("分享")
+                Text(stringResource(R.string.action_share))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("取消")
+                Text(stringResource(R.string.action_cancel))
             }
         }
     )
@@ -202,14 +205,14 @@ fun SearchDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("全文搜索") },
+        title = { Text(stringResource(R.string.reader_search_title)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = query,
                     onValueChange = onQueryChange,
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("输入搜索关键词") },
+                    placeholder = { Text(stringResource(R.string.reader_search_placeholder)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { onSearch() })
@@ -223,18 +226,20 @@ fun SearchDialog(
                     if (isSearching) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp))
                     } else {
-                        Text("搜索")
+                        Text(stringResource(R.string.action_search))
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 if (results.isNotEmpty()) {
                     Text(
-                        "搜索结果 (${results.size})",
+                        stringResource(R.string.reader_search_results, results.size),
                         style = MaterialTheme.typography.titleSmall
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                        items(results.size) { index ->
+                        // book_content is UNIQUE(book_id, chapter_index), so in-book search returns
+                        // at most one row per chapter and chapterIndex is a unique key.
+                        items(results.size, key = { results[it].chapterIndex }) { index ->
                             val result = results[index]
                             Card(
                                 modifier = Modifier
@@ -261,7 +266,7 @@ fun SearchDialog(
                     }
                 } else if (!isSearching && hasSearched && query.isNotEmpty()) {
                     Text(
-                        "未找到匹配结果",
+                        stringResource(R.string.reader_search_no_results),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
@@ -269,7 +274,7 @@ fun SearchDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("关闭") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_close)) }
         }
     )
 }

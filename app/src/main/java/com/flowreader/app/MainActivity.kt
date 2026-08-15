@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.IntentCompat
 import com.flowreader.app.ui.FlowReaderRoot
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -33,6 +34,6 @@ class MainActivity : ComponentActivity() {
     private fun resolveImportUri(intent: Intent?): Uri? {
         if (intent?.action != Intent.ACTION_VIEW) return null
         return intent.data
-            ?: intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+            ?: IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
     }
 }

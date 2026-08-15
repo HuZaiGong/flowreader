@@ -11,10 +11,24 @@
     <string name="action_more">More</string>
     <string name="action_search">Search</string>
     <string name="action_dismiss">Got it</string>
+    <string name="action_back">Back</string>
 
     <string name="stats_title">Stats</string>
     <string name="book_detail_title">Book details</string>
     <string name="reader_title">Reading</string>
+
+    <!-- Reader menu and dialogs -->
+    <string name="reader_menu_settings">Reading settings</string>
+    <string name="reader_menu_annotations">Highlights and notes</string>
+    <string name="reader_menu_search">Full-text search</string>
+    <string name="reader_menu_focus">Focus mode</string>
+    <string name="reader_menu_share">Share progress</string>
+    <string name="reader_bookmarks_title">Bookmarks</string>
+    <string name="reader_bookmarks_empty">No bookmarks yet</string>
+    <string name="reader_chapters_title">Contents</string>
+    <string name="reader_bookmark_entry">Chapter %1$d · position %2$d</string>
+    <string name="reader_bookmark_current"> · current chapter</string>
+    <string name="reader_toggle_controls">Toggle reading controls</string>
 
     <string name="library_title">FlowReader</string>
     <string name="library_search_placeholder">Search titles, authors or full text</string>
@@ -153,4 +167,178 @@
     <string name="opds_downloading">Downloading %1$s</string>
     <string name="opds_imported">Imported %1$s</string>
     <string name="opds_next_page">Next page</string>
+
+    <!-- v56.5.1: previously missing from this locale -->
+    <string name="library_continue_hint">Continue reading</string>
+    <string name="library_view_grid">Grid view</string>
+    <string name="library_view_list">List view</string>
+    <string name="search_title">Search library</string>
+    <string name="search_section_books">Books (%1$d)</string>
+    <string name="search_section_chapters">Chapter matches (%1$d)</string>
+    <string name="search_no_books">No book matches that title or author</string>
+    <string name="search_load_more">Load more chapter results</string>
+    <string name="search_history_title">Recent searches</string>
+    <string name="search_history_empty">Enter a keyword to search every book and chapter</string>
+    <string name="search_clear_history">Clear</string>
+    <string name="settings_lan_transfer">LAN transfer</string>
+    <string name="settings_lan_transfer_desc">Move backup files between devices on the same Wi-Fi, without the internet</string>
+    <string name="settings_lan_transfer_hint">The sender creates a backup link; the receiver pastes it to import. The link carries a random token and is valid only for this session.</string>
+    <string name="settings_lan_serve">Create backup link</string>
+    <string name="settings_lan_copy">Copy link</string>
+    <string name="settings_lan_stop">Stop serving</string>
+    <string name="settings_lan_receive">Receive and import from link</string>
+    <string name="settings_lan_receive_hint">Paste an http:// receive link</string>
+    <string name="settings_lan_ip_hint">This device on the LAN: %1$s (if it fails to connect, check that both devices are on the same Wi-Fi)</string>
+    <string name="settings_export_shelf">Export shelf info</string>
+    <string name="settings_export_shelf_desc">Export titles, authors, progress, categories and reading lists as CSV or JSON</string>
+    <string name="settings_export_shelf_choice">Choose an export format</string>
+
+    <!-- v56.5.1: common actions -->
+    <string name="action_edit">Edit</string>
+    <string name="action_share">Share</string>
+    <string name="action_add">Add</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- v56.5.1: reading stats -->
+    <string name="stats_today_section">Today</string>
+    <string name="stats_total_section">All time</string>
+    <string name="stats_read_time">Reading time</string>
+    <string name="stats_read_pages">Pages read</string>
+    <string name="stats_total_time">Total time</string>
+    <string name="stats_total_pages">Total pages</string>
+    <string name="stats_books_read">Books read</string>
+    <string name="stats_streak">Streak</string>
+    <string name="stats_subtitle_today">today</string>
+    <string name="stats_subtitle_total">all time</string>
+    <string name="stats_unit_pages">pages</string>
+    <string name="stats_unit_books">books</string>
+    <string name="stats_unit_days">days</string>
+    <string name="stats_trend_section">Last 7 days</string>
+    <string name="stats_trend_card_title">Reading time, last 7 days</string>
+    <string name="stats_trend_peak">Peak %1$s</string>
+    <string name="stats_trend_empty">No reading records yet</string>
+    <string name="stats_report_section">Reports and goals</string>
+    <string name="stats_goal_weekly">Weekly goal</string>
+    <string name="stats_goal_monthly">Monthly goal</string>
+    <string name="stats_goal_button">Goal %1$d min</string>
+    <string name="stats_report_summary">%1$s · %2$d pages</string>
+    <string name="stats_fastest_day">Fastest day: %1$s</string>
+    <string name="stats_most_read_book">Most read: %1$s</string>
+    <string name="stats_value_none">None</string>
+    <string name="stats_goal_remaining">%1$d min left to reach your goal</string>
+    <string name="stats_minutes">%1$d min</string>
+
+    <!-- v56.5.1: book detail -->
+    <string name="book_detail_tab_chapters">Chapters (%1$d)</string>
+    <string name="book_detail_tab_annotations">Annotations (%1$d)</string>
+    <string name="book_detail_tab_bookmarks">Bookmarks (%1$d)</string>
+    <string name="book_detail_export_annotations">Export annotations</string>
+    <string name="book_detail_tags_title">Reading tags</string>
+    <string name="book_detail_tags_empty">No tags yet</string>
+    <string name="book_detail_tags_edit_title">Edit tags</string>
+    <string name="book_detail_tags_hint">Separate with commas or spaces</string>
+    <string name="book_detail_cover_of">Cover of %1$s</string>
+    <string name="book_detail_chapter_count">%1$d chapters</string>
+    <string name="book_detail_read_percent">%1$s read</string>
+    <string name="book_detail_description">Description</string>
+    <string name="book_detail_not_found">Book not found</string>
+    <string name="book_detail_export_title">Annotation export</string>
+    <string name="book_detail_chapters_empty">No chapters</string>
+    <string name="book_detail_annotations_empty">No annotations</string>
+    <string name="book_detail_bookmarks_empty">No bookmarks</string>
+    <string name="book_detail_continue_reading">Continue reading</string>
+    <string name="book_detail_start_reading">Start reading</string>
+    <string name="book_detail_entry_meta">Chapter %1$d · %2$s</string>
+    <string name="book_detail_annotation_note">Note: %1$s</string>
+    <string name="book_detail_delete_annotation">Delete annotation</string>
+    <string name="book_detail_delete_bookmark">Delete bookmark</string>
+
+    <!-- v56.5.1: reader dialogs -->
+    <string name="reader_annotations_empty">No highlights or notes yet\n\nSelect text, then tap the highlight button</string>
+    <string name="reader_annotation_note">Note: %1$s</string>
+    <string name="reader_edit_note">Edit note</string>
+    <string name="reader_note_label">Note text</string>
+    <string name="reader_share_progress_title">Share reading progress</string>
+    <string name="reader_share_card">Create share card (image)</string>
+    <string name="reader_search_title">Full-text search</string>
+    <string name="reader_search_placeholder">Enter a keyword</string>
+
+    <!-- v56.5.1: reader settings sheet -->
+    <string name="reader_custom_font">Custom font</string>
+    <string name="reader_first_line_indent">Indent first line</string>
+    <string name="reader_auto_night">Auto night mode (19:00–07:00)</string>
+    <string name="reader_timer_minutes">%1$d min</string>
+    <string name="reader_palette_label">Reader theme %1$s</string>
+    <string name="reader_custom_color_label">Custom theme colour %1$s</string>
+    <string name="reader_custom_color_notice">Custom background and text colours override the selected palette; if contrast falls short, a readable palette is restored automatically.</string>
+    <string name="reader_restore_palette">Restore palette defaults</string>
+    <string name="reader_background_notice">An imported image always sits beneath a translucent scrim in the current palette colour — body text contrast is verified against a flat colour, so the scrim cannot be turned off.</string>
+    <string name="reader_background_remove">Remove image</string>
+    <string name="reader_background_min_alpha">This palette needs a scrim of at least %1$d%% to keep body text readable.</string>
+
+    <!-- v56.5.1: decision wheel -->
+    <string name="wheel_result_inline">🎉 Result</string>
+    <string name="wheel_result_dialog">🎯 Wheel result</string>
+    <string name="wheel_edit_options">Edit options</string>
+    <string name="wheel_new_option">New option</string>
+    <string name="wheel_reset_options">Reset to defaults</string>
+
+    <!-- v56.5.1: text selection bar -->
+    <string name="reader_selection_highlight">Highlight</string>
+    <string name="reader_selection_copy">Copy</string>
+    <string name="reader_selection_highlight_desc">Highlight selected text</string>
+    <string name="reader_selection_copy_desc">Copy selected text</string>
+    <string name="reader_selection_bookmark_desc">Bookmark selected text</string>
+
+    <!-- v56.5.1: reader content and views -->
+    <string name="reader_pdf_load_failed">This PDF could not be loaded</string>
+    <string name="reader_pdf_page">PDF page %1$d</string>
+    <string name="reader_illustration">Illustration</string>
+    <string name="reader_illustration_missing">Illustration missing</string>
+    <string name="reader_comic_page">Comic page %1$d</string>
+    <string name="reader_chapter_indicator">Chapter %1$d of %2$d</string>
+    <string name="reader_chapter_empty">This chapter is empty</string>
+
+    <!-- v56.5.1: durations and dates (units used to be hardcoded in :core's FlowFormatters) -->
+    <string name="duration_seconds">%1$d s</string>
+    <string name="duration_minutes">%1$d min</string>
+    <string name="duration_hours">%1$d h</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
+    <string name="spoken_date">%2$d/%1$d</string>
+    <string name="stats_chart_empty_desc">No recent reading records</string>
+    <string name="stats_chart_entry">%1$s: %2$s</string>
+    <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1: remaining new strings -->
+    <string name="reader_search_results">Search Results (%1$d)</string>
+    <string name="reader_search_no_results">No matching results</string>
+    <string name="reader_share_chooser">Share to</string>
+    <string name="reader_share_card_chooser">Share Reading Card</string>
+    <string name="wheel_spinning">Spinning…</string>
+    <string name="wheel_spin">Spin</string>
+    <string name="action_done">Done</string>
+    <string name="reader_selection_bookmark">Bookmark</string>
+    <string name="reader_background_pick">Choose Image</string>
+    <string name="reader_background_change">Change Image</string>
+    <string name="reader_section_typography">Typography</string>
+    <string name="reader_section_palette">Reading Theme</string>
+    <string name="reader_section_page_mode">Page Mode</string>
+    <string name="reader_section_eye_protection">Eye Protection Interval</string>
+    <string name="reader_section_custom_theme">Custom Theme</string>
+    <string name="reader_section_background">Background Image</string>
+    <string name="reader_setting_font">Font</string>
+    <string name="reader_setting_font_size">Font Size</string>
+    <string name="reader_setting_line_spacing">Line Spacing</string>
+    <string name="reader_setting_para_spacing">Paragraph Spacing</string>
+    <string name="reader_setting_para_spacing_value">%1$s × font size</string>
+    <string name="reader_setting_night_palette">Night Palette</string>
+    <string name="reader_setting_scrim_alpha">Scrim Opacity</string>
+    <string name="reader_setting_bg_color">Background Color</string>
+    <string name="reader_setting_text_color">Text Color</string>
+    <string name="reader_setting_color_none">Follow Palette</string>
+    <string name="reader_tts_play">Start Reading Aloud</string>
+    <string name="reader_tts_pause">Pause Reading Aloud</string>
+    <string name="reader_bookmark_default">Selected text bookmark</string>
+    <string name="reader_pdf_annotation_on">Annotation mode</string>
+    <string name="reader_pdf_annotation_off">Exit annotation mode</string>
 </resources>

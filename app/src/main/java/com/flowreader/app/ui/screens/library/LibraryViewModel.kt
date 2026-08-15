@@ -1,6 +1,7 @@
 package com.flowreader.app.ui.screens.library
 
 import android.net.Uri
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowreader.app.domain.model.Book
@@ -33,7 +34,12 @@ enum class SortOrder {
 /**
  * Localizable feedback. The ViewModel reports *what* happened; `LibraryScreen` decides how to say
  * it, so batch results survive the v53 in-app language switch instead of being frozen Chinese.
+ *
+ * `@Immutable` because a sealed interface leaves the compiler no choice but to defer to runtime,
+ * which left `LibraryUiState.message` as the one field blocking the whole state class from being
+ * stable. Every implementation below holds only an Int or a String.
  */
+@Immutable
 sealed interface LibraryMessage {
     data class Deleted(val count: Int) : LibraryMessage
     data class Moved(val count: Int) : LibraryMessage

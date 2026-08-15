@@ -65,12 +65,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.component.FlowStateHost
 import com.flowreader.app.core.designsystem.token.FlowRadius
 import com.flowreader.app.core.designsystem.token.FlowSpacing
@@ -80,6 +82,7 @@ import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.model.Bookmark
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.repository.AnnotationExportFormat
+import com.flowreader.app.ui.components.durationText
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -111,10 +114,15 @@ fun BookDetailScreen(
         if (exportText != null) {
             val sendIntent = Intent(Intent.ACTION_SEND).apply {
                 type = "text/plain"
-                putExtra(Intent.EXTRA_TITLE, uiState.book?.title ?: "标注导出")
+                putExtra(
+                    Intent.EXTRA_TITLE,
+                    uiState.book?.title ?: context.getString(R.string.book_detail_export_title)
+                )
                 putExtra(Intent.EXTRA_TEXT, exportText)
             }
-            context.startActivity(Intent.createChooser(sendIntent, "导出标注"))
+            context.startActivity(
+                Intent.createChooser(sendIntent, context.getString(R.string.book_detail_export_annotations))
+            )
             viewModel.clearAnnotationExport()
         }
     }
@@ -122,10 +130,16 @@ fun BookDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.book?.title ?: "书籍详情", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Text(
+                        uiState.book?.title ?: stringResource(R.string.book_detail_title),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 }
             )
@@ -138,7 +152,7 @@ fun BookDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues),
-            emptyTitle = "未找到书籍",
+            emptyTitle = stringResource(R.string.book_detail_not_found),
             onDismissError = onBackClick
         ) {
             val book = uiState.book ?: return@FlowStateHost
@@ -168,17 +182,23 @@ fun BookDetailScreen(
                             Tab(
                                 selected = selectedTab == 0,
                                 onClick = { selectedTab = 0 },
-                                text = { Text("目录 (${uiState.chapters.size})") }
+                                text = {
+                                    Text(stringResource(R.string.book_detail_tab_chapters, uiState.chapters.size))
+                                }
                             )
                             Tab(
                                 selected = selectedTab == 1,
                                 onClick = { selectedTab = 1 },
-                                text = { Text("标注 (${uiState.annotations.size})") }
+                                text = {
+                                    Text(stringResource(R.string.book_detail_tab_annotations, uiState.annotations.size))
+                                }
                             )
                             Tab(
                                 selected = selectedTab == 2,
                                 onClick = { selectedTab = 2 },
-                                text = { Text("书签 (${uiState.bookmarks.size})") }
+                                text = {
+                                    Text(stringResource(R.string.book_detail_tab_bookmarks, uiState.bookmarks.size))
+                                }
                             )
                         }
                     }
@@ -186,7 +206,9 @@ fun BookDetailScreen(
 
                 when (selectedTab) {
                     0 -> if (uiState.chapters.isEmpty()) {
-                        item(key = "chapters_empty") { TabEmpty("暂无目录") }
+                        item(key = "chapters_empty") {
+                            TabEmpty(stringResource(R.string.book_detail_chapters_empty))
+                        }
                     } else {
                         items(uiState.chapters, key = { "chapter_${it.id}_${it.index}" }) { chapter ->
                             ChapterItem(chapter = chapter, onClick = { onReadClick(bookId, chapter.index) })
@@ -199,7 +221,7 @@ fun BookDetailScreen(
                                 OutlinedButton(onClick = { showExportMenu = true }) {
                                     Icon(Icons.Default.Download, contentDescription = null)
                                     Spacer(modifier = Modifier.width(FlowSpacing.sm))
-                                    Text("导出标注")
+                                    Text(stringResource(R.string.book_detail_export_annotations))
                                 }
                                 DropdownMenu(
                                     expanded = showExportMenu,
@@ -218,7 +240,9 @@ fun BookDetailScreen(
                             }
                         }
                         if (uiState.annotations.isEmpty()) {
-                            item(key = "annotations_empty") { TabEmpty("暂无标注") }
+                            item(key = "annotations_empty") {
+                                TabEmpty(stringResource(R.string.book_detail_annotations_empty))
+                            }
                         } else {
                             items(uiState.annotations, key = { "annotation_${it.id}" }) { annotation ->
                                 AnnotationItem(
@@ -230,7 +254,9 @@ fun BookDetailScreen(
                     }
 
                     else -> if (uiState.bookmarks.isEmpty()) {
-                        item(key = "bookmarks_empty") { TabEmpty("暂无书签") }
+                        item(key = "bookmarks_empty") {
+                            TabEmpty(stringResource(R.string.book_detail_bookmarks_empty))
+                        }
                     } else {
                         items(uiState.bookmarks, key = { "bookmark_${it.id}" }) { bookmark ->
                             BookmarkItem(
@@ -274,11 +300,15 @@ private fun TagEditorCard(tags: List<String>, onEdit: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(FlowSpacing.sm)
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("阅读标签", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                TextButton(onClick = onEdit) { Text("编辑") }
+                Text(
+                    stringResource(R.string.book_detail_tags_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(onClick = onEdit) { Text(stringResource(R.string.action_edit)) }
             }
             if (tags.isEmpty()) {
-                Text("暂无标签", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.book_detail_tags_empty), color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 Row(horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm)) {
                     tags.forEach { tag -> AssistChip(onClick = {}, label = { Text(tag) }) }
@@ -293,12 +323,12 @@ private fun TagsDialog(tags: List<String>, onSave: (String) -> Unit, onDismiss: 
     var text by remember(tags) { mutableStateOf(tags.joinToString(", ")) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("编辑标签") },
+        title = { Text(stringResource(R.string.book_detail_tags_edit_title)) },
         text = {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                label = { Text("用逗号或空格分隔") },
+                label = { Text(stringResource(R.string.book_detail_tags_hint)) },
                 modifier = Modifier.fillMaxWidth()
             )
         },
@@ -309,10 +339,10 @@ private fun TagsDialog(tags: List<String>, onSave: (String) -> Unit, onDismiss: 
                     onDismiss()
                 }
             ) {
-                Text("保存")
+                Text(stringResource(R.string.action_save))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("取消") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } }
     )
 }
 
@@ -331,8 +361,8 @@ private fun ReadingStatsCard(totalReadTime: Long, totalReadPages: Int) {
         ) {
             StatColumn(
                 icon = { Icon(Icons.Default.Timer, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                value = FlowFormatters.duration(totalReadTime),
-                label = "阅读时长"
+                value = durationText(totalReadTime),
+                label = stringResource(R.string.stats_read_time)
             )
             StatColumn(
                 icon = {
@@ -343,7 +373,7 @@ private fun ReadingStatsCard(totalReadTime: Long, totalReadPages: Int) {
                     )
                 },
                 value = "$totalReadPages",
-                label = "阅读页数"
+                label = stringResource(R.string.stats_read_pages)
             )
         }
     }
@@ -378,7 +408,7 @@ private fun BookInfoHeader(book: Book, onReadClick: () -> Unit) {
                                 .data(File(coverPath))
                                 .crossfade(true)
                                 .build(),
-                            contentDescription = "《${book.title}》封面",
+                            contentDescription = stringResource(R.string.book_detail_cover_of, book.title),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                             loading = { CoverFallback() },
@@ -404,14 +434,17 @@ private fun BookInfoHeader(book: Book, onReadClick: () -> Unit) {
                     )
                     Spacer(modifier = Modifier.height(FlowSpacing.sm))
                     Text(
-                        text = "${book.totalChapters} 章",
+                        text = stringResource(R.string.book_detail_chapter_count, book.totalChapters),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (book.readingProgress > 0) {
                         Spacer(modifier = Modifier.height(FlowSpacing.sm))
                         Text(
-                            text = "已读 ${FlowFormatters.percent(book.readingProgress)}",
+                            text = stringResource(
+                                R.string.book_detail_read_percent,
+                                FlowFormatters.percent(book.readingProgress)
+                            ),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -422,7 +455,7 @@ private fun BookInfoHeader(book: Book, onReadClick: () -> Unit) {
             if (book.description.isNotBlank()) {
                 Spacer(modifier = Modifier.height(FlowSpacing.lg))
                 Text(
-                    text = "简介",
+                    text = stringResource(R.string.book_detail_description),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -444,7 +477,15 @@ private fun BookInfoHeader(book: Book, onReadClick: () -> Unit) {
                     contentDescription = null
                 )
                 Spacer(modifier = Modifier.width(FlowSpacing.sm))
-                Text(if (book.readingProgress > 0) "继续阅读" else "开始阅读")
+                Text(
+                    stringResource(
+                        if (book.readingProgress > 0) {
+                            R.string.book_detail_continue_reading
+                        } else {
+                            R.string.book_detail_start_reading
+                        }
+                    )
+                )
             }
         }
     }
@@ -493,14 +534,18 @@ private fun AnnotationItem(annotation: Annotation, onDelete: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(FlowSpacing.xs))
                 Text(
-                    text = "第 ${annotation.chapterIndex + 1} 章 · ${dateFormat.format(annotation.createdTime)}",
+                    text = stringResource(
+                        R.string.book_detail_entry_meta,
+                        annotation.chapterIndex + 1,
+                        dateFormat.format(annotation.createdTime)
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (annotation.note.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "备注: ${annotation.note}",
+                        text = stringResource(R.string.book_detail_annotation_note, annotation.note),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -509,7 +554,7 @@ private fun AnnotationItem(annotation: Annotation, onDelete: () -> Unit) {
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "删除标注",
+                    contentDescription = stringResource(R.string.book_detail_delete_annotation),
                     tint = MaterialTheme.colorScheme.error
                 )
             }
@@ -586,7 +631,11 @@ private fun BookmarkItem(bookmark: Bookmark, onOpen: () -> Unit, onDelete: () ->
                     )
                     Spacer(modifier = Modifier.height(FlowSpacing.xs))
                     Text(
-                        text = "第 ${bookmark.chapterIndex + 1} 章 · ${dateFormat.format(bookmark.createdTime)}",
+                        text = stringResource(
+                            R.string.book_detail_entry_meta,
+                            bookmark.chapterIndex + 1,
+                            dateFormat.format(bookmark.createdTime)
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -594,7 +643,7 @@ private fun BookmarkItem(bookmark: Bookmark, onOpen: () -> Unit, onDelete: () ->
                 IconButton(onClick = { isDeleting = true }) {
                     Icon(
                         imageVector = Icons.Default.Delete,
-                        contentDescription = "删除书签",
+                        contentDescription = stringResource(R.string.book_detail_delete_bookmark),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }

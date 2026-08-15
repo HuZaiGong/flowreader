@@ -9,7 +9,9 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.flowreader.app.R
 import com.flowreader.app.domain.model.Bookmark
 
 @Composable
@@ -24,10 +26,10 @@ fun BookmarksDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("书签") },
+        title = { Text(stringResource(R.string.reader_bookmarks_title)) },
         text = {
             if (bookmarks.isEmpty()) {
-                Text("暂无书签")
+                Text(stringResource(R.string.reader_bookmarks_empty))
             } else {
                 LazyColumn(
                     modifier = Modifier.heightIn(max = 400.dp)
@@ -36,14 +38,24 @@ fun BookmarksDialog(
                         ListItem(
                             headlineContent = { Text(bookmark.text) },
                             supportingContent = {
-                                val currentMarker = if (bookmark.chapterIndex == currentChapterIndex) " · 当前章节" else ""
-                                Text("第 ${bookmark.chapterIndex + 1} 章 · 位置 ${bookmark.position}$currentMarker")
+                                val currentMarker = if (bookmark.chapterIndex == currentChapterIndex) {
+                                    stringResource(R.string.reader_bookmark_current)
+                                } else {
+                                    ""
+                                }
+                                Text(
+                                    stringResource(
+                                        R.string.reader_bookmark_entry,
+                                        bookmark.chapterIndex + 1,
+                                        bookmark.position
+                                    ) + currentMarker
+                                )
                             },
                             trailingContent = {
                                 IconButton(onClick = { onBookmarkDelete(bookmark) }) {
                                     Icon(
                                         Icons.Filled.Delete,
-                                        contentDescription = "删除"
+                                        contentDescription = stringResource(R.string.action_delete)
                                     )
                                 }
                             },
@@ -55,7 +67,7 @@ fun BookmarksDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("关闭")
+                Text(stringResource(R.string.action_close))
             }
         }
     )

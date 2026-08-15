@@ -11,10 +11,24 @@
     <string name="action_more">더보기</string>
     <string name="action_search">검색</string>
     <string name="action_dismiss">확인했어요</string>
+    <string name="action_back">뒤로</string>
 
     <string name="stats_title">통계</string>
     <string name="book_detail_title">책 정보</string>
     <string name="reader_title">읽기</string>
+
+    <!-- 리더 메뉴 및 대화상자 -->
+    <string name="reader_menu_settings">읽기 설정</string>
+    <string name="reader_menu_annotations">하이라이트와 메모</string>
+    <string name="reader_menu_search">전문 검색</string>
+    <string name="reader_menu_focus">집중 모드</string>
+    <string name="reader_menu_share">진행률 공유</string>
+    <string name="reader_bookmarks_title">북마크</string>
+    <string name="reader_bookmarks_empty">아직 북마크가 없습니다</string>
+    <string name="reader_chapters_title">목차</string>
+    <string name="reader_bookmark_entry">%1$d장 · 위치 %2$d</string>
+    <string name="reader_bookmark_current"> · 현재 장</string>
+    <string name="reader_toggle_controls">읽기 컨트롤 표시 전환</string>
 
     <string name="library_title">플로우리더</string>
     <string name="library_search_placeholder">제목, 저자 또는 전문 검색</string>
@@ -153,4 +167,178 @@
     <string name="opds_downloading">%1$s 내려받는 중</string>
     <string name="opds_imported">%1$s을(를) 가져왔습니다</string>
     <string name="opds_next_page">다음 페이지</string>
+
+    <!-- v56.5.1: 이 로케일에서 누락되었던 항목 -->
+    <string name="library_continue_hint">이어서 읽기</string>
+    <string name="library_view_grid">그리드 보기</string>
+    <string name="library_view_list">목록 보기</string>
+    <string name="search_title">서재 검색</string>
+    <string name="search_section_books">도서 (%1$d)</string>
+    <string name="search_section_chapters">챕터 일치 (%1$d)</string>
+    <string name="search_no_books">제목이나 저자가 일치하는 도서가 없습니다</string>
+    <string name="search_load_more">챕터 결과 더 불러오기</string>
+    <string name="search_history_title">검색 기록</string>
+    <string name="search_history_empty">키워드를 입력해 모든 도서와 챕터를 검색하세요</string>
+    <string name="search_clear_history">지우기</string>
+    <string name="settings_lan_transfer">LAN 전송</string>
+    <string name="settings_lan_transfer_desc">같은 Wi-Fi의 기기 간에 백업 파일을 전송합니다. 인터넷은 사용하지 않습니다</string>
+    <string name="settings_lan_transfer_hint">보내는 기기에서 백업 링크를 만들고, 받는 기기에서 붙여넣어 가져옵니다. 링크에는 임의 토큰이 포함되며 이번 세션에서만 유효합니다.</string>
+    <string name="settings_lan_serve">백업 링크 만들기</string>
+    <string name="settings_lan_copy">링크 복사</string>
+    <string name="settings_lan_stop">서비스 중지</string>
+    <string name="settings_lan_receive">링크에서 받아 가져오기</string>
+    <string name="settings_lan_receive_hint">http:// 수신 링크를 붙여넣으세요</string>
+    <string name="settings_lan_ip_hint">이 기기의 LAN 주소: %1$s (연결에 실패하면 두 기기가 같은 Wi-Fi에 있는지 확인하세요)</string>
+    <string name="settings_export_shelf">서재 정보 내보내기</string>
+    <string name="settings_export_shelf_desc">제목, 저자, 진행률, 분류, 독서 목록을 CSV 또는 JSON으로 내보냅니다</string>
+    <string name="settings_export_shelf_choice">내보낼 형식 선택</string>
+
+    <!-- v56.5.1: 공통 동작 -->
+    <string name="action_edit">편집</string>
+    <string name="action_share">공유</string>
+    <string name="action_add">추가</string>
+    <string name="action_retry">다시 시도</string>
+
+    <!-- v56.5.1: 독서 통계 -->
+    <string name="stats_today_section">오늘의 독서</string>
+    <string name="stats_total_section">누적</string>
+    <string name="stats_read_time">독서 시간</string>
+    <string name="stats_read_pages">읽은 페이지</string>
+    <string name="stats_total_time">총 시간</string>
+    <string name="stats_total_pages">총 페이지</string>
+    <string name="stats_books_read">읽은 도서</string>
+    <string name="stats_streak">연속 독서</string>
+    <string name="stats_subtitle_today">오늘</string>
+    <string name="stats_subtitle_total">누적</string>
+    <string name="stats_unit_pages">페이지</string>
+    <string name="stats_unit_books">권</string>
+    <string name="stats_unit_days">일</string>
+    <string name="stats_trend_section">최근 7일 추이</string>
+    <string name="stats_trend_card_title">최근 7일 독서 시간</string>
+    <string name="stats_trend_peak">최고 %1$s</string>
+    <string name="stats_trend_empty">독서 기록이 없습니다</string>
+    <string name="stats_report_section">리포트와 목표</string>
+    <string name="stats_goal_weekly">주간 목표</string>
+    <string name="stats_goal_monthly">월간 목표</string>
+    <string name="stats_goal_button">목표 %1$d분</string>
+    <string name="stats_report_summary">시간 %1$s · %2$d페이지</string>
+    <string name="stats_fastest_day">가장 빨리 읽은 날: %1$s</string>
+    <string name="stats_most_read_book">가장 많이 읽은 도서: %1$s</string>
+    <string name="stats_value_none">없음</string>
+    <string name="stats_goal_remaining">목표까지 %1$d분 남았습니다</string>
+    <string name="stats_minutes">%1$d분</string>
+
+    <!-- v56.5.1: 도서 상세 -->
+    <string name="book_detail_tab_chapters">목차 (%1$d)</string>
+    <string name="book_detail_tab_annotations">주석 (%1$d)</string>
+    <string name="book_detail_tab_bookmarks">북마크 (%1$d)</string>
+    <string name="book_detail_export_annotations">주석 내보내기</string>
+    <string name="book_detail_tags_title">독서 태그</string>
+    <string name="book_detail_tags_empty">태그가 없습니다</string>
+    <string name="book_detail_tags_edit_title">태그 편집</string>
+    <string name="book_detail_tags_hint">쉼표나 공백으로 구분하세요</string>
+    <string name="book_detail_cover_of">%1$s 표지</string>
+    <string name="book_detail_chapter_count">%1$d개 챕터</string>
+    <string name="book_detail_read_percent">%1$s 읽음</string>
+    <string name="book_detail_description">소개</string>
+    <string name="book_detail_not_found">도서를 찾을 수 없습니다</string>
+    <string name="book_detail_export_title">주석 내보내기</string>
+    <string name="book_detail_chapters_empty">목차가 없습니다</string>
+    <string name="book_detail_annotations_empty">주석이 없습니다</string>
+    <string name="book_detail_bookmarks_empty">북마크가 없습니다</string>
+    <string name="book_detail_continue_reading">이어서 읽기</string>
+    <string name="book_detail_start_reading">읽기 시작</string>
+    <string name="book_detail_entry_meta">%1$d장 · %2$s</string>
+    <string name="book_detail_annotation_note">메모: %1$s</string>
+    <string name="book_detail_delete_annotation">주석 삭제</string>
+    <string name="book_detail_delete_bookmark">북마크 삭제</string>
+
+    <!-- v56.5.1: 리더 대화상자 -->
+    <string name="reader_annotations_empty">하이라이트나 메모가 없습니다\n\n텍스트를 선택한 뒤 하이라이트 버튼을 누르세요</string>
+    <string name="reader_annotation_note">메모: %1$s</string>
+    <string name="reader_edit_note">메모 편집</string>
+    <string name="reader_note_label">메모 내용</string>
+    <string name="reader_share_progress_title">독서 진행률 공유</string>
+    <string name="reader_share_card">공유 카드 만들기(이미지)</string>
+    <string name="reader_search_title">전문 검색</string>
+    <string name="reader_search_placeholder">검색어를 입력하세요</string>
+
+    <!-- v56.5.1: 리더 설정 -->
+    <string name="reader_custom_font">사용자 지정 글꼴</string>
+    <string name="reader_first_line_indent">첫 줄 들여쓰기</string>
+    <string name="reader_auto_night">자동 야간 모드 (19:00–07:00)</string>
+    <string name="reader_timer_minutes">%1$d분</string>
+    <string name="reader_palette_label">리더 테마 %1$s</string>
+    <string name="reader_custom_color_label">사용자 지정 테마색 %1$s</string>
+    <string name="reader_custom_color_notice">사용자 지정 배경색과 글자색은 선택한 팔레트를 덮어씁니다. 명암비가 기준에 못 미치면 읽기 쉬운 배색으로 자동 복원됩니다.</string>
+    <string name="reader_restore_palette">팔레트 기본값 복원</string>
+    <string name="reader_background_notice">가져온 이미지는 항상 현재 팔레트 색의 반투명 스크림 아래에 놓입니다. 본문 명암비는 단색 배경을 기준으로 검증하므로 스크림은 끌 수 없습니다.</string>
+    <string name="reader_background_remove">이미지 제거</string>
+    <string name="reader_background_min_alpha">이 팔레트에서 본문을 읽기 쉽게 유지하려면 최소 %1$d%% 의 스크림이 필요합니다.</string>
+
+    <!-- v56.5.1: 결정 룰렛 -->
+    <string name="wheel_result_inline">🎉 결과</string>
+    <string name="wheel_result_dialog">🎯 룰렛 결과</string>
+    <string name="wheel_edit_options">항목 편집</string>
+    <string name="wheel_new_option">새 항목</string>
+    <string name="wheel_reset_options">기본 항목으로 초기화</string>
+
+    <!-- v56.5.1: 텍스트 선택 바 -->
+    <string name="reader_selection_highlight">하이라이트</string>
+    <string name="reader_selection_copy">복사</string>
+    <string name="reader_selection_highlight_desc">선택한 텍스트 하이라이트</string>
+    <string name="reader_selection_copy_desc">선택한 텍스트 복사</string>
+    <string name="reader_selection_bookmark_desc">선택한 텍스트 북마크</string>
+
+    <!-- v56.5.1: 리더 본문과 보기 -->
+    <string name="reader_pdf_load_failed">이 PDF를 불러올 수 없습니다</string>
+    <string name="reader_pdf_page">PDF %1$d페이지</string>
+    <string name="reader_illustration">삽화</string>
+    <string name="reader_illustration_missing">삽화 없음</string>
+    <string name="reader_comic_page">만화 %1$d페이지</string>
+    <string name="reader_chapter_indicator">%1$d / %2$d장</string>
+    <string name="reader_chapter_empty">이 장에는 내용이 없습니다</string>
+
+    <!-- v56.5.1: 시간과 날짜 (단위는 이전에 :core의 FlowFormatters에 하드코딩되어 있었음) -->
+    <string name="duration_seconds">%1$d초</string>
+    <string name="duration_minutes">%1$d분</string>
+    <string name="duration_hours">%1$d시간</string>
+    <string name="duration_hours_minutes">%1$d시간 %2$d분</string>
+    <string name="spoken_date">%1$d월 %2$d일</string>
+    <string name="stats_chart_empty_desc">최근 독서 기록이 없습니다</string>
+    <string name="stats_chart_entry">%1$s %2$s</string>
+    <string name="stats_chart_separator">, </string>
+
+    <!-- v56.5.1: 나머지 새 문자열 -->
+    <string name="reader_search_results">검색 결과 (%1$d)</string>
+    <string name="reader_search_no_results">일치하는 결과가 없습니다</string>
+    <string name="reader_share_chooser">공유</string>
+    <string name="reader_share_card_chooser">독서 카드 공유</string>
+    <string name="wheel_spinning">돌아가는 중...</string>
+    <string name="wheel_spin">돌리기</string>
+    <string name="action_done">완료</string>
+    <string name="reader_selection_bookmark">북마크</string>
+    <string name="reader_background_pick">이미지 선택</string>
+    <string name="reader_background_change">이미지 변경</string>
+    <string name="reader_section_typography">타이포그래피</string>
+    <string name="reader_section_palette">독서 테마</string>
+    <string name="reader_section_page_mode">페이지 모드</string>
+    <string name="reader_section_eye_protection">눈 보호 간격</string>
+    <string name="reader_section_custom_theme">커스텀 테마</string>
+    <string name="reader_section_background">배경 이미지</string>
+    <string name="reader_setting_font">폰트</string>
+    <string name="reader_setting_font_size">글자 크기</string>
+    <string name="reader_setting_line_spacing">줄 간격</string>
+    <string name="reader_setting_para_spacing">단락 간격</string>
+    <string name="reader_setting_para_spacing_value">%1$s × 글자 크기</string>
+    <string name="reader_setting_night_palette">야간 팔레트</string>
+    <string name="reader_setting_scrim_alpha">스크림 불투명도</string>
+    <string name="reader_setting_bg_color">배경색</string>
+    <string name="reader_setting_text_color">글자색</string>
+    <string name="reader_setting_color_none">팔레트 따르기</string>
+    <string name="reader_tts_play">읽기 시작</string>
+    <string name="reader_tts_pause">읽기 일시정지</string>
+    <string name="reader_bookmark_default">선택한 텍스트 북마크</string>
+    <string name="reader_pdf_annotation_on">주석 모드</string>
+    <string name="reader_pdf_annotation_off">주석 모드 종료</string>
 </resources>

@@ -8,10 +8,10 @@ import org.junit.Test
 class ReaderPaletteIdTest {
 
     @Test
-    fun twelveBuiltInPalettesSplitIntoLightAndDark() {
-        assertEquals(12, ReaderPaletteId.entries.size)
-        assertEquals(7, ReaderPaletteId.LIGHT_PALETTES.size)
-        assertEquals(5, ReaderPaletteId.DARK_PALETTES.size)
+    fun eighteenBuiltInPalettesSplitIntoLightAndDark() {
+        assertEquals(18, ReaderPaletteId.entries.size)
+        assertEquals(9, ReaderPaletteId.LIGHT_PALETTES.size)
+        assertEquals(9, ReaderPaletteId.DARK_PALETTES.size)
         assertTrue(ReaderPaletteId.LIGHT_PALETTES.none { it.isDark })
         assertTrue(ReaderPaletteId.DARK_PALETTES.all { it.isDark })
     }

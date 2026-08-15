@@ -21,10 +21,10 @@ class ReaderPaletteContrastTest {
     }
 
     @Test
-    fun twelveBuiltInPalettesAreAvailable() {
-        assertEquals(12, ReaderPalettes.all.size)
-        assertEquals(7, ReaderPaletteId.LIGHT_PALETTES.size)
-        assertEquals(5, ReaderPaletteId.DARK_PALETTES.size)
+    fun eighteenBuiltInPalettesAreAvailable() {
+        assertEquals(18, ReaderPalettes.all.size)
+        assertEquals(9, ReaderPaletteId.LIGHT_PALETTES.size)
+        assertEquals(9, ReaderPaletteId.DARK_PALETTES.size)
     }
 
     @Test

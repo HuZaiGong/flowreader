@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalViewConfiguration
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
@@ -59,6 +60,7 @@ import com.flowreader.app.core.designsystem.reader.readerChapterTitleStyle
 import com.flowreader.app.core.designsystem.reader.readerHeadingStyle
 import com.flowreader.app.core.designsystem.reader.text
 import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.R
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.Chapter
 import com.flowreader.app.domain.model.ReadingSettings
@@ -391,7 +393,7 @@ private fun ReaderImage(path: String, tint: Color) {
     if (exists) {
         AsyncImage(
             model = file,
-            contentDescription = "插图",
+            contentDescription = stringResource(R.string.reader_illustration),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = FlowSpacing.sm)
@@ -408,7 +410,7 @@ private fun ReaderImage(path: String, tint: Color) {
         ) {
             Icon(
                 imageVector = Icons.Default.BrokenImage,
-                contentDescription = "插图缺失",
+                contentDescription = stringResource(R.string.reader_illustration_missing),
                 tint = tint.copy(alpha = 0.3f)
             )
         }

@@ -28,7 +28,7 @@ enum class ColorSource(val displayName: String) {
 }
 
 /**
- * The 12 built-in reader palettes. Only the identity lives here — the actual color values are a
+ * The 18 built-in reader palettes. Only the identity lives here — the actual color values are a
  * rendering concern and live in `:core` (`ReaderPalettes`).
  */
 enum class ReaderPaletteId(val displayName: String, val isDark: Boolean) {
@@ -43,7 +43,13 @@ enum class ReaderPaletteId(val displayName: String, val isDark: Boolean) {
     INK_BLUE("墨蓝", true),
     DEEP_BROWN("深棕", true),
     OBSIDIAN("曜石", true),
-    OLED("纯黑", true);
+    OLED("纯黑", true),
+    SOLARIZED_LIGHT("曝光浅", false),
+    ROSE_QUARTZ("石英粉", false),
+    SOLARIZED_DARK("曝光深", true),
+    NORD("极地", true),
+    GRUVBOX("复古暖", true),
+    FOREST("深林", true);
 
     companion object {
         val LIGHT_PALETTES: List<ReaderPaletteId> get() = entries.filter { !it.isDark }
@@ -144,6 +150,13 @@ data class ReadingSettings(
     val tapZoneRatio: Float = 0.3f,
     val customTextColorArgb: Long? = null,
     val customBackgroundColorArgb: Long? = null,
+    /**
+     * Absolute path to a user-imported reader background under `filesDir/backgrounds/`, or null for
+     * the palette's flat colour. Always rendered under a scrim — see `ReaderBackgroundImage`.
+     */
+    val backgroundImagePath: String? = null,
+    /** Scrim opacity over [backgroundImagePath]. Clamped by `ReaderBackgroundImage.clampScrimAlpha`. */
+    val backgroundScrimAlpha: Float = 0.85f,
     val gestureSettings: GestureSettings = GestureSettings()
 ) {
     companion object {

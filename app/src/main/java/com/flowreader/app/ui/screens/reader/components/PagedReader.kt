@@ -23,10 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.reader.ReaderMetrics
 import com.flowreader.app.core.designsystem.reader.ReaderPalette
 import com.flowreader.app.core.designsystem.reader.background
@@ -138,7 +140,7 @@ fun PagedReader(
 
         if (pages.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("本章暂无内容", color = palette.text.copy(alpha = 0.5f))
+                Text(stringResource(R.string.reader_chapter_empty), color = palette.text.copy(alpha = 0.5f))
             }
             return@BoxWithConstraints
         }
