@@ -44,7 +44,7 @@ The UI and documentation are primarily Chinese while code identifiers are Englis
 
 ### Reader
 
-- **12 reading palettes**: paper white, cream, eye-care green, linen, morning mist, cool gray, e-ink, night black, ink blue, dark brown, obsidian, pure black — all asserted automatically against WCAG AA body-text contrast; custom background / text colors are supported too, with the same contrast checks.
+- **18 reading palettes**: paper white, cream, eye-care green, linen, morning mist, cool gray, e-ink, solarized light, rose quartz, night black, ink blue, dark brown, obsidian, pure black, solarized dark, nord, gruvbox, forest — all asserted automatically against WCAG AA body-text contrast; custom background / text colors are supported too, with the same contrast checks.
 - **Adjustable typography**: font size 12–32sp, line spacing 1.0–2.5x, paragraph spacing, first-line indent, external `.ttf` / `.otf` font import. Chinese body text is line-wrapped at a 34-character-per-line cap.
 - **Three page-turn modes**: slide (animated scrolling), **true pagination** (per-page measurement + swipe / tap to turn), and no-animation jumps. Only genuinely implemented options are offered — the simulation, curl and cover modes that once had nothing but a UI entry were removed along with their entry points.
 - **Native text selection**: long-press to select, word-level selection, drag to extend, dual handles; a floating action bar highlights (5 colors), copies or bookmarks, and the selected range maps exactly to the chapter source.
@@ -52,6 +52,13 @@ The UI and documentation are primarily Chinese while code identifiers are Englis
 - **PDF**: zoom, drag to flip pages, box-select region annotation.
 - **Fully configurable gestures**: tap zones, double tap, long press, left/right swipes and edge hot-zone width are all adjustable — and actually take effect.
 - **Others**: TTS read-aloud, focus mode (fullscreen immersive), keep screen on, scheduled auto night mode (19:00–07:00, re-evaluated every minute), eye-protection reminders (15/20/30/45/60 minutes), a draggable bottom progress bar.
+
+### Appearance & Theming
+
+- **12 built-in color presets** (v56.6): violet, indigo, azure, teal, emerald, moss, amber, tangerine, crimson, rose, plum, graphite. Picking one **regenerates the whole Material scheme**, not just an accent. Violet is the default and maps to the hand-tuned brand scheme verbatim, so upgrading changes nothing for existing installs.
+- **Color studio** (v56.6): Settings → Appearance → Color studio offers a **hue ring with an inscribed saturation/value disc**, a **spectrum bar**, brightness and saturation bars, and a hex field — four controls bound to one HSV state, so any of them can finish an adjustment another started. The dialog previews the generated scheme and its measured body-text contrast live; nothing is written until you hit Apply.
+- **Contrast is a guarantee, not a coincidence**: for any seed color, **every text-on-surface pair in the generated scheme clears WCAG AA (4.5:1)**. The generator is Compose-free inside `:core`, so that promise is unit-tested across all 12 presets in both modes, every 5° of the hue circle, and the degenerate black / white / mid-grey seeds.
+- **Theme mode and color source are independent axes**: light / dark / follow-system is one dimension, built-in / wallpaper / custom is another, and the reader's 18 palettes are a third that never follows the app theme.
 
 ### Notes & Data
 

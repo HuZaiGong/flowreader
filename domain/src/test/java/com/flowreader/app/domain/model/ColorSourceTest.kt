@@ -7,10 +7,15 @@ import org.junit.Test
 class ColorSourceTest {
 
     @Test
-    fun bothSourcesAreRealChoices() {
-        // Deliberately two values, not three: a "follow system" option would be
-        // indistinguishable from DYNAMIC at runtime, i.e. another fake switch.
-        assertEquals(listOf(ColorSource.BRAND, ColorSource.DYNAMIC), ColorSource.entries.toList())
+    fun everySourceIsARealChoice() {
+        // Three values as of v56.6, and each reads a different AppSettings field: BRAND takes
+        // colorPreset, CUSTOM takes customSeedArgb, DYNAMIC takes neither. A "follow system" option
+        // is still deliberately absent — it would be indistinguishable from DYNAMIC at runtime,
+        // i.e. another fake switch.
+        assertEquals(
+            listOf(ColorSource.BRAND, ColorSource.DYNAMIC, ColorSource.CUSTOM),
+            ColorSource.entries.toList()
+        )
     }
 
     @Test

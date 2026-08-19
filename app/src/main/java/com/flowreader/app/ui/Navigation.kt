@@ -110,7 +110,12 @@ fun FlowReaderNavHost(
     val screenWidthDp = LocalConfiguration.current.screenWidthDp
 
     FlowLocaleProvider(languageTag = appSettings.language.tag) {
-        FlowTheme(themeMode = appSettings.themeMode, colorSource = appSettings.colorSource) {
+        FlowTheme(
+            themeMode = appSettings.themeMode,
+            colorSource = appSettings.colorSource,
+            colorPreset = appSettings.colorPreset,
+            customSeedArgb = appSettings.customSeedArgb
+        ) {
             if (screenWidthDp >= MEDIUM_MIN_WIDTH_DP) {
                 // Medium / expanded (v55): a navigation rail keeps the reading surface wide.
                 Row(modifier = Modifier.fillMaxSize()) {

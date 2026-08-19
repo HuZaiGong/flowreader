@@ -15,7 +15,7 @@ Toolchain: JDK 17, Android SDK 35 (compileSdk 35 / minSdk 26). The Gradle wrappe
 ./gradlew assembleRelease          # R8 full-mode minify + resource shrink (signs with the DEBUG config on purpose)
 ./gradlew testDebugUnitTest        # all JVM unit tests (:app, :core, :domain, :feature:reader)
 ./gradlew verifyKotlinStyle        # ktlint (non-:app modules) + whitespace gate
-./gradlew coverageSummary          # enforces the 40% test-breadth file ratio (currently 71.0%)
+./gradlew coverageSummary          # enforces the 40% test-breadth file ratio (currently 79.4%)
 ./gradlew verifyRoborazziDebug     # screenshot regression gate
 ./gradlew performanceBaseline      # APK size tracking vs baseline/apk-size.properties
 ./gradlew clean                    # when KSP/generated state looks stale
@@ -33,7 +33,7 @@ CI (`.github/workflows/ci.yml`) runs exactly: `verifyKotlinStyle` → `testDebug
 ### Two verification gates that trip people up
 
 - **ktlint is applied to every module except `:app`** (see the `subprojects` block in the root `build.gradle.kts`). App-module Kotlin is only checked by the whitespace gate in `verifyKotlinStyle` — which fails the whole build on *any* tab character or trailing whitespace in any `.kt`/`.kts` file in the repo. `.editorconfig` sets 4-space indent, LF, max line 140, `android_studio` ktlint style.
-- **`coverageSummary` is a file-count ratio, not line coverage**: `(test files in app + core + feature + domain test source sets) / (app repository impls + app ViewModels + feature ViewModels + every :core main source file + domain repository interfaces + domain models)` must be ≥ 40% (currently 71.0%). Adding a new domain model, ViewModel or `:core` file without a test can break the build even though nothing else changed.
+- **`coverageSummary` is a file-count ratio, not line coverage**: `(test files in app + core + feature + domain test source sets) / (app repository impls + app ViewModels + feature ViewModels + every :core main source file + domain repository interfaces + domain models)` must be ≥ 40% (currently 79.4%). Adding a new domain model, ViewModel or `:core` file without a test can break the build even though nothing else changed.
 
 ## Module layout and its current reality
 
@@ -43,8 +43,8 @@ Allowed dependency direction: `feature:* → core/domain`, `data → core/domain
 
 **Important: `:feature:library` contains no source files yet.** It is a compiled, linted, and tested placeholder. `:feature:reader` now holds `ChapterPaginator`, `ReaderProgressEngine`, `ReaderSessionTracker` (all unit-tested). All screen/ViewModel code still lives in `:app`. `:core` became real in v52 and now holds the design system. Modules holding code today:
 
-- `:domain` — `domain/model/` (data classes, enums like `AppThemeMode`/`ColorSource`/`ReaderPaletteId`/`BookFormat`/`ReaderFontFamily`/`PageMode`) and `domain/repository/` (10 repository interfaces, one file each). `domain/usecase/` is an empty leftover directory; business logic lives in ViewModels by deliberate choice.
-- `:core` — the design system (v52). `core/designsystem/token/` (`FlowTokens`/`FlowBrandColors`/`FlowTypography`), `core/designsystem/theme/FlowTheme.kt`, `core/designsystem/reader/` (12 `ReaderPalette`s + `ReaderMetrics`/`ReaderTypography`), `core/designsystem/component/` (`BookCover`, `FlowScaffold`, `FlowTopBar`, `FlowStateHost`, `SkeletonBox`), and `core/util/` (`ColorContrast`, `FlowFormatters`, `ReadingProgress`, `ReaderBehavior`, `ReaderCustomTheme`, `CoverArt`, exporters). Everything under `core/util/` and `ReaderMetrics` is deliberately Compose-free so it is JVM-testable.
+- `:domain` — `domain/model/` (data classes, enums like `AppThemeMode`/`ColorSource`/`AppColorPreset`/`ReaderPaletteId`/`BookFormat`/`ReaderFontFamily`/`PageMode`) and `domain/repository/` (10 repository interfaces, one file each). `domain/usecase/` is an empty leftover directory; business logic lives in ViewModels by deliberate choice.
+- `:core` — the design system (v52). `core/designsystem/token/` (`FlowTokens`/`FlowBrandColors`/`FlowColorPresets`/`FlowTypography`), `core/designsystem/theme/FlowTheme.kt`, `core/designsystem/reader/` (18 `ReaderPalette`s + `ReaderMetrics`/`ReaderTypography`), `core/designsystem/component/` (`BookCover`, `FlowScaffold`, `FlowTopBar`, `FlowStateHost`, `SkeletonBox`), and `core/util/` (`ColorContrast`, `ColorSpaces`, `SeedColorScheme`, `ColorWheelMath`, `FlowFormatters`, `ReadingProgress`, `ReaderBehavior`, `ReaderCustomTheme`, `CoverArt`, exporters). Everything under `core/util/` and `ReaderMetrics` is deliberately Compose-free so it is JVM-testable.
 - `:data` — Room only: `AppDatabase` plus 7 DAOs and 8 entities under `data/local/`.
 - `:app` — composition root: `MainActivity`, `FlowReaderApplication`, `di/AppModule.kt`, `ui/`, `util/`, `widget/`, and **all repository implementations** in `data/repository/`.
 
@@ -78,7 +78,9 @@ Routes are the sealed class `Screen` in `ui/Navigation.kt`: `library`, `stats`, 
 
 `Screen.Reader.createRoute(bookId, chapterIndex = -1)` omits `chapterIndex` entirely when resuming; a non-negative value jumps straight to that chapter. `ReaderScreen` takes no `bookId` parameter — `ReaderViewModel` pulls both args out of `SavedStateHandle` (validate `bookId > 0` before touching the DB, since the default is `0L`).
 
-`FlowTheme` (from `:core`) is applied once, in `FlowReaderNavHost`. Do not add per-screen theme wrappers. The app theme is `AppThemeMode` (`LIGHT`/`DARK`/`FOLLOW_SYSTEM`) plus `ColorSource` (`BRAND` default / `DYNAMIC` wallpaper). The reader's 12 `ReaderPalette`s and its time-based `autoNightMode` (19:00–07:00, re-evaluated every minute) are separate and never change the app theme.
+`FlowTheme` (from `:core`) is applied once, in `FlowReaderNavHost`. Do not add per-screen theme wrappers. The app theme is `AppThemeMode` (`LIGHT`/`DARK`/`FOLLOW_SYSTEM`) plus `ColorSource` (`BRAND` default / `DYNAMIC` wallpaper / `CUSTOM` seed). The reader's 18 `ReaderPalette`s and its time-based `autoNightMode` (19:00–07:00, re-evaluated every minute) are separate and never change the app theme.
+
+App color (v56.6): `BRAND` renders one of 12 `AppColorPreset`s, `CUSTOM` generates a scheme from `AppSettings.customSeedArgb`. `AppColorPreset.VIOLET` is the default and is special-cased in `FlowColorPresets` to return the hand-tuned brand scheme verbatim — everything else goes through `SeedColorScheme`, a Compose-free HSL generator in `:core/util` that guarantees WCAG AA on every text pair for any seed. `ColorStudioDialog` (`:app`) is the hue-ring / spectrum-bar picker; its geometry lives in `:core` `ColorWheelMath`. See `AGENTS.md` for the constraints that are easy to break.
 
 In-app language switch (`AppLanguage`: zh default, en, ja, ko, de, es, fr, pt, ru): `FlowLocaleProvider` wraps `LocalContext`/`LocalConfiguration`/`LocalLayoutDirection` with a `ContextWrapper` — a bare `createConfigurationContext()` result is not an Activity and makes `hiltViewModel()`'s `findActivity()` throw. Route titles in `Screen` are `@StringRes`, never string literals — the v53 language switch freezes string-bearing statics at first composition.
 
@@ -128,7 +130,14 @@ The project is offline-first and privacy-minded — keep it that way. v56.3/v56.
 
 ## Version bookkeeping
 
-`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5644 / "56.4.4") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5660 / "56.6.0") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+
+**v56.6.0 app color presets + color studio (2026-08-19)** — 配色来源 went from two options to 12 presets + wallpaper + a custom picker:
+- `AppColorPreset` (12 seeds) in `:domain`, `ColorSource.CUSTOM` added, `AppSettings` gained `colorPreset` + `customSeedArgb`. The three sources each read a different field, so none is a duplicate of another.
+- **`AppColorPreset.VIOLET` bypasses the generator by design.** It is the default, and `:core` returns `FlowLightColorScheme`/`FlowDarkColorScheme` verbatim for it — generating the default would recolor every existing install and move the Roborazzi goldens as a side effect of adding presets. `FlowColorPresetsTest` pins the individual roles.
+- **`SeedColorScheme` (`:core/util`, Compose-free) promises WCAG AA on every text-on-surface pair for any seed.** HSL approximation of M3's HCT, chosen over adding `material-color-utilities` to an offline-first app; being Compose-free is what makes the promise unit-testable (12 presets × 2 modes × 13 pairs, plus the hue circle every 5°, plus black/white/grey seeds). Roles sweep away from their background and fall back to black/white — and `onSurfaceVariant` is held against **both** `surfaceVariant` and plain `surface`, because every subtitle in the app renders it on `surface`.
+- `updateColorPreset()`/`updateCustomSeedColor()` write `COLOR_SOURCE` in the **same `edit{}`**; splitting the writes emits a "new source + old color" `AppSettings` and the theme flashes the old scheme.
+- `ColorStudioDialog` + `:core` `ColorWheelMath`: wheel gesture ownership is decided once at touch-down; the hex field and the bars' `setProgress` semantics are the accessible path around a Canvas. See `AGENTS.md`.
 
 **v56.4.4 safe-area fix (2026-08-12)** — 「顶栏遮蔽页面内容」 on the entry pages:
 - `FlowStateHost` applied its `modifier` in the error / loading / empty branches but not in the success branch (`else -> content()`). `LibraryScreen`, `StatsScreen` and `BookDetailScreen` pass the `Scaffold`'s inset padding in through that `modifier`, so once a page had data it lost all 88dp of safe area and drew from y=0 under the `TopAppBar` — while the very same screen's loading and empty states were placed correctly. Success branch is now `Box(modifier = modifier) { content() }`.

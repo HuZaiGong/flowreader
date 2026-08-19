@@ -12,7 +12,9 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.flowreader.app.core.util.ColorSpaces
 import com.flowreader.app.core.util.ReaderBackgroundImage
+import com.flowreader.app.domain.model.AppColorPreset
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.AppThemeMode
@@ -43,6 +45,8 @@ class SettingsRepositoryImpl @Inject constructor(
     private object PreferencesKeys {
         val THEME = stringPreferencesKey(SettingsRepository.THEME_KEY)
         val COLOR_SOURCE = stringPreferencesKey("color_source")
+        val COLOR_PRESET = stringPreferencesKey("color_preset")
+        val CUSTOM_SEED_COLOR = longPreferencesKey("custom_seed_color")
         val APP_LANGUAGE = stringPreferencesKey("app_language")
         val FONT_SIZE = intPreferencesKey("font_size")
         val LINE_SPACING = floatPreferencesKey("line_spacing")
@@ -146,6 +150,11 @@ class SettingsRepositoryImpl @Inject constructor(
             AppSettings(
                 themeMode = AppThemeMode.fromStoredName(preferences[PreferencesKeys.THEME]),
                 colorSource = ColorSource.fromStoredName(preferences[PreferencesKeys.COLOR_SOURCE]),
+                colorPreset = AppColorPreset.fromStoredName(preferences[PreferencesKeys.COLOR_PRESET]),
+                // Forced opaque on read as well as on write: a value persisted with a stale alpha
+                // would make every generated role translucent, and the contrast math assumes opaque.
+                customSeedArgb = preferences[PreferencesKeys.CUSTOM_SEED_COLOR]
+                    ?.let { ColorSpaces.OPAQUE_ALPHA or (it and 0xFFFFFF) },
                 language = AppLanguage.fromStoredName(preferences[PreferencesKeys.APP_LANGUAGE]),
                 defaultReadingSettings = readReadingSettings(preferences),
                 readingReminderEnabled = preferences[PreferencesKeys.READING_REMINDER_ENABLED] ?: false,
@@ -163,6 +172,30 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun updateColorSource(source: ColorSource) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.COLOR_SOURCE] = source.name
+        }
+    }
+
+    // Both writers below set COLOR_SOURCE in the same edit{} as their own key. Two separate writes
+    // would emit an intermediate AppSettings — the new source with the old color — and the theme
+    // recomposes off that flow, so the app would visibly flash the previous scheme.
+    override suspend fun updateColorPreset(preset: AppColorPreset) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.COLOR_PRESET] = preset.name
+            preferences[PreferencesKeys.COLOR_SOURCE] = ColorSource.BRAND.name
+        }
+    }
+
+    override suspend fun updateCustomSeedColor(argb: Long?) {
+        context.dataStore.edit { preferences ->
+            if (argb != null) {
+                preferences[PreferencesKeys.CUSTOM_SEED_COLOR] = ColorSpaces.OPAQUE_ALPHA or (argb and 0xFFFFFF)
+                preferences[PreferencesKeys.COLOR_SOURCE] = ColorSource.CUSTOM.name
+            } else {
+                // Clearing the seed must also leave CUSTOM, otherwise the source would silently
+                // render the preset while the UI still reports 自定义.
+                preferences.remove(PreferencesKeys.CUSTOM_SEED_COLOR)
+                preferences[PreferencesKeys.COLOR_SOURCE] = ColorSource.BRAND.name
+            }
         }
     }
 

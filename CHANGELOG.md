@@ -4,6 +4,37 @@
 
 ---
 
+## [v56.6.0] - 2026-08-19
+> 配色来源从 2 个选项扩展为 12 套内置配色 + 跟随壁纸 + 自调色，并新增色相环／色盘／光谱条调色台。
+
+### 新增
+- **12 套内置配色**：`AppColorPreset`（经典紫、靛蓝、晴空蓝、青碧、翠绿、苔绿、琥珀、橘橙、绯红、玫瑰、梅紫、石墨）。选中任一套会重新生成整套 Material 配色，而不是只替换强调色。
+  - **经典紫是默认值，且被特意特殊处理**：`FlowColorPresets.schemeOf(VIOLET)` 原样返回手工调过的 `FlowLightColorScheme` / `FlowDarkColorScheme`，不走生成器。默认值若改走生成算法，等于给每一个从未碰过这个设置的老用户改颜色 —— `FlowColorPresetsTest` 逐个角色断言这一点。
+- **自调色调色台**（设置 → 外观 → 自调色）：`ColorStudioDialog` 提供四种输入方式绑定同一份 HSV 状态 —— **色相环 + 内嵌饱和度／明度色盘**、**光谱条**、明度条与饱和度条、十六进制输入框，任一种都能接续另一种未调完的颜色。弹窗内实时预览生成后的六个角色色块与实测正文对比度；仅在点「应用」时写入，取消则不动实时主题。
+  - 十六进制输入框不只是便利项，而是**无障碍通道**：Canvas 无法被 TalkBack 操作，两个渐变条因此也带 `progressBarRangeInfo` + `setProgress` 语义。
+- **`ColorSource.CUSTOM`**：第三种配色来源。三个来源各读 `AppSettings` 的不同字段（BRAND 读 `colorPreset`，CUSTOM 读 `customSeedArgb`，DYNAMIC 两者都不读），因此都不是彼此的重复项。仍然刻意没有「跟随系统」—— 运行时与 DYNAMIC 无法区分，只会是又一个假开关。
+
+### 技术实现
+- **`SeedColorScheme`（`:core/util`，不依赖 Compose）**：由单一种子色生成 24 个 Material 角色的 HSL 色阶。刻意是 M3 HCT 的近似而非移植 —— `material-color-utilities` 不是依赖，`dynamicLightColorScheme` 只读壁纸，于是在「给一个离线优先的应用加一个库」和「自己维护约 150 行 HSL 数学」之间选了后者，换来的是这套生成器可以在 JVM 上被测。
+  - **承诺：任意种子色下，生成配色中的每一组正文文字／背景配对都不低于 AA 的 4.5:1。** 单靠色阶做不到这件事 —— 中等亮度的种子会让 `onPrimary` 和 `primary` 落在几乎相同的亮度上 —— 所以每个 `onX` 角色都会朝远离其背景的方向扫描亮度，最终回退到纯黑或纯白。该回退必然成功：最坏情况的背景亮度对纯黑／纯白中较远的一侧仍有 4.58:1。
+  - `onSurfaceVariant` 同时对 `surfaceVariant` **和** `surface` 校验，`onSurface` 反之亦然 —— 应用里每一条副标题都是 `onSurfaceVariant` 落在纯 `surface` 上，只校验同名配对会漏掉真正的用法。
+  - 错误色系固定不随种子变化：红色的错误提示是约定，不是品牌选择；配色跑偏比不跟品牌更糟。
+  - 不设饱和度下限，因此「石墨」这套中性配色真的保持中性（`graphiteStaysNeutral` 守卫）。
+- **`ColorSpaces` / `ColorWheelMath`（`:core/util`，均不依赖 Compose）**：HSV／HSL 转换、十六进制解析，以及调色台的全部几何运算（环形命中判定、内嵌方块边长、手柄反算）。放在这里是因为逆映射一旦差一点，表现就是「圆点跟不上手指」，而这种问题只有在 JVM 测试里才便宜。
+- **写入语义**：`updateColorPreset()` / `updateCustomSeedColor()` 都在**同一个 `edit{}`** 里连带写 `COLOR_SOURCE`。分成两次写会先发出一个「新来源 + 旧颜色」的中间 `AppSettings`，而主题就是从这个 flow 重组的，用户会看到旧配色闪一下。
+- 种子色在读与写两侧都强制为不透明：带旧 alpha 的持久化值会让生成的每个角色都半透明，而对比度数学假定不透明合成。
+
+### 变更
+- `settings_color_source_desc` 文案随之更新；新增 27 条字符串 × 9 种语言（每种语言 309 → 336 条）。新 UI 的标签全部走 `stringResource`，不复用 enum 里的中文 `displayName`（那些字段早于 v53 语言切换，仍被阅读器面板使用）。
+- README / README_EN 阅读色板数量由 12 更正为 18（v56.5.0 加了 6 套但漏改文档），并新增「外观与主题」小节。
+
+### 测试
+- 新增 47 个测试：`ColorSpacesTest`(12)、`SeedColorSchemeTest`(9)、`ColorWheelMathTest`(13)、`FlowColorPresetsTest`(8)、`AppColorPresetTest`(5)；`ColorSourceTest` 随 CUSTOM 更新。
+- AA 承诺的覆盖范围：12 套预设 × 明暗两档 × 13 组文字配对，整个色相圈每 5° 一档，以及纯黑／纯白／中灰／近黑等退化种子。
+- 全量测试 330 个，0 失败；测试广度 77.8% → 79.4%（54/68）。
+
+---
+
 ## [v56.5.2] - 2026-08-14
 > 性能优化：domain 模型稳定性配置使书架卡片、阅读器参数可跳过重组。
 

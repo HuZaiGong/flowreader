@@ -12,10 +12,10 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import com.flowreader.app.core.designsystem.token.FlowDarkColorScheme
-import com.flowreader.app.core.designsystem.token.FlowLightColorScheme
+import com.flowreader.app.core.designsystem.token.FlowColorPresets
 import com.flowreader.app.core.designsystem.token.FlowShapes
 import com.flowreader.app.core.designsystem.token.FlowTypography
+import com.flowreader.app.domain.model.AppColorPreset
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
 
@@ -32,12 +32,18 @@ fun AppThemeMode.isDark(): Boolean = when (this) {
  * The one and only theme wrapper. Applied once at the navigation root — never per screen.
  *
  * [colorSource] replaces the pre-v52 behaviour where Android 12+ silently forced wallpaper
- * dynamic color and the brand palette was unreachable. The default is now [ColorSource.BRAND].
+ * dynamic color and the brand palette was unreachable. The default is still [ColorSource.BRAND].
+ *
+ * v56.6 gave the two non-wallpaper sources something to vary: BRAND renders one of the 12
+ * [AppColorPreset]s and CUSTOM generates a scheme from [customSeedArgb]. A CUSTOM source with a null
+ * seed falls back to [colorPreset] rather than rendering nothing.
  */
 @Composable
 fun FlowTheme(
     themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
     colorSource: ColorSource = ColorSource.BRAND,
+    colorPreset: AppColorPreset = AppColorPreset.DEFAULT,
+    customSeedArgb: Long? = null,
     content: @Composable () -> Unit
 ) {
     val darkTheme = themeMode.isDark()
@@ -47,8 +53,10 @@ fun FlowTheme(
     val colorScheme = when {
         colorSource == ColorSource.DYNAMIC && dynamicAvailable && darkTheme -> dynamicDarkColorScheme(context)
         colorSource == ColorSource.DYNAMIC && dynamicAvailable -> dynamicLightColorScheme(context)
-        darkTheme -> FlowDarkColorScheme
-        else -> FlowLightColorScheme
+        colorSource == ColorSource.CUSTOM && customSeedArgb != null ->
+            FlowColorPresets.schemeFromSeed(customSeedArgb, darkTheme)
+        // DYNAMIC below Android 12, and CUSTOM with no seed yet, both land here on purpose.
+        else -> FlowColorPresets.schemeOf(colorPreset, darkTheme)
     }
 
     val view = LocalView.current

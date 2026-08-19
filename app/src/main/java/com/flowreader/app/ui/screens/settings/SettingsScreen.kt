@@ -2,8 +2,11 @@ package com.flowreader.app.ui.screens.settings
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -14,13 +17,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ColorLens
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
@@ -29,6 +35,7 @@ import androidx.compose.material.icons.filled.Gesture
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.TextFields
 import androidx.compose.material.icons.filled.WbSunny
@@ -58,14 +65,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.BuildConfig
 import com.flowreader.app.R
+import com.flowreader.app.core.designsystem.theme.isDark
+import com.flowreader.app.core.designsystem.token.FlowColorPresets
+import com.flowreader.app.core.designsystem.token.FlowRadius
 import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.core.util.ColorSpaces
 import com.flowreader.app.ui.screens.settings.ShelfExportFormat
+import com.flowreader.app.domain.model.AppColorPreset
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
@@ -89,6 +105,7 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     var showGestureDialog by remember { mutableStateOf(false) }
     var showShelfExportDialog by remember { mutableStateOf(false) }
     var showLanTransferDialog by remember { mutableStateOf(false) }
+    var showColorStudio by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -162,11 +179,38 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                     ColorSource.entries.forEach { source ->
                         FilterChip(
                             selected = uiState.colorSource == source,
-                            onClick = { viewModel.updateColorSource(source) },
-                            label = { Text(source.displayName) }
+                            onClick = {
+                                // CUSTOM is the only source that needs a value before it can render,
+                                // so selecting it with no stored seed opens the studio instead of
+                                // switching to a source that would silently show the preset.
+                                if (source == ColorSource.CUSTOM && uiState.customSeedArgb == null) {
+                                    showColorStudio = true
+                                } else {
+                                    viewModel.updateColorSource(source)
+                                }
+                            },
+                            label = { Text(colorSourceLabel(source)) }
                         )
                     }
                 }
+
+                // v56.6: the preset grid is what makes BRAND more than a single fixed palette.
+                if (uiState.colorSource == ColorSource.BRAND) {
+                    ColorPresetGrid(
+                        selected = uiState.colorPreset,
+                        onSelect = { viewModel.updateColorPreset(it) },
+                        modifier = Modifier.padding(horizontal = FlowSpacing.lg, vertical = FlowSpacing.sm)
+                    )
+                }
+
+                SettingsItem(
+                    icon = Icons.Default.Palette,
+                    title = stringResource(R.string.settings_color_studio),
+                    subtitle = uiState.customSeedArgb
+                        ?.let { stringResource(R.string.settings_color_studio_active, ColorSpaces.toHexString(it)) }
+                        ?: stringResource(R.string.settings_color_studio_desc),
+                    onClick = { showColorStudio = true }
+                )
 
                 // v53: the app shipped four `values-*` folders that nothing could ever select.
                 SettingsItem(
@@ -333,7 +377,113 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onDismiss = { showGestureDialog = false }
         )
     }
+
+    if (showColorStudio) {
+        ColorStudioDialog(
+            // Seeded from whatever is on screen now, so the studio opens on the current color
+            // rather than resetting to violet every time.
+            initialArgb = uiState.customSeedArgb ?: FlowColorPresets.seedOf(uiState.colorPreset),
+            dark = uiState.themeMode.isDark(),
+            onDismiss = { showColorStudio = false },
+            onConfirm = { argb ->
+                viewModel.updateCustomSeedColor(argb)
+                showColorStudio = false
+            },
+            onClear = if (uiState.customSeedArgb != null) {
+                {
+                    viewModel.updateCustomSeedColor(null)
+                    showColorStudio = false
+                }
+            } else {
+                null
+            }
+        )
+    }
 }
+
+/**
+ * The 12 built-in presets. Each swatch is the preset's seed color; the scheme it generates is
+ * previewed by applying it, which is instant and reversible, so no secondary preview is offered here.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColorPresetGrid(
+    selected: AppColorPreset,
+    onSelect: (AppColorPreset) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(FlowSpacing.sm),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        AppColorPreset.entries.forEach { preset ->
+            val isSelected = preset == selected
+            val label = colorPresetLabel(preset)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(FlowRadius.md))
+                    .background(FlowColorPresets.swatchOf(preset))
+                    .border(
+                        width = if (isSelected) 3.dp else 1.dp,
+                        color = if (isSelected) {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            MaterialTheme.colorScheme.outlineVariant
+                        },
+                        shape = RoundedCornerShape(FlowRadius.md)
+                    )
+                    .clickable { onSelect(preset) }
+                    .semantics { contentDescription = label },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isSelected) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Localized labels for the two color enums.
+ *
+ * The enums' own `displayName`s are Chinese literals (they predate the v53 language switch and are
+ * still used by the reader sheet), so anything added to this screen after v56.5's i18n pass has to
+ * resolve its label through `stringResource` instead — otherwise the eight non-Chinese locales
+ * would show Chinese preset names.
+ */
+@Composable
+private fun colorSourceLabel(source: ColorSource): String = stringResource(
+    when (source) {
+        ColorSource.BRAND -> R.string.color_source_brand
+        ColorSource.DYNAMIC -> R.string.color_source_dynamic
+        ColorSource.CUSTOM -> R.string.color_source_custom
+    }
+)
+
+@Composable
+private fun colorPresetLabel(preset: AppColorPreset): String = stringResource(
+    when (preset) {
+        AppColorPreset.VIOLET -> R.string.color_preset_violet
+        AppColorPreset.INDIGO -> R.string.color_preset_indigo
+        AppColorPreset.AZURE -> R.string.color_preset_azure
+        AppColorPreset.TEAL -> R.string.color_preset_teal
+        AppColorPreset.EMERALD -> R.string.color_preset_emerald
+        AppColorPreset.MOSS -> R.string.color_preset_moss
+        AppColorPreset.AMBER -> R.string.color_preset_amber
+        AppColorPreset.TANGERINE -> R.string.color_preset_tangerine
+        AppColorPreset.CRIMSON -> R.string.color_preset_crimson
+        AppColorPreset.ROSE -> R.string.color_preset_rose
+        AppColorPreset.PLUM -> R.string.color_preset_plum
+        AppColorPreset.GRAPHITE -> R.string.color_preset_graphite
+    }
+)
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {

@@ -15,12 +15,18 @@ enum class AppThemeMode(val displayName: String) {
 }
 
 /**
- * Where the Material color scheme comes from. [BRAND] keeps the app's own visual identity,
- * [DYNAMIC] follows the wallpaper on Android 12+ and falls back to [BRAND] below it.
+ * Where the Material color scheme comes from.
+ *
+ * [BRAND] draws from the 12 built-in [AppColorPreset]s, [DYNAMIC] follows the wallpaper on
+ * Android 12+ and falls back to [BRAND] below it, and [CUSTOM] (v56.6) generates the scheme from a
+ * user-picked seed color. Each of the three reads a *different* field of [AppSettings], so none of
+ * them is a duplicate of another: BRAND uses `colorPreset`, CUSTOM uses `customSeedArgb`, DYNAMIC
+ * uses neither.
  */
 enum class ColorSource(val displayName: String) {
-    BRAND("品牌配色"),
-    DYNAMIC("跟随壁纸");
+    BRAND("内置配色"),
+    DYNAMIC("跟随壁纸"),
+    CUSTOM("自定义");
 
     companion object {
         fun fromStoredName(raw: String?): ColorSource = entries.firstOrNull { it.name == raw } ?: BRAND
@@ -179,6 +185,13 @@ data class ReadingSettings(
 data class AppSettings(
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
     val colorSource: ColorSource = ColorSource.BRAND,
+    /** Which built-in preset [ColorSource.BRAND] renders. Ignored by the other two sources. */
+    val colorPreset: AppColorPreset = AppColorPreset.DEFAULT,
+    /**
+     * Seed color for [ColorSource.CUSTOM] as an opaque ARGB long, or null if the user has never
+     * picked one (in which case CUSTOM falls back to [colorPreset]'s seed).
+     */
+    val customSeedArgb: Long? = null,
     val language: AppLanguage = AppLanguage.FOLLOW_SYSTEM,
     val defaultReadingSettings: ReadingSettings = ReadingSettings(),
     val readingReminderEnabled: Boolean = false,

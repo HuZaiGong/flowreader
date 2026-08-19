@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowreader.app.domain.model.AppColorPreset
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppThemeMode
 import com.flowreader.app.domain.model.ColorSource
@@ -29,6 +30,8 @@ enum class ShelfExportFormat { CSV, JSON }
 data class SettingsUiState(
     val themeMode: AppThemeMode = AppThemeMode.FOLLOW_SYSTEM,
     val colorSource: ColorSource = ColorSource.BRAND,
+    val colorPreset: AppColorPreset = AppColorPreset.DEFAULT,
+    val customSeedArgb: Long? = null,
     val language: AppLanguage = AppLanguage.FOLLOW_SYSTEM,
     val readingSettings: ReadingSettings = ReadingSettings(),
     val isLoading: Boolean = true,
@@ -75,6 +78,8 @@ class SettingsViewModel @Inject constructor(
                 SettingsUiState(
                     themeMode = settings.themeMode,
                     colorSource = settings.colorSource,
+                    colorPreset = settings.colorPreset,
+                    customSeedArgb = settings.customSeedArgb,
                     language = settings.language,
                     readingSettings = settings.defaultReadingSettings,
                     isLoading = false,
@@ -258,6 +263,19 @@ class SettingsViewModel @Inject constructor(
     fun updateColorSource(source: ColorSource) {
         viewModelScope.launch {
             settingsRepository.updateColorSource(source)
+        }
+    }
+
+    fun updateColorPreset(preset: AppColorPreset) {
+        viewModelScope.launch {
+            settingsRepository.updateColorPreset(preset)
+        }
+    }
+
+    /** Applies a seed picked in the color studio. Null clears it and returns to the preset scheme. */
+    fun updateCustomSeedColor(argb: Long?) {
+        viewModelScope.launch {
+            settingsRepository.updateCustomSeedColor(argb)
         }
     }
 

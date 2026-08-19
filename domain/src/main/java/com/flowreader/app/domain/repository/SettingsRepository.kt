@@ -1,5 +1,6 @@
 package com.flowreader.app.domain.repository
 
+import com.flowreader.app.domain.model.AppColorPreset
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppSettings
 import com.flowreader.app.domain.model.AppThemeMode
@@ -17,6 +18,17 @@ interface SettingsRepository {
 
     suspend fun updateThemeMode(mode: AppThemeMode)
     suspend fun updateColorSource(source: ColorSource)
+
+    /** Selects a built-in preset and switches [ColorSource] to BRAND in one write. */
+    suspend fun updateColorPreset(preset: AppColorPreset)
+
+    /**
+     * Stores a custom seed color and switches [ColorSource] to CUSTOM in one write; a null seed
+     * clears the stored value. Both halves must land together — a seed written without the source
+     * switch is invisible, and a source switch without a seed shows the previous color.
+     */
+    suspend fun updateCustomSeedColor(argb: Long?)
+
     suspend fun updateLanguage(language: AppLanguage)
     suspend fun updateReadingSettings(settings: ReadingSettings)
     suspend fun updateReadingReminder(enabled: Boolean, hour: Int = 20, minute: Int = 0)
