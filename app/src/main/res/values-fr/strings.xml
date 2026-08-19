@@ -99,7 +99,7 @@
     <string name="color_studio_brightness">Luminosité</string>
     <string name="color_studio_saturation">Saturation</string>
     <string name="color_studio_hex">Valeur hexadécimale</string>
-    <string name="color_studio_contrast">Contraste du texte %1$s:1 (4.5:1 minimum, garanti à la génération)</string>
+    <string name="color_studio_contrast">Contraste du texte %1$.1f:1 (4,5:1 minimum, garanti à la génération)</string>
     <string name="color_studio_apply">Appliquer</string>
     <string name="color_studio_reset">Rétablir les intégrées</string>
     <string name="settings_language">Langue d\'affichage</string>

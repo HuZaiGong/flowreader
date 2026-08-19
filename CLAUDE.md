@@ -15,7 +15,7 @@ Toolchain: JDK 17, Android SDK 35 (compileSdk 35 / minSdk 26). The Gradle wrappe
 ./gradlew assembleRelease          # R8 full-mode minify + resource shrink (signs with the DEBUG config on purpose)
 ./gradlew testDebugUnitTest        # all JVM unit tests (:app, :core, :domain, :feature:reader)
 ./gradlew verifyKotlinStyle        # ktlint (non-:app modules) + whitespace gate
-./gradlew coverageSummary          # enforces the 40% test-breadth file ratio (currently 79.4%)
+./gradlew coverageSummary          # enforces the 40% test-breadth file ratio (currently 80.9%)
 ./gradlew verifyRoborazziDebug     # screenshot regression gate
 ./gradlew performanceBaseline      # APK size tracking vs baseline/apk-size.properties
 ./gradlew clean                    # when KSP/generated state looks stale
@@ -33,7 +33,7 @@ CI (`.github/workflows/ci.yml`) runs exactly: `verifyKotlinStyle` → `testDebug
 ### Two verification gates that trip people up
 
 - **ktlint is applied to every module except `:app`** (see the `subprojects` block in the root `build.gradle.kts`). App-module Kotlin is only checked by the whitespace gate in `verifyKotlinStyle` — which fails the whole build on *any* tab character or trailing whitespace in any `.kt`/`.kts` file in the repo. `.editorconfig` sets 4-space indent, LF, max line 140, `android_studio` ktlint style.
-- **`coverageSummary` is a file-count ratio, not line coverage**: `(test files in app + core + feature + domain test source sets) / (app repository impls + app ViewModels + feature ViewModels + every :core main source file + domain repository interfaces + domain models)` must be ≥ 40% (currently 79.4%). Adding a new domain model, ViewModel or `:core` file without a test can break the build even though nothing else changed.
+- **`coverageSummary` is a file-count ratio, not line coverage**: `(test files in app + core + feature + domain test source sets) / (app repository impls + app ViewModels + feature ViewModels + every :core main source file + domain repository interfaces + domain models)` must be ≥ 40% (currently 80.9%). Adding a new domain model, ViewModel or `:core` file without a test can break the build even though nothing else changed.
 
 ## Module layout and its current reality
 
@@ -130,7 +130,14 @@ The project is offline-first and privacy-minded — keep it that way. v56.3/v56.
 
 ## Version bookkeeping
 
-`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5660 / "56.6.0") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+`versionCode`/`versionName` live in `app/build.gradle.kts` (currently 5661 / "56.6.1") and `SettingsScreen` surfaces `BuildConfig.VERSION_NAME`. Releases are one commit per version with a matching `CHANGELOG.md` entry (`vNN.N.N: summary`); `ROADMAP.md` tracks the longer arc and the acknowledged tech debt.
+
+**v56.6.1 v56.6.0 follow-up sweep (2026-08-19)**:
+- **`String.format("%.1f", x)` without a `Locale` is a bug in this app, not a style nit.** The color studio's contrast readout pre-formatted the number and passed the string into `stringResource`. `String.format`'s no-locale overload uses the **JVM default locale** while string resources resolve against the **in-app language**, so under a comma-decimal locale the two disagree and a numeric placeholder throws. Format inside the resource (`%1$.1f`) and pass the raw `Double` — `Resources.getString(id, args)` uses the resource config locale. This was the only such call site; keep it that way. (The hardcoded "4.5:1" threshold in the same sentence needed the comma too, in de/es/fr/pt/ru.)
+- **Writing to a state you read in the same composition costs an extra pass every frame of a drag.** `ColorStudioDialog` stored the hex field's text and reassigned it from each picker callback during composition. The fix is the general one: keep only the *user's* draft in state (`null` = not editing) and **derive** the displayed value — `val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)`.
+- A subtitle that reads one field must gate on the field that decides whether it applies: the 自调色 row showed a stored `customSeedArgb` as "in use" while `ColorSource` was `BRAND`.
+- **`backup_rules.xml`/`data_extraction_rules.xml` back up nothing, deliberately.** `<include>` *restricts* backup to the domains it lists, and the only listed domain (`sharedpref`) is empty — the app has no `getSharedPreferences` call anywhere, and DataStore's `dataStoreFile()` lands in `filesDir/datastore/`, i.e. the `file` domain. The comments used to claim the opposite; they now state the net effect and warn against "fixing" it with `<include domain="file">`, which would push reading habits off-device through Google's backup transport. Cross-device migration is the in-app SAF/LAN backup, user-triggered.
+- **`FlowTheme`'s `remember` around the `ColorScheme` is hardening, not a shipped-bug fix.** The compiler report says `restartable skippable fun FlowTheme(...)` with all five params `stable` (`./gradlew :core:compileDebugKotlin -PcomposeReports=true`, now wired in `:core` too), so Compose skips the body outright when inputs are unchanged and the scheme was never actually rebuilt per navigation. It is kept because losing skippability on this one composable recomposes the whole app (`staticCompositionLocalOf`) and `ColorScheme` has no `equals`, so nothing downstream would catch it. `FlowThemeStabilityTest` pins scheme **identity** across recompositions; its KDoc says plainly that it is not a regression gate for a past defect. Don't let a later edit relabel either as a bug fix.
 
 **v56.6.0 app color presets + color studio (2026-08-19)** — 配色来源 went from two options to 12 presets + wallpaper + a custom picker:
 - `AppColorPreset` (12 seeds) in `:domain`, `ColorSource.CUSTOM` added, `AppSettings` gained `colorPreset` + `customSeedArgb`. The three sources each read a different field, so none is a duplicate of another.

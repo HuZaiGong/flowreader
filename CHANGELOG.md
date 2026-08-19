@@ -4,6 +4,30 @@
 
 ---
 
+## [v56.6.1] - 2026-08-19
+> v56.6.0 的排查性修复：一处非中文语言下会崩溃的格式化、一处组合期回写、一处会说谎的副标题，以及一份把备份策略写反了的注释。
+
+### 修复
+- **调色台在 de/fr/es/pt/ru 等语言下会崩溃。** `SchemePreview` 里的对比度数值先用 `String.format("%.1f", ratio)` 转成字符串再交给 `stringResource`。`String.format` 不带 locale 参数时用的是 **JVM 默认 locale**，而字符串资源是按**应用内语言设置**取的 —— 在小数点为逗号的语言下，`"4,7"` 喂给 `%1$s` 之外的数值占位符即抛异常，而排版也与该语言不一致。现在资源里就是 `%1$.1f`，`ratio: Double` 直接传给 `stringResource`，由 `Resources.getString(id, args)` 按资源 locale 格式化。这是全仓库唯一一处不带 locale 的 `String.format`。
+  - 同批修掉 de/es/fr/pt/ru 五份资源里硬写的「4.5:1」阈值 → 「4,5:1」，与同一句里现在会本地化的实测值对齐。
+- **调色台每拖一次色相环要付两次组合。** 十六进制输入框的草稿值存在 `mutableStateOf` 里，而每个取色回调都会在**组合期**把它改写成新颜色的十六进制串，同一趟组合又把它读出来渲染 —— 典型的 backwards write，Compose 只能再跑一趟才能收敛。现在草稿是「用户正在输入」的三态标记（`null` = 显示取色器的颜色），显示值由 `argb` 派生：`val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)`；取色回调只把它清成 `null`，输入框失焦时同样清空。
+- **「自调色」的副标题会声称一个没在生效的颜色。** 只要用户曾经存过自定义色，之后切回内置配色，该项仍显示 `#RRGGBB` 与「使用中」。现在多一道来源判定：`customSeedArgb?.takeIf { colorSource == CUSTOM }`。
+
+### 变更
+- **`backup_rules.xml` / `data_extraction_rules.xml` 的注释此前完全写反了**，声称会备份「阅读设置、主题、语言」。实际上 `<include>` 会把备份范围**限制**为它列出的域，而这里唯一列出的 `sharedpref` 在本应用中是空的：全仓库没有任何 `getSharedPreferences` / `PreferenceManager` 调用，设置存在 DataStore，`dataStoreFile()` 落在 `filesDir/datastore/` 即 `file` 域。也就是说**一直什么都没备份**。
+  - 按离线优先的定位，这个行为是对的，因此**只改注释不改行为**：现在注释直接写明净效果是「什么都不出设备」，并说明不要通过 `<include domain="file">` 来「修好」它 —— 那等于把用户的阅读习惯经 Google 备份通道送出设备。跨设备迁移走应用内备份／导出（SAF 文件或局域网传输），由用户显式触发。
+
+### 技术实现
+- **`FlowTheme` 的 `ColorScheme` 现在包在 `remember` 里 —— 这是加固，不是修 bug。** 最初判断是「每次导航都会重建 scheme，而 `staticCompositionLocalOf` 会重建整棵子树」，但把 `remember` 撤掉后新测试照样通过。查 Compose 编译器报告（`:core` 现已支持 `-PcomposeReports=true`）得到结论：`restartable skippable fun FlowTheme(...)`，五个参数全部 `stable` —— 输入不变时 Compose 直接跳过整个函数，函数体不会执行，因此当前**没有**这个 bug。保留 `remember` 的理由只有一个：这条路径一旦失去可跳过性（多一个不稳定参数、多一个组合期读取就够），后果是全应用重组，而代价是一次 `remember` 比较。代码注释与测试 KDoc 都按此写明了「已证明什么、未证明什么」。
+- `:core/build.gradle.kts` 补上与 `:app` 对齐的 `composeReports` 开关（默认关闭），上面那个结论就是这么查出来的。
+
+### 测试
+- 新增 `FlowThemeStabilityTest`（4 个，Robolectric + Compose）：钉住重组时 `MaterialTheme.colorScheme` 的**实例同一性**（`ColorScheme` 没有 `equals`，只能按引用比）。其 KDoc 明确标注它不是某个已发布 bug 的回归门。
+- 新增 `FlowColorPresetsTest.everySeedIsDarkEnoughForTheWhiteSelectionCheckmark`：配色选中态的白色对勾是硬编码的，守住 12 个种子色对白色都 ≥ 3:1（AA 非文本对比度）。
+- 全量测试 330 → 335 个（+4 +1），0 失败；测试广度 79.4% → 80.9%（55/68）。
+
+---
+
 ## [v56.6.0] - 2026-08-19
 > 配色来源从 2 个选项扩展为 12 套内置配色 + 跟随壁纸 + 自调色，并新增色相环／色盘／光谱条调色台。
 

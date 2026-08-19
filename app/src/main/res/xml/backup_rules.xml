@@ -2,14 +2,26 @@
 <!--
   Android Auto Backup rules (API 23+).
 
-  FlowReader backs up user preferences (SharedPreferences/DataStore) but NOT the database:
-  - Included: reading settings, theme, language (settings.preferences_pb)
-  - Excluded: device.xml (device-specific data), the Room database (books stay local)
+  Net effect: nothing leaves the device. That is deliberate, not an oversight.
 
-  Security note: Currently safe as no credentials are stored. If future versions add
-  account/sync features, use EncryptedSharedPreferences and exclude from backup.
+  An <include> list restricts backup to exactly what it names, and the one domain named here
+  is empty in practice: FlowReader has no SharedPreferences at all (there is no
+  getSharedPreferences / PreferenceManager call in the app). Settings live in DataStore
+  Preferences, and `dataStoreFile()` resolves to filesDir/datastore/settings.preferences_pb,
+  which belongs to the `file` domain — not `sharedpref`. The Room database, the FTS database,
+  covers and reader background images are all in `file` / `database` too, so they are excluded
+  by the same restriction.
+
+  Do NOT "fix" this by adding <include domain="file" .../>. Backing up the preferences file
+  would ship a user's reading habits off-device through Google's backup transport, which
+  contradicts the offline-first, no-network-sync design. Users who want their data on another
+  device use the in-app backup/export (SAF file or LAN transfer), which they trigger explicitly.
+
+  Security note: no credentials are stored anywhere today. If a future version ever adds an
+  account or sync feature, keep its secrets in EncryptedSharedPreferences and out of backup.
 -->
 <full-backup-content>
+    <!-- Restricts backup to `sharedpref`, which this app never writes to. -->
     <include domain="sharedpref" path="."/>
     <exclude domain="sharedpref" path="device.xml"/>
 </full-backup-content>

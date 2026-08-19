@@ -2,10 +2,17 @@
 <!--
   Android Cloud Backup rules (API 31+).
 
-  Same policy as backup_rules.xml: preferences only, no database.
+  Same policy as backup_rules.xml, and the same net effect: nothing leaves the device.
+  The single included domain (`sharedpref`) is empty — FlowReader has no SharedPreferences;
+  settings live in DataStore under the `file` domain, which an <include> list excludes.
+  See backup_rules.xml for why that stays as-is.
+
+  There is deliberately no <device-transfer> block, so device-to-device transfer copies
+  nothing either; the in-app LAN transfer covers that case explicitly.
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <!-- Restricts cloud backup to `sharedpref`, which this app never writes to. -->
         <include domain="sharedpref" path="."/>
         <exclude domain="sharedpref" path="device.xml"/>
     </cloud-backup>

@@ -105,7 +105,7 @@
     <string name="color_studio_brightness">明度</string>
     <string name="color_studio_saturation">彩度</string>
     <string name="color_studio_hex">16 進カラー値</string>
-    <string name="color_studio_contrast">本文コントラスト %1$s:1（4.5:1 以上、生成時に自動保証）</string>
+    <string name="color_studio_contrast">本文コントラスト %1$.1f:1（4.5:1 以上、生成時に自動保証）</string>
     <string name="color_studio_apply">適用</string>
     <string name="color_studio_reset">組み込みに戻す</string>
     <string name="settings_language">表示言語</string>

@@ -133,7 +133,7 @@
     <string name="color_studio_brightness">明度</string>
     <string name="color_studio_saturation">饱和度</string>
     <string name="color_studio_hex">十六进制色值</string>
-    <string name="color_studio_contrast">正文对比度 %1$s:1（需不低于 4.5:1，生成时自动保证）</string>
+    <string name="color_studio_contrast">正文对比度 %1$.1f:1（需不低于 4.5:1，生成时自动保证）</string>
     <string name="color_studio_apply">应用</string>
     <string name="color_studio_reset">恢复内置</string>
     <string name="settings_language">显示语言</string>

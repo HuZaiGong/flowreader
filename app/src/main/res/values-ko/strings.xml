@@ -105,7 +105,7 @@
     <string name="color_studio_brightness">명도</string>
     <string name="color_studio_saturation">채도</string>
     <string name="color_studio_hex">16진수 색상값</string>
-    <string name="color_studio_contrast">본문 대비 %1$s:1 (4.5:1 이상, 생성 시 자동 보장)</string>
+    <string name="color_studio_contrast">본문 대비 %1$.1f:1 (4.5:1 이상, 생성 시 자동 보장)</string>
     <string name="color_studio_apply">적용</string>
     <string name="color_studio_reset">내장 색상 복원</string>
     <string name="settings_language">표시 언어</string>

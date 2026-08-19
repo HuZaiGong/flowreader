@@ -23,7 +23,7 @@
 
 FlowReader is built with **Jetpack Compose + Material 3** and layered as multi-module **Clean Architecture + MVVM**. It deliberately ships no account system, no cloud sync, no analytics and no crash collection: the whole app requests a single `INTERNET` permission, used only for LAN OPDS catalogs and LAN backup transfer. There is no WebView anywhere in the app.
 
-Current version: **v56.5.2** (versionCode 5652).
+Current version: **v56.6.1** (versionCode 5661).
 
 **Supported formats**: EPUB, TXT, PDF, Markdown, FB2, MOBI, and comics — single JPG / PNG / WebP images and image-only ZIP / CBZ archives. FB2 and MOBI are imported read-only, split into chapters at import time just like EPUB. **DRM-protected MOBI / AZW files are rejected outright — no decryption of any kind**; HUFF/CDIC-compressed files are rejected whole rather than half-decoded.
 
@@ -149,6 +149,8 @@ The project is offline-first and privacy-minded; these are hard constraints:
 
 Recent releases:
 
+- **v56.6.1** — follow-up sweep on v56.6.0. The color studio pre-formatted its contrast number with a locale-less `String.format` while string resources resolve against the in-app language, so comma-decimal locales disagreed and threw; the hex field wrote to a state it read in the same composition, costing an extra pass per drag frame; the Color studio subtitle still claimed a custom color was in use after switching back to a preset. Also corrected `backup_rules.xml`'s comments, which described the opposite of the real behavior — the backup scope has always been empty (nothing leaves the device) and that is deliberate, so only the comments changed.
+- **v56.6.0** — the color source expanded from two options to **12 built-in presets + wallpaper + a custom picker**, with a hue-ring / disc / spectrum-bar studio. `:core`'s `SeedColorScheme` generates all 24 Material roles from one seed and guarantees WCAG AA (4.5:1) on every text-on-surface pair for any seed.
 - **v56.5.2** — Compose stability configuration eliminates unstable inference for domain models. The `:domain` module has no Compose compiler, causing `Book`/`Chapter`/`Annotation`/`ReadingSettings` parameters to be inferred unstable, re-executing every visible book card on any state change. Declared `com.flowreader.app.domain.model.*` stable via `compose_compiler_config.conf` and wired into all four Compose modules; unstable classes dropped from 52 to 37, all UiState now stable.
 - **v56.5.1** — Localized book detail and stats pages. `:core`'s `FlowFormatters` formats numbers, dates and units by `Locale`; domain models now carry raw values instead of concatenated strings, surviving the v53 language switch instead of frozen Chinese.
 - **v56.4.4** — fixed "content hidden behind the top bar after data loads" on the bookshelf / stats / book detail pages: the success branch of `FlowStateHost` dropped the `modifier`, so the 88dp safe area vanished in the success state while the loading / empty / error states of the same pages were fine.

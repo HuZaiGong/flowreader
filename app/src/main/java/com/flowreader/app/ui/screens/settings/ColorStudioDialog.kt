@@ -89,13 +89,15 @@ fun ColorStudioDialog(
 
     val argb = ColorSpaces.fromHsv(hue, saturation, value)
 
-    // The field is only pushed from the pickers while it is not being edited, so a half-typed
-    // "#1A" is not overwritten between keystrokes.
-    var hexInput by remember(initialArgb) { mutableStateOf(ColorSpaces.toHexString(initialArgb)) }
-    var hexFocused by remember { mutableStateOf(false) }
-    if (!hexFocused) {
-        hexInput = ColorSpaces.toHexString(argb)
-    }
+    // A null draft means "display the pickers' colour"; a non-null one means the user is mid-typing
+    // and owns the field, so a half-entered "#1A" is not overwritten between keystrokes.
+    //
+    // The display is *derived* rather than stored on purpose. v56.6.0 kept it in state and assigned
+    // to it during composition, then read it again in the same pass — a backwards write, so every
+    // wheel drag paid two composition passes instead of one. The draft is only ever cleared from
+    // event handlers below, never from composition.
+    var hexDraft by remember(initialArgb) { mutableStateOf<String?>(null) }
+    val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -107,14 +109,20 @@ fun ColorStudioDialog(
             ) {
                 SchemePreview(argb = argb, dark = dark)
 
+                // Every picker releases the hex draft: touching a picker means the user is no longer
+                // typing, so the field should follow the colour again.
                 HueRingPicker(
                     hue = hue,
                     saturation = saturation,
                     value = value,
-                    onHueChange = { hue = it },
+                    onHueChange = {
+                        hue = it
+                        hexDraft = null
+                    },
                     onSaturationValueChange = { s, v ->
                         saturation = s
                         value = v
+                        hexDraft = null
                     },
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
@@ -125,7 +133,10 @@ fun ColorStudioDialog(
                     label = stringResource(R.string.color_studio_spectrum),
                     fraction = ColorWheelMath.barFractionForHue(hue),
                     brush = Brush.horizontalGradient(SPECTRUM_COLORS),
-                    onFractionChange = { hue = it * 359.999f }
+                    onFractionChange = {
+                        hue = it * 359.999f
+                        hexDraft = null
+                    }
                 )
 
                 GradientBar(
@@ -134,7 +145,10 @@ fun ColorStudioDialog(
                     brush = Brush.horizontalGradient(
                         listOf(Color.Black, Color(ColorSpaces.fromHsv(hue, saturation, 1f)))
                     ),
-                    onFractionChange = { value = it }
+                    onFractionChange = {
+                        value = it
+                        hexDraft = null
+                    }
                 )
 
                 GradientBar(
@@ -143,13 +157,16 @@ fun ColorStudioDialog(
                     brush = Brush.horizontalGradient(
                         listOf(Color(ColorSpaces.fromHsv(hue, 0f, value)), Color(ColorSpaces.fromHsv(hue, 1f, value)))
                     ),
-                    onFractionChange = { saturation = it }
+                    onFractionChange = {
+                        saturation = it
+                        hexDraft = null
+                    }
                 )
 
                 OutlinedTextField(
-                    value = hexInput,
+                    value = hexDisplay,
                     onValueChange = { raw ->
-                        hexInput = raw
+                        hexDraft = raw
                         ColorSpaces.parseHex(raw)?.let { parsed ->
                             val hsv = ColorSpaces.toHsv(parsed)
                             // Grey has no hue to read back, so keep the current one rather than
@@ -160,11 +177,13 @@ fun ColorStudioDialog(
                         }
                     },
                     singleLine = true,
-                    isError = ColorSpaces.parseHex(hexInput) == null,
+                    isError = ColorSpaces.parseHex(hexDisplay) == null,
                     label = { Text(stringResource(R.string.color_studio_hex)) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .onFocusChanged { hexFocused = it.isFocused }
+                        // Leaving the field abandons an unparseable draft rather than stranding the
+                        // user on a red error they can only clear by moving a picker.
+                        .onFocusChanged { if (!it.isFocused) hexDraft = null }
                 )
             }
         },
@@ -392,7 +411,10 @@ private fun SchemePreview(argb: Long, dark: Boolean) {
                     style = MaterialTheme.typography.titleSmall
                 )
                 Text(
-                    text = stringResource(R.string.color_studio_contrast, String.format("%.1f", ratio)),
+                    // The `%.1f` lives in the string resource, not in a bare `String.format` here:
+                    // `getString` formats with the resource configuration's locale, so the decimal
+                    // separator follows the in-app language (7,2 in de/fr/ru) instead of the device's.
+                    text = stringResource(R.string.color_studio_contrast, ratio),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -99,7 +99,7 @@
     <string name="color_studio_brightness">Brillo</string>
     <string name="color_studio_saturation">Saturación</string>
     <string name="color_studio_hex">Valor hexadecimal</string>
-    <string name="color_studio_contrast">Contraste del texto %1$s:1 (mínimo 4.5:1, garantizado al generar)</string>
+    <string name="color_studio_contrast">Contraste del texto %1$.1f:1 (mínimo 4,5:1, garantizado al generar)</string>
     <string name="color_studio_apply">Aplicar</string>
     <string name="color_studio_reset">Restaurar integrados</string>
     <string name="settings_language">Idioma de la interfaz</string>

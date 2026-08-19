@@ -99,7 +99,7 @@
     <string name="color_studio_brightness">Яркость</string>
     <string name="color_studio_saturation">Насыщенность</string>
     <string name="color_studio_hex">Шестнадцатеричное значение</string>
-    <string name="color_studio_contrast">Контраст текста %1$s:1 (не менее 4.5:1, гарантируется при генерации)</string>
+    <string name="color_studio_contrast">Контраст текста %1$.1f:1 (не менее 4,5:1, гарантируется при генерации)</string>
     <string name="color_studio_apply">Применить</string>
     <string name="color_studio_reset">Вернуть встроенные</string>
     <string name="settings_language">Язык интерфейса</string>

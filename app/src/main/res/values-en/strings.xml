@@ -105,7 +105,7 @@
     <string name="color_studio_brightness">Brightness</string>
     <string name="color_studio_saturation">Saturation</string>
     <string name="color_studio_hex">Hex value</string>
-    <string name="color_studio_contrast">Body text contrast %1$s:1 (4.5:1 minimum, guaranteed on generation)</string>
+    <string name="color_studio_contrast">Body text contrast %1$.1f:1 (4.5:1 minimum, guaranteed on generation)</string>
     <string name="color_studio_apply">Apply</string>
     <string name="color_studio_reset">Restore built-in</string>
     <string name="settings_language">Display language</string>

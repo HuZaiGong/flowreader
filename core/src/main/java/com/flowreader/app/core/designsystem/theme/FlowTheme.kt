@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -50,13 +51,29 @@ fun FlowTheme(
     val context = LocalContext.current
     val dynamicAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
 
-    val colorScheme = when {
-        colorSource == ColorSource.DYNAMIC && dynamicAvailable && darkTheme -> dynamicDarkColorScheme(context)
-        colorSource == ColorSource.DYNAMIC && dynamicAvailable -> dynamicLightColorScheme(context)
-        colorSource == ColorSource.CUSTOM && customSeedArgb != null ->
-            FlowColorPresets.schemeFromSeed(customSeedArgb, darkTheme)
-        // DYNAMIC below Android 12, and CUSTOM with no seed yet, both land here on purpose.
-        else -> FlowColorPresets.schemeOf(colorPreset, darkTheme)
+    // Insurance, not a live bug fix — and worth keeping only because the failure mode is severe.
+    //
+    // Every branch below except the two brand singletons builds a **new** ColorScheme instance;
+    // `ColorScheme` does not override `equals` (it declares only `toString`), and `MaterialTheme`
+    // publishes it through a `staticCompositionLocalOf`, whose contract is to recompose the entire
+    // subtree when the provided value changes. So if this composable's body ever re-runs with
+    // unchanged colour inputs, the whole app UI rebuilds.
+    //
+    // Today it cannot: the compiler reports `FlowTheme` as `restartable skippable` with all five
+    // parameters `stable` (`./gradlew :core:compileDebugKotlin -PcomposeReports=true`), so Compose
+    // skips it outright when nothing changed. That guarantee is one careless parameter away from
+    // gone — adding an unstable type or a non-memoized lambda would silently turn a skip into a
+    // full-tree rebuild. `remember` makes the outcome hold either way, and `FlowThemeStabilityTest`
+    // pins the outcome rather than the mechanism.
+    val colorScheme = remember(colorSource, colorPreset, customSeedArgb, darkTheme, dynamicAvailable, context) {
+        when {
+            colorSource == ColorSource.DYNAMIC && dynamicAvailable && darkTheme -> dynamicDarkColorScheme(context)
+            colorSource == ColorSource.DYNAMIC && dynamicAvailable -> dynamicLightColorScheme(context)
+            colorSource == ColorSource.CUSTOM && customSeedArgb != null ->
+                FlowColorPresets.schemeFromSeed(customSeedArgb, darkTheme)
+            // DYNAMIC below Android 12, and CUSTOM with no seed yet, both land here on purpose.
+            else -> FlowColorPresets.schemeOf(colorPreset, darkTheme)
+        }
     }
 
     val view = LocalView.current

@@ -99,7 +99,7 @@
     <string name="color_studio_brightness">Helligkeit</string>
     <string name="color_studio_saturation">Sättigung</string>
     <string name="color_studio_hex">Hex-Farbwert</string>
-    <string name="color_studio_contrast">Textkontrast %1$s:1 (mindestens 4.5:1, bei der Erzeugung garantiert)</string>
+    <string name="color_studio_contrast">Textkontrast %1$.1f:1 (mindestens 4,5:1, bei der Erzeugung garantiert)</string>
     <string name="color_studio_apply">Anwenden</string>
     <string name="color_studio_reset">Integrierte wiederherstellen</string>
     <string name="settings_language">Anzeigesprache</string>

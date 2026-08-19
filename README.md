@@ -23,7 +23,7 @@
 
 FlowReader 用 **Jetpack Compose + Material 3** 构建，**Clean Architecture + MVVM** 多模块分层。它刻意不做账号体系、云同步、数据上报和崩溃收集：整个应用只申请一个 `INTERNET` 权限，仅供局域网 OPDS 书目与局域网备份互传使用；应用内没有任何 WebView。
 
-当前版本 **v56.5.2**（versionCode 5652）。
+当前版本 **v56.6.1**（versionCode 5661）。
 
 **支持格式**：EPUB、TXT、PDF、Markdown、FB2、MOBI，以及漫画 —— 单张 JPG / PNG / WebP 与纯图片 ZIP / CBZ 包。FB2 与 MOBI 是只读导入，在导入时像 EPUB 一样切成章节；**带 DRM 的 MOBI / AZW 直接拒绝导入，不做任何解密**，HUFF/CDIC 压缩的文件也是整体拒绝而非半解码。
 
@@ -149,6 +149,8 @@ CI（`.github/workflows/ci.yml`）严格按此顺序跑这六项：
 
 最近几个版本：
 
+- **v56.6.1** —— v56.6.0 的排查性修复。调色台的对比度数值此前用不带 locale 的 `String.format` 预格式化，而字符串资源按应用内语言解析，在小数点为逗号的语言下两者不一致并会抛异常；十六进制输入框在组合期回写自己读取的状态，每拖一次色相环多付一趟组合；「自调色」副标题在已切回内置配色时仍声称自定义色在用。另外把 `backup_rules.xml` 写反了的注释改正 —— 备份范围一直是空的（什么都不出设备），这是刻意的，只改注释不改行为。
+- **v56.6.0** —— 配色来源从 2 个选项扩展为 **12 套内置配色 + 跟随壁纸 + 自调色**，并新增色相环／色盘／光谱条调色台。`:core` 的 `SeedColorScheme` 由单一种子色生成 24 个 Material 角色，并保证任意种子下正文文字／背景都不低于 WCAG AA 的 4.5:1。
 - **v56.5.2** —— Compose 稳定性配置消除 domain 模型不稳定推断。`:domain` 模块无 Compose 编译器，导致 `Book`/`Chapter`/`Annotation`/`ReadingSettings` 等参数被推断为不稳定，每个可见书卡在任意状态变更时都重新执行。通过 `compose_compiler_config.conf` 声明 `com.flowreader.app.domain.model.*` 稳定并接入四个 Compose 模块；不稳定类从 52 个降至 37 个，所有 UiState 现在稳定。
 - **v56.5.1** —— 书籍详情与统计页本地化。`:core` 的 `FlowFormatters` 根据 `Locale` 格式化数字、日期与单位；domain 模型现在携带纯数值而非拼接字符串，避免 v53 语言切换冻结中文。
 - **v56.4.4** —— 修复书架／统计／书籍详情三页「加载出数据后内容被顶栏遮挡」：`FlowStateHost` 的成功分支丢弃了 `modifier`，导致 88dp 安全区在成功状态下消失，而同一页面的加载／空／错误状态反而正常。

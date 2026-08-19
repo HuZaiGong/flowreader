@@ -24,6 +24,9 @@ android {
     }
     composeCompiler {
         stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_compiler_config.conf"))
+        if (project.hasProperty("composeReports")) {
+            reportsDestination = layout.buildDirectory.dir("compose_reports").get().asFile
+        }
     }
     testOptions {
         unitTests.isReturnDefaultValues = true

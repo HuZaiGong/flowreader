@@ -206,7 +206,11 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
                 SettingsItem(
                     icon = Icons.Default.Palette,
                     title = stringResource(R.string.settings_color_studio),
+                    // Only claim the seed is current when CUSTOM is actually the active source. A
+                    // stored seed survives switching back to a preset, and reporting it as 当前
+                    // while a preset is on screen would be a plainly false statement.
                     subtitle = uiState.customSeedArgb
+                        ?.takeIf { uiState.colorSource == ColorSource.CUSTOM }
                         ?.let { stringResource(R.string.settings_color_studio_active, ColorSpaces.toHexString(it)) }
                         ?: stringResource(R.string.settings_color_studio_desc),
                     onClick = { showColorStudio = true }
