@@ -44,7 +44,7 @@ Flow: `Composable → ViewModel → domain repository interface → data reposit
 - `ui/screens/<screen>/` pairs `*Screen.kt` with `*ViewModel.kt`; screens: `library`, `stats`, `settings`, `wheel`, `bookdetail`, `reader`, `search`, `notes`, `readinglist`, `opds`. Each ViewModel exposes an immutable `StateFlow<XxxUiState>` backed by a private `MutableStateFlow`. The shell is `ui/AppShellViewModel.kt`, which supplies theme mode + color source (`AppSettings`) to `FlowReaderNavHost`.
 - Repository interfaces are separate files in `domain/repository/` (10: Book, Chapter, Bookmark, Annotation, Category, ReadingStats, Backup, Settings, Search, ReadingList); implementations in `:app` `data/repository/`, bound in `di/AppModule.kt`.
 - `di/AppModule.kt`: `DatabaseModule` (`@Provides`: AppDatabase with migrations + 7 DAOs) and `RepositoryModule` (`@Binds` × 10). Add bindings there for new repos.
-- No use-case layer (`domain/usecase/` is an empty leftover); logic lives in ViewModels and feature-module engines.
+- No use-case layer at all (`domain/usecase/` does not exist — it was deleted, so don't go looking for an empty directory); logic lives in ViewModels and feature-module engines.
 
 ## Navigation and theme
 

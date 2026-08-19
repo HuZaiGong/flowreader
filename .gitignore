@@ -109,12 +109,12 @@ providers.yaml.local
 .opencode/goals/
 .opencode/node_modules/
 
-# AI assistant local state. These hold machine-specific paths and permission grants,
-# not project config. Previously only ignored via a global ~/.config/git/ignore, so a
-# fresh clone on another machine would have surfaced them as untracked.
-.claude/settings.local.json
-.claude/settings.local.json.tmp.*
-.claude/worktrees/
+# AI assistant local state — the whole directory is excluded, not just settings.
+# It holds machine-specific paths, permission grants, worktrees and locally installed
+# skills, none of which are project config. Anything here that later needs to be shared
+# has to be force-added (`git add -f`) or moved out of .claude/ entirely.
+.claude/
+skills-lock.json
 
 # Working notes written during development sessions; not part of the project
 HANDOFF.md

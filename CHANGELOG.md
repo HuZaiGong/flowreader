@@ -5,26 +5,31 @@
 ---
 
 ## [v56.6.1] - 2026-08-19
-> v56.6.0 的排查性修复：一处非中文语言下会崩溃的格式化、一处组合期回写、一处会说谎的副标题，以及一份把备份策略写反了的注释。
+> v56.6.0 之后的补丁：修了非中文语言下会崩的格式化、一处组合期回写、一个说谎的副标题，顺手把两份备份注释改对了。
 
 ### 修复
-- **调色台在 de/fr/es/pt/ru 等语言下会崩溃。** `SchemePreview` 里的对比度数值先用 `String.format("%.1f", ratio)` 转成字符串再交给 `stringResource`。`String.format` 不带 locale 参数时用的是 **JVM 默认 locale**，而字符串资源是按**应用内语言设置**取的 —— 在小数点为逗号的语言下，`"4,7"` 喂给 `%1$s` 之外的数值占位符即抛异常，而排版也与该语言不一致。现在资源里就是 `%1$.1f`，`ratio: Double` 直接传给 `stringResource`，由 `Resources.getString(id, args)` 按资源 locale 格式化。这是全仓库唯一一处不带 locale 的 `String.format`。
-  - 同批修掉 de/es/fr/pt/ru 五份资源里硬写的「4.5:1」阈值 → 「4,5:1」，与同一句里现在会本地化的实测值对齐。
-- **调色台每拖一次色相环要付两次组合。** 十六进制输入框的草稿值存在 `mutableStateOf` 里，而每个取色回调都会在**组合期**把它改写成新颜色的十六进制串，同一趟组合又把它读出来渲染 —— 典型的 backwards write，Compose 只能再跑一趟才能收敛。现在草稿是「用户正在输入」的三态标记（`null` = 显示取色器的颜色），显示值由 `argb` 派生：`val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)`；取色回调只把它清成 `null`，输入框失焦时同样清空。
-- **「自调色」的副标题会声称一个没在生效的颜色。** 只要用户曾经存过自定义色，之后切回内置配色，该项仍显示 `#RRGGBB` 与「使用中」。现在多一道来源判定：`customSeedArgb?.takeIf { colorSource == CUSTOM }`。
+- **调色台在 de/fr/es/pt/ru 等语言下会崩溃。** `SchemePreview` 先把对比度数值用 `String.format("%.1f", ratio)` 转成字符串，再交给 `stringResource`。`String.format` 不带 locale 时跟的是 JVM 默认 locale，而字符串资源按应用内语言设置解析。小数点为逗号的语言下，`"4,7"` 会被作为字符串传给资源里的数值占位符，直接抛异常；就算不抛，数字格式也跟该语言对不上。现在资源里写成 `%1$.1f`，`ratio: Double` 原样传给 `stringResource`，由 `Resources.getString(id, args)` 按资源 locale 格式化。全仓库不带 locale 的 `String.format` 就这一处。
+  - de/es/fr/pt/ru 五份资源里硬写的「4.5:1」阈值也一并改成「4,5:1」，跟同一句里现在会本地化的实测值对齐。
+- **调色台每拖一次色相环要付两次组合。** 十六进制输入框的草稿存在 `mutableStateOf` 里，每个取色回调又在组合期把它改写成新颜色的十六进制串，同一趟组合再读出来渲染。这是 Compose 里典型的 backwards write，只能多跑一趟才能收敛。现在草稿改成「用户正在输入」的三态标记（`null` = 显示取色器的颜色），显示值由 `argb` 派生：`val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)`。取色回调只把它清成 `null`，输入框失焦时同样清空。
+- **「自调色」的副标题会声称一个没在生效的颜色。** 只要用户存过自定义色，之后切回内置配色，这一项照样显示 `#RRGGBB` 和「使用中」。现在加一道来源判定：`customSeedArgb?.takeIf { colorSource == CUSTOM }`。
 
 ### 变更
-- **`backup_rules.xml` / `data_extraction_rules.xml` 的注释此前完全写反了**，声称会备份「阅读设置、主题、语言」。实际上 `<include>` 会把备份范围**限制**为它列出的域，而这里唯一列出的 `sharedpref` 在本应用中是空的：全仓库没有任何 `getSharedPreferences` / `PreferenceManager` 调用，设置存在 DataStore，`dataStoreFile()` 落在 `filesDir/datastore/` 即 `file` 域。也就是说**一直什么都没备份**。
-  - 按离线优先的定位，这个行为是对的，因此**只改注释不改行为**：现在注释直接写明净效果是「什么都不出设备」，并说明不要通过 `<include domain="file">` 来「修好」它 —— 那等于把用户的阅读习惯经 Google 备份通道送出设备。跨设备迁移走应用内备份／导出（SAF 文件或局域网传输），由用户显式触发。
+- **`backup_rules.xml` / `data_extraction_rules.xml` 的注释之前写反了**，声称会备份「阅读设置、主题、语言」。实际上 `<include>` 是把备份范围限制成它列出的域，而这里唯一列出的 `sharedpref` 在本应用里是空的：全仓库没有任何 `getSharedPreferences` / `PreferenceManager` 调用，设置存在 DataStore，`dataStoreFile()` 落在 `filesDir/datastore/`，属于 `file` 域。也就是说一直什么都没备份。
+  - 按离线优先的定位，这个行为是对的，所以只改注释不改行为。现在注释直接写明结果就是「什么都不出设备」，并提醒不要用 `<include domain="file">` 去「修好」它，那等于把用户的阅读习惯经 Google 备份通道送出设备。跨设备迁移走应用内备份／导出（SAF 文件或局域网传输），由用户显式触发。
 
 ### 技术实现
-- **`FlowTheme` 的 `ColorScheme` 现在包在 `remember` 里 —— 这是加固，不是修 bug。** 最初判断是「每次导航都会重建 scheme，而 `staticCompositionLocalOf` 会重建整棵子树」，但把 `remember` 撤掉后新测试照样通过。查 Compose 编译器报告（`:core` 现已支持 `-PcomposeReports=true`）得到结论：`restartable skippable fun FlowTheme(...)`，五个参数全部 `stable` —— 输入不变时 Compose 直接跳过整个函数，函数体不会执行，因此当前**没有**这个 bug。保留 `remember` 的理由只有一个：这条路径一旦失去可跳过性（多一个不稳定参数、多一个组合期读取就够），后果是全应用重组，而代价是一次 `remember` 比较。代码注释与测试 KDoc 都按此写明了「已证明什么、未证明什么」。
-- `:core/build.gradle.kts` 补上与 `:app` 对齐的 `composeReports` 开关（默认关闭），上面那个结论就是这么查出来的。
+- **`FlowTheme` 的 `ColorScheme` 现在包在 `remember` 里，是加固，不是修 bug。** 最初怀疑每次导航都会重建 scheme，而 `staticCompositionLocalOf` 会连带重建整棵子树，但把 `remember` 撤掉后新测试照样通过。后来查 Compose 编译器报告（`:core` 已支持 `-PcomposeReports=true`），看到 `restartable skippable fun FlowTheme(...)`，五个参数全部 `stable`。输入不变时 Compose 直接跳过整个函数，函数体不会执行，所以当前没有这个 bug。保留 `remember` 的理由只有一个：这条路径一旦失去可跳过性（多一个不稳定参数、多一个组合期读取就够），后果是全应用重组，而代价只是一次 `remember` 比较。代码注释和测试 KDoc 也写明了「证明了什么、没证明什么」。
+- `:core/build.gradle.kts` 补上了和 `:app` 对齐的 `composeReports` 开关（默认关闭），上面的结论就是这么查出来的。
 
 ### 测试
-- 新增 `FlowThemeStabilityTest`（4 个，Robolectric + Compose）：钉住重组时 `MaterialTheme.colorScheme` 的**实例同一性**（`ColorScheme` 没有 `equals`，只能按引用比）。其 KDoc 明确标注它不是某个已发布 bug 的回归门。
-- 新增 `FlowColorPresetsTest.everySeedIsDarkEnoughForTheWhiteSelectionCheckmark`：配色选中态的白色对勾是硬编码的，守住 12 个种子色对白色都 ≥ 3:1（AA 非文本对比度）。
+- 新增 `FlowThemeStabilityTest`（4 个，Robolectric + Compose），断言重组时 `MaterialTheme.colorScheme` 的实例同一性（`ColorScheme` 没有 `equals`，只能按引用比）。KDoc 里写明它不是某个已发布 bug 的回归门。
+- 新增 `FlowColorPresetsTest.everySeedIsDarkEnoughForTheWhiteSelectionCheckmark`：配色选中态的白色对勾是硬编码的，保证 12 个种子色对白色都 ≥ 3:1（AA 非文本对比度）。
 - 全量测试 330 → 335 个（+4 +1），0 失败；测试广度 79.4% → 80.9%（55/68）。
+
+### 文档
+- **README 重写为写给人看的介绍，而不是一份审计清单。** 原文按「概述／功能／架构／构建／安全约束」分节，开头第二段就是模块分层与权限声明 —— 对着代码校对很方便，但一个想知道「这阅读器值不值得装」的人得读到第 47 行才看到第一个能感知的功能。现在改为先说清它是什么、为什么不做云同步（以及这个取舍的代价是什么），再按「找书／读／记笔记看数据」把功能放回使用场景里，架构与门禁下移并保留全部事实。
+- 顺带修正 README 里 4 处与代码不符的地方：`:core` 写 12 套阅读色板（实际 18，v56.5.0 加了 6 套后漏改）、`:data` 写 7 个 Entity（实际 8 —— `ReadingListItemEntity` 与 `ReadingListEntity` 在同一文件里，按文件数会少算一个）、`coverageSummary` 写 77.8%（实际 80.9%），以及安全小节仍在说「云备份只含 shared prefs」—— 这正是本版刚刚改正的那条错述，README 漏改了。
+- 另修 `CLAUDE.md` 一处过期描述：它说 `domain/usecase/` 是「空的遗留目录」，实际该目录已不存在（README 写的「已删除」才是对的）。
 
 ---
 
