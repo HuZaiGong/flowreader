@@ -1,6 +1,6 @@
 # FlowReader 长期规划书
 
-> 版本: v56.0.0 | 更新: 2026-08
+> 版本: v56.6.2 | 更新: 2026-08-20
 
 ---
 
@@ -17,14 +17,16 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 ---
 
-## 二、现状评估 (v55.0.0)
+## 二、现状评估 (v56.6.2)
 
 ### 已完成的核心能力
 
 | 领域 | 状态 | 说明 |
 |------|------|------|
 | 多格式支持 | ✅ 扩展 | EPUB / TXT / PDF / Markdown / FB2 / MOBI / JPG / PNG / WebP / CBZ（只读，拒绝 DRM） |
-| 阅读排版 | ✅ 稳定 | 字体/字号/行距/主题/翻页模式/屏幕常亮/专注模式 |
+| 阅读排版 | ✅ 稳定 | 字体/字号/行距/翻页模式/屏幕常亮/专注模式；18 套阅读色板 + 自定义背景（带强制可读性蒙层） |
+| 应用配色 | ✅ 扩展 | 12 套内置配色 + 跟随壁纸 + 自调色（色相环／光谱条调色台）；任意种子色由 `SeedColorScheme` 保证 WCAG AA |
+| 多语言 | ✅ 扩展 | 9 种语言（zh / en / ja / ko / de / es / fr / pt / ru），应用内随时切换 |
 | 全文搜索 (FTS5) | ✅ 稳定 | 单书检索 + 全库跨书检索，结果标明书籍来源 |
 | 标注/高亮 | ✅ 稳定 | 5 色高亮，批注笔记，CRUD |
 | 阅读统计 | ✅ 稳定 | 按真实字符位置累计页数，周/月报告，日/周/月目标 |
@@ -37,6 +39,11 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 | 阅读笔记管理 | ✅ 基础 | 全库笔记集中检索、删除和导出 |
 | 书签系统 | ✅ 回归 | 阅读器入口恢复，长按段落可添加备注书签 |
 | TTS 朗读 | ✅ 回归 | 系统 TextToSpeech API，支持朗读/暂停 |
+| 局域网传输 | ✅ 基础 | `LanTransferServer` 随机端口 + 16 位令牌只服务一个备份文件；两端都只接受局域网地址 |
+| 分享与导出 | ✅ 基础 | 阅读卡片 PNG（`ShareCardGenerator`）、书架 CSV/JSON（`ShelfExporter`）、标注 MD/HTML/TXT |
+| 主屏 Widget | ✅ 基础 | 显示当前书名与进度百分比（读 DataStore 快照） |
+| ContentProvider | ✅ 基础 | 只读暴露书籍元数据与进度，无文件路径/正文，写操作拒绝 |
+| 自适应布局 | ✅ 基础 | <600dp 底部栏 / ≥600dp 导航栏；书架网格与列表双视图 |
 
 ### 已知技术债务
 
@@ -44,7 +51,21 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 - `SavedStateHandle` 取出的 bookId 默认 0L，各 ViewModel 需各自校验
 - Room DB version 7，已有 4→5、5→6、6→7 显式迁移，无 destructive migration 兜底
 - 分页模式进度以"页号"为位置语义，与滚动模式像素语义并存；切换模式后进度按章内比例近似恢复。v56.4.3 起这两种单位由 `ReaderPositionUnit` 显式区分，阅读统计各走各的计数路径
-- **滚动模式的阅读统计仍把滚动像素当字符数用**（`ReaderSessionTracker.recordProgress()` 对 `content.substring(上次位置, 当前位置)` 取长度，而这两个值来自 `ScrollState.value`）。因此"已读字数/阅读速度"在 SLIDE/NONE 下是个与真实字数成正比但系数取决于字号行距的粗略代理值，而非真实字数；页数因除以 `charsPerPage` 而同比缩放，日/周统计的相对趋势可用，绝对值不可信。修正需要引入像素→字符映射（`updatePosition` 已经带着 `chapterScrollFraction`，可用 `比例 × 章节字数`），但会改变统计口径并需要重写 `ReaderSessionTrackerTest` 中既有的按字符断言，故留待专门的统计口径改造
+- **滚动模式的阅读统计仍把滚动像素当字符数用**（`ReaderSessionTracker.recordProgress()` 对 `content.substring(上次位置, 当前位置)` 取长度，而这两个值来自 `ScrollState.value`，见 `ReaderContent.kt` 的 `onPositionChanged(scrollState.value)`）。因此"已读字数/阅读速度"在 SLIDE/NONE 下是个与真实字数成正比但系数取决于字号行距的粗略代理值，而非真实字数；页数因除以 `charsPerPage` 而同比缩放，日/周统计的相对趋势可用，绝对值不可信。修正需要引入像素→字符映射（`updatePosition` 已经带着 `chapterScrollFraction`，可用 `比例 × 章节字数`），但会改变统计口径并需要重写 `ReaderSessionTrackerTest` 中既有的按字符断言，故留待专门的统计口径改造
+
+### 静态审查 7 条的处置（v56.6.2 收口）
+
+`SECURITY_REVIEW_2026-08-20.md`（第三方静态审查）共报 7 条，v56.6.2 全部处理完毕。#1–#4 是代码缺陷，各配回归测试；剩下三条的处置记在这里，因为它们的"改法"比"改动"更值得留档：
+
+- **#5 明文 API key —— 报告的位置是错的，我第一次核查的结论也是错的。** 报告说在 `.claude/providers.yaml`（`.claude/` 从 v56.6.1 起整体 git-ignore）；我第一次说在根目录 `providers.yaml`、自 v45.0.2 进了历史。都不对。真相是：`providers.yaml` 的提交历史里**从来没有过**明文 key，一直是 `{env:DEEPSEEK_API_KEY}`；本机工作区那份确实有真 key，但被 `git update-index --skip-worktree` 藏住了（`git ls-files -v` 前缀 `S`），所以 `git status` 永远干净 —— 这正是我误判的来源。全历史扫描后，唯一真被提交过的 key 字面量在 `V56.5.0_PLAN.md:128`，那段话正在论证"这个 key 是公共占位值、不算泄露"，然后把值抄进了正文。已改为不复述。key 本身是公共免费中转站的共享值，没轮换；改写已公开的 `main` 历史是破坏性操作，留给仓库主人定。**方法论教训：这类判断要看 `git ls-files -v` 和全历史扫描，不能看工作区文件。**
+- **#6 release 签名 —— 已换成正式密钥。** `app/build.gradle.kts` 新增 `signingConfigs { create("release") }`，从 git-ignore 的 `keystore.properties` 读密钥库；文件缺失时回退 debug，好让 CI 和新克隆照样产出可测的 `app-release.apk`。新增 `keystore.properties.example`。**验证过，不是"配置看着对"**：`apksigner verify --print-certs` 给出 `CN=HuZaiGong, OU=Dev, O=flowreader`，与 debug 的 `CN=Android Debug` 指纹不同。踩过一个坑：第一次验证时磁盘上的 APK 比 `keystore.properties` 还老，配置是对的但产物还是旧的 —— 先看时间戳。
+- **#7 导出的 ContentProvider —— 已加权限门禁。** 新增 `com.flowreader.app.permission.READ_LIBRARY`（`dangerous`）挂在 `android:readPermission` 上：调用方得声明权限、还得用户运行时同意，导出能力保留。取 `dangerous` 不取 `signature`，是因为后者只允许同签名应用读，等于把功能删了而不是给它加门。写权限用 `signature` 级兜底（`insert`/`update`/`delete` 本来就抛异常）。代价说清楚：已有外部集成方升级后会拿到 `SecurityException` —— 核查过仓库内外都没有已知集成方，README/ROADMAP 也从没把它当对外接口宣传，所以收紧。这道门在 Android 框架侧执行，单测覆盖不到，manifest 属性就是执行点。
+
+### 流程债
+
+- **v56.5.0 没有 CHANGELOG 条目。** 它作为两个 `wip` 提交进了库（`09e1540` 阅读器/统计/转盘入口的 i18n + 6 套新阅读色板，`6e17c54` 用户自定义阅读背景与强制可读性蒙层），但 `CHANGELOG.md` 从 v56.4.4 直接跳到 v56.5.1。发布规范第 4 条要求每个版本一条 CHANGELOG，这条漏了；也正是它导致 README 的"12 套色板"过期到 v56.6.1 才被发现。
+- **CI 只在 `main` 上跑**（`.github/workflows/ci.yml` 的 `push` / `pull_request` 都只监听 `main`），所以推到 `dev` 的提交没有任何远端验证，六道门禁必须在本地实跑。
+- **`AGENTS_CN.md` / `CLAUDE_CN.md` 已停止同步** —— 前者最后一次更新是 2026-07-24，后者停在 v56.4.0。英文版才是权威，中文镜像要么补齐要么删掉，别留在中间状态误导人。
 
 ---
 
@@ -156,9 +177,21 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 - [x] **性能基线**：`performanceBaseline` 任务输出 debug/release APK 体积并与基线对比（debug 27.5MB / release 10.8MB），CI 汇总到 step summary
 - [x] **本地化扩展**：新增法语/德语/西班牙语/葡萄牙语/俄语完整翻译（169 键，含 v55 新功能），应用内语言选择器同步扩展
 
+### v56.1 — v56.6 补丁线（无新功能规划，按需发布）
+
+v56.0 之后没有再排新功能，实际发生的都是审计、修复和一次配色扩展。列在这里是因为「规划里没有、但库里有」的版本最容易在文档里失联（v56.5.0 就是这么漏掉 CHANGELOG 的）：
+
+- **v56.3.0 / v56.4.0 / v56.4.1** —— 三轮安全审计与收尾加固（`SECURITY_AUDIT_REPORT.md` / `SECURITY_FIX_SUMMARY.md`）：ContentProvider 不再在 Binder 线程上 `runBlocking`，FileProvider 从三处全树授权收到一个 `share_cards/` 子目录，令牌生成的取模偏差修正。
+- **v56.4.2 / v56.4.4** —— 两次窗口 inset 修复。前者是外层 shell「应用但不消费」inset，导致下面 9 个界面各自再应用一遍；后者是 `FlowStateHost` 成功分支丢了 `modifier`，页面**有数据时**才失去安全区。两者都说明 inset 契约必须集中在一处。
+- **v56.4.3** —— 11 处功能性 bug 排查：书内全文搜索因 FTS5 列无类型亲和性而恒空、PAGED 与漫画的阅读统计整段丢失、划词高亮少存一个字符、「最近 7 天」实际只显示 2–3 天。
+- **v56.5.0** —— 阅读器自定义背景（带强制可读性蒙层）、6 套新阅读色板（12 → 18）、阅读器/统计/转盘入口 i18n。**这一版没有 CHANGELOG 条目**，见上文「流程债」。
+- **v56.5.1 / v56.5.2** —— 9 语言字符串补齐（domain 模型改为携带纯数值，不再被语言切换冻结）；Compose 稳定性配置消除 domain 模型的不稳定推断，不稳定类 52 → 37。
+- **v56.6.0 / v56.6.1** —— 配色来源扩为 12 套内置配色 + 跟随壁纸 + 自调色，新增调色台；随后修掉非中文语言下会抛异常的 `String.format`、一处组合期回写，并把两份写反了的备份规则注释改正。
+- **v56.6.2** —— 第三方静态审查 #1–#4：导入文件名可穿越目录、若干无上限读取、局域网接收端不校验主机、备份服务器无读超时且路径匹配过松。#5–#7 见上文「待决事项」。
+
 ---
 
-## 五、长期愿景 (v55+)
+## 五、长期愿景 (v57+)
 
 ### 5.1 成为最好的 Android 离线阅读器
 
@@ -186,15 +219,17 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 |------|------|------|
 | v48-v50 | 每 2-3 周 | 短期迭代，快速修复和功能增量 |
 | v51-v55 | 每 4-6 周 | 中期迭代，含架构升级和较大功能 |
-| v55+ | 每 2-3 月 | 长期愿景，谨慎评估每项功能的必要性 |
+| v56 补丁线 | 按需 | 审计、修复与小幅扩展，不排新功能；一个补丁一条 CHANGELOG |
+| v57+ | 每 2-3 月 | 长期愿景，谨慎评估每项功能的必要性 |
 
 ### 发布标准
 
-1. `./gradlew assembleDebug` 编译通过
+1. 六道门禁按 CI 的顺序**实跑**通过：`verifyKotlinStyle` → `testDebugUnitTest` → `coverageSummary` → `assembleDebug` → `verifyRoborazziDebug` → `performanceBaseline`。UP-TO-DATE 不算跑过，必要时用 `--rerun-tasks`
 2. 核心功能冒烟测试通过（打开书籍 → 翻页 → 搜索 → 统计 → 转盘）
 3. 无新增 `!!` 操作符和未处理的 `try-catch`
-4. CHANGELOG.md 已更新
-5. CI 通过（GitHub Actions: test + assemble）
+4. CHANGELOG.md 已更新（一个版本一条，别再出现 v56.5.0 那样的空档）
+5. `versionCode` / `versionName` 与 CHANGELOG 最新条目一致
+6. CI 只在 `main` 上触发，因此 `dev` 上的提交没有远端验证 —— 第 1 条必须在本地完成
 
 ---
 

@@ -374,4 +374,10 @@
     <string name="reader_bookmark_default">选中文本书签</string>
     <string name="reader_pdf_annotation_on">标注模式</string>
     <string name="reader_pdf_annotation_off">退出标注模式</string>
+
+    <!-- v56.6.2: custom permissions guarding the exported ContentProvider (finding #7) -->
+    <string name="permission_read_library_label">读取书库</string>
+    <string name="permission_read_library_description">允许该应用读取你的书籍列表与阅读进度（不含书籍正文与文件路径）。</string>
+    <string name="permission_write_library_label">修改书库</string>
+    <string name="permission_write_library_description">允许该应用修改你的书库。本应用一律拒绝写入请求。</string>
 </resources>

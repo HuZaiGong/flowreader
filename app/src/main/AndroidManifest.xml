@@ -3,9 +3,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-      v53: the only network code in the app is the LAN-only OPDS client. It is guarded in
-      `OpdsAddress` to private address ranges; nothing else opens a socket, and no analytics,
-      crash reporting or sync exists. See the "否决清单" section of ROADMAP.md.
+      The only network code in the app is LAN-only: the OPDS client and the LAN backup transfer.
+      Both validate the peer address themselves (`OpdsAddress.isPrivateHost()`) — loopback,
+      RFC1918, RFC4193 and `.local`-style names only. Nothing else opens a socket, and no
+      analytics, crash reporting or sync exists. See the "否决清单" section of ROADMAP.md.
     -->
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -14,6 +15,30 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29"
         tools:ignore="ScopedStorage" />
+
+    <!--
+      v56.6.2 (static-review finding #7): the exported ContentProvider is now gated by a custom
+      permission. Read-only book metadata and progress is still deliberately available to other
+      apps on the device (automation tools, launchers) — that is what the provider is for — but
+      an app now has to declare this permission AND have the user grant it at runtime, instead
+      of reading the whole library silently the moment it is installed.
+
+      `dangerous` and not `signature` on purpose: `signature` would restrict the provider to
+      apps signed with this repo's key, which deletes the feature rather than gating it.
+      The write permission is `signature` (so effectively never granted) purely as a second
+      layer — `insert`/`update`/`delete` already throw in FlowReaderContentProvider.
+    -->
+    <permission
+        android:name="com.flowreader.app.permission.READ_LIBRARY"
+        android:label="@string/permission_read_library_label"
+        android:description="@string/permission_read_library_description"
+        android:protectionLevel="dangerous" />
+
+    <permission
+        android:name="com.flowreader.app.permission.WRITE_LIBRARY"
+        android:label="@string/permission_write_library_label"
+        android:description="@string/permission_write_library_description"
+        android:protectionLevel="signature" />
 
     <application
         android:name=".FlowReaderApplication"
@@ -54,6 +79,8 @@
             android:authorities="com.flowreader.app.provider"
             android:exported="true"
             android:enabled="true"
+            android:readPermission="com.flowreader.app.permission.READ_LIBRARY"
+            android:writePermission="com.flowreader.app.permission.WRITE_LIBRARY"
             android:multiprocess="false" />
 
         <provider

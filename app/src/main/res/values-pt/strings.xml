@@ -358,4 +358,10 @@
     <string name="reader_bookmark_default">Marcador de texto selecionado</string>
     <string name="reader_pdf_annotation_on">Modo de anotação</string>
     <string name="reader_pdf_annotation_off">Sair do modo de anotação</string>
+
+    <!-- v56.6.2: custom permissions guarding the exported ContentProvider (finding #7) -->
+    <string name="permission_read_library_label">Ler a biblioteca</string>
+    <string name="permission_read_library_description">Permite que este app leia sua lista de livros e seu progresso de leitura. O texto dos livros e os caminhos de arquivo nunca são expostos.</string>
+    <string name="permission_write_library_label">Modificar a biblioteca</string>
+    <string name="permission_write_library_description">Permite que este app modifique sua biblioteca. O FlowReader recusa todas as escritas.</string>
 </resources>

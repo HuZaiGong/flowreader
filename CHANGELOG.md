@@ -4,33 +4,137 @@
 
 ---
 
-## [v56.6.1] - 2026-08-19
-> v56.6.0 之后的补丁：修了非中文语言下会崩的格式化、一处组合期回写、一个说谎的副标题，顺手把两份备份注释改对了。
+## [v56.6.2] - 2026-08-20
+
+> 本版本依据第三方静态审查报告（`SECURITY_REVIEW_2026-08-20.md`）实施安全修复。该报告共列明问题 7 项，本版本全部处理完毕：外部文件名路径校验、读取容量上限、局域网地址校验、备份服务器连接超时、release 正式签名、导出 provider 的权限门禁，以及一处明文 key（其真实位置与报告所述不同，详见「说明」）。核对文档期间另发现并修复一处用户可见缺陷：`:core` 模块缺少 5 种语言。
+
+### 安全
+
+**问题一：外部传入文件名可突破应用私有目录边界（审查编号 #1，风险等级：中）**
+
+经核查，恶意应用向 FlowReader 发送 `ACTION_VIEW` 意图时，其 `ContentProvider` 可将显示名称构造为 `../../databases/flowreader_db`，导入流程据此覆盖数据库；构造为 `datastore/settings.preferences_pb` 即可覆盖设置文件。上述操作对用户呈现为普通导入。成因如下：`getFileName()` 原样返回 `ContentResolver` 提供的 `DISPLAY_NAME`，`copyFileToInternal()` 将其直接用于构造 `File(booksDir, fileName)`，全程未对该字符串进行校验。
+
+处理措施：新增 `util/ImportFileName.kt`。其中 `sanitize()` 仅保留路径最后一段（`/` 与 `\` 均视为分隔符），将「字母／数字／`.`／`_`／`-`／空格」之外的字符（含控制字符）予以替换，去除开头的点号（防止生成隐藏文件），长度超过 120 字符时截断并保留扩展名。落盘前经 `resolveWithin()` 以 `canonicalFile` 复核目标路径确实位于目标目录内，无法取得规范路径时返回 null，不予导入。
+
+说明：消毒处理有意保留 Unicode 字符。仓库中原有仅保留 ASCII 的 `sanitizeFileName()`，其用途为漫画解压目录名，若施用于书名，将使《三体.epub》变为 `_.epub`。两者不可互换，故未复用。
+
+另修复一处竞态问题（TOCTOU）：`copyFileToInternal()` 此前自行再次查询 `ContentResolver` 获取文件名，同一 Uri 两次查询可能返回不同结果，即通过校验的名称与实际写入的名称不一致。现文件名由调用方（`LibraryViewModel`／`OpdsViewModel`）解析后传入，全流程仅解析一次。
+
+**问题二：伪造 EPUB 文件可导致内存溢出或磁盘写满（审查编号 #2，风险等级：中）**
+
+经核查，EPUB 的 `META-INF/container.xml` 与 OPF 文件以 `readText()` 无上限读取，整包、图片及压缩包以 `copyTo()` 复制。上述输入内容由文件制作者控制，读取方无从干涉，例如将 `container.xml` 构造至数百 MB 时，`readText()` 将完整读取。
+
+处理措施：相关路径全部改用 `copyCapped`／`readCappedBytes`／`readCappedText`，并新增两档容量上限：整包（EPUB／CBZ／任意选中文件）256MB，EPUB 结构性元数据 4MB；封面图沿用既有 24MB 上限。超限即失败并返回明确提示，同时删除半成品文件。`parseEpubStream` 与 `extractEpubCover` 为此补充 `finally { tempFile.delete() }`，避免提前 return 遗留临时文件。
+
+**问题三：局域网接收端未校验对方地址，公网链接可被拉取（审查编号 #3，风险等级：低）**
+
+经核查，`LanTransferClient.download()` 仅校验 `http://` 协议前缀。`http://evil.example.com/backup/…` 将被视为同一 WiFi 网络下的其他设备，从公网拉取至多 200MB 内容并交由备份导入器处理，而备份导入将整体覆盖书库。此行为与「`INTERNET` 权限仅用于局域网」的定位相冲突。
+
+处理措施：复用 OPDS 客户端的 `OpdsAddress.isPrivateHost()` 地址校验（回环／RFC1918／RFC4193／`.local` 类名称），路径须严格匹配 `/backup/` 及 16 位十六进制令牌。该规则可推广适用：本应用仅有一项 `INTERNET` 权限，每个发起请求的调用点须自行校验，不得依赖 OPDS 客户端代为把关。
+
+**问题四：备份服务器可被低速连接占用（审查编号 #4，风险等级：低）**
+
+经核查，`serve()` 运行于单线程执行器，唯一工作线程将在 `readLine()` 处挂起等待（slow loris 攻击模式），导致对话框开启期间服务器无法响应其他请求。现已为每个连接设置 5 秒 `soTimeout`，最坏情况由「无限期等待」变为「每个滞留连接等待 5 秒」。
+
+另核查发现路径匹配与类文档承诺不符：类文档声明仅应答精确的 `/backup/<token>` 路径，而代码使用 `requestLine.contains("/backup/$token")`，导致 `GET /anything/backup/<token>` 与 `GET /backup/<token>extra` 亦可获得 200 响应。单独考量不构成漏洞（仍须猜中令牌），但文档承诺的边界应与代码执行的边界一致。现 `isBackupRequest()` 按整行精确匹配，并同时接受 HTTP/1.1 与 HTTP/1.0（`HttpURLConnection` 可能降级协议版本）。
+
+**问题五：release 构建使用 debug 签名（审查编号 #6，风险等级：信息）**
+
+debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.release` 直接 `signingConfig = signingConfigs.getByName("debug")`，任何人都能构造一个签名相同的升级包覆盖安装到用户机器上。
+
+处理措施：新增 `signingConfigs { create("release") }`，从仓库根目录的 `keystore.properties`（已 git-ignore，密钥库本身由 `*.jks` 规则覆盖）读取密钥库路径与密码；该文件不存在时回退到 debug 签名，使 CI 与新克隆仍能产出可测试的 `app-release.apk`，单元测试不受影响。同时新增 `keystore.properties.example` 说明配置项与生成方式。
+
+已实测验证，未止于「配置看起来对」：`apksigner verify --print-certs` 显示 `Signer #1 certificate DN: CN=HuZaiGong, OU=Dev, O=flowreader`，与 debug 密钥的 `CN=Android Debug` 及其证书指纹均不相同。附带一处提醒：验证前先确认 APK 的时间戳晚于 `keystore.properties` 的创建时间——本次首次验证时磁盘上的 APK 构建于配置落地之前，配置正确但产物仍是旧的 debug 签名。
+
+**问题六：导出的 ContentProvider 未声明权限（审查编号 #7，风险等级：低）**
+
+`content://com.flowreader.app.provider` 以 `exported="true"` 导出且无任何权限声明，故同机任意应用无需申请、无需用户同意，即可读取完整书单与各书阅读进度。该导出本身是有意设计（供自动化工具与桌面小组件读取只读元数据，不含文件路径与正文），问题在于「有意导出」被实现成了「对所有应用静默开放」。
+
+处理措施：新增自定义权限 `com.flowreader.app.permission.READ_LIBRARY` 并置于 `android:readPermission`。调用方须声明该权限且经用户运行时授权方可读取，导出能力本身保留。保护级别取 `dangerous` 而非 `signature`：后者会将该接口限定为与本仓库同签名的应用，等同于删除该功能而非为其加门禁。另以 `signature` 级 `WRITE_LIBRARY` 覆盖 `android:writePermission` 作为第二道防线——`insert`／`update`／`delete` 本身已一律抛异常。权限的标签与说明文案随应用支持的 9 种语言一并提供（该文案会出现在系统授权对话框中）。
+
+需注意，此项变更会影响现有外部集成方：任何已在读取该 provider 的应用将在升级后收到 `SecurityException`，须声明权限并请求授权。经核查，仓库内外均无已知集成方，`README` 与 `ROADMAP` 亦从未将其作为对外接口宣传，故按收紧处理。Android 在本类之外执行权限检查，故单元测试无法覆盖该门禁，manifest 属性即执行点。
 
 ### 修复
-- **调色台在 de/fr/es/pt/ru 等语言下会崩溃。** `SchemePreview` 先把对比度数值用 `String.format("%.1f", ratio)` 转成字符串，再交给 `stringResource`。`String.format` 不带 locale 时跟的是 JVM 默认 locale，而字符串资源按应用内语言设置解析。小数点为逗号的语言下，`"4,7"` 会被作为字符串传给资源里的数值占位符，直接抛异常；就算不抛，数字格式也跟该语言对不上。现在资源里写成 `%1$.1f`，`ratio: Double` 原样传给 `stringResource`，由 `Resources.getString(id, args)` 按资源 locale 格式化。全仓库不带 locale 的 `String.format` 就这一处。
-  - de/es/fr/pt/ru 五份资源里硬写的「4.5:1」阈值也一并改成「4,5:1」，跟同一句里现在会本地化的实测值对齐。
-- **调色台每拖一次色相环要付两次组合。** 十六进制输入框的草稿存在 `mutableStateOf` 里，每个取色回调又在组合期把它改写成新颜色的十六进制串，同一趟组合再读出来渲染。这是 Compose 里典型的 backwards write，只能多跑一趟才能收敛。现在草稿改成「用户正在输入」的三态标记（`null` = 显示取色器的颜色），显示值由 `argb` 派生：`val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)`。取色回调只把它清成 `null`，输入框失焦时同样清空。
-- **「自调色」的副标题会声称一个没在生效的颜色。** 只要用户存过自定义色，之后切回内置配色，这一项照样显示 `#RRGGBB` 和「使用中」。现在加一道来源判定：`customSeedArgb?.takeIf { colorSource == CUSTOM }`。
 
-### 变更
-- **`backup_rules.xml` / `data_extraction_rules.xml` 的注释之前写反了**，声称会备份「阅读设置、主题、语言」。实际上 `<include>` 是把备份范围限制成它列出的域，而这里唯一列出的 `sharedpref` 在本应用里是空的：全仓库没有任何 `getSharedPreferences` / `PreferenceManager` 调用，设置存在 DataStore，`dataStoreFile()` 落在 `filesDir/datastore/`，属于 `file` 域。也就是说一直什么都没备份。
-  - 按离线优先的定位，这个行为是对的，所以只改注释不改行为。现在注释直接写明结果就是「什么都不出设备」，并提醒不要用 `<include domain="file">` 去「修好」它，那等于把用户的阅读习惯经 Google 备份通道送出设备。跨设备迁移走应用内备份／导出（SAF 文件或局域网传输），由用户显式触发。
+**`:core` 模块缺少 5 种语言，德／西／法／葡／俄界面回退为中文**
+
+核对文档时发现：`:core` 自有 9 条会直接显示给用户的字符串（加载中／暂无内容／出错了／重试，以及若干无障碍描述），由 `FlowStateHost`／`FlowTopBar`／`BookCover`／`SkeletonBox` 使用，但该模块只有 `values`／`values-en`／`values-ja`／`values-ko` 四套资源。`:app` 在 v56 扩至 9 种语言时未同步扩 `:core`，故在德、西、法、葡、俄五种语言下，所有加载态、空态与错误态均显示中文。现已补齐五套资源，9 个 locale 各 9 条。往 `:core` 新增字符串时，9 个 locale 目录须一并增加。
 
 ### 技术实现
-- **`FlowTheme` 的 `ColorScheme` 现在包在 `remember` 里，是加固，不是修 bug。** 最初怀疑每次导航都会重建 scheme，而 `staticCompositionLocalOf` 会连带重建整棵子树，但把 `remember` 撤掉后新测试照样通过。后来查 Compose 编译器报告（`:core` 已支持 `-PcomposeReports=true`），看到 `restartable skippable fun FlowTheme(...)`，五个参数全部 `stable`。输入不变时 Compose 直接跳过整个函数，函数体不会执行，所以当前没有这个 bug。保留 `remember` 的理由只有一个：这条路径一旦失去可跳过性（多一个不稳定参数、多一个组合期读取就够），后果是全应用重组，而代价只是一次 `remember` 比较。代码注释和测试 KDoc 也写明了「证明了什么、没证明什么」。
-- `:core/build.gradle.kts` 补上了和 `:app` 对齐的 `composeReports` 开关（默认关闭），上面的结论就是这么查出来的。
+
+`BookParser` 的 `copyCapped`／`readCappedBytes`／`readCappedText` 移入 companion object 并改为 `internal` 访问级别，实例保留同名单行转发，以避免改动十余处调用点。理由在于容量上限须可测试：实际上限为 256MB，测试中触发须构造 256MB 夹具；改为 `internal` 后，测试可直接传入 1000 字节上限与 1001 字节流。`LanTransferServer.isBackupRequest()` 同理，设为 `internal` 以便脱离 socket 单独测试请求行匹配。
 
 ### 测试
-- 新增 `FlowThemeStabilityTest`（4 个，Robolectric + Compose），断言重组时 `MaterialTheme.colorScheme` 的实例同一性（`ColorScheme` 没有 `equals`，只能按引用比）。KDoc 里写明它不是某个已发布 bug 的回归门。
-- 新增 `FlowColorPresetsTest.everySeedIsDarkEnoughForTheWhiteSelectionCheckmark`：配色选中态的白色对勾是硬编码的，保证 12 个种子色对白色都 ≥ 3:1（AA 非文本对比度）。
-- 全量测试 330 → 335 个（+4 +1），0 失败；测试广度 79.4% → 80.9%（55/68）。
+
+- 依审查建议，前四项修复各配备回归测试：`ImportFileNameTest`（15 项）、`BookParserCapsTest`（10 项）、`LanTransferClientTest`（8 项）、`LanTransferServerTest` 新增 5 项。签名与 provider 权限两项无法以单元测试覆盖——前者的验证手段是对产物执行 `apksigner verify --print-certs`，后者的执行点在 Android 框架侧而非应用代码内；两者均以实测结果记录于上，未以测试充数。
+- 容量上限测试同时固定三项易被改坏的边界：恰好等于上限时应通过（判定为 `> limit` 而非 `>= limit`，否则体积恰在边界的书籍将被拒绝）；超限后不得读完整条流（上限的意义在于 80GB 的流仅消耗一个缓冲区的代价）；`copyCapped` 不删除残留文件（该行为属注释明示的契约，删除由各调用方负责，若将来在 `copyCapped` 内追加删除逻辑，`filesDir/books` 中将残留无人清理的文件）。
+- 各项修复均经变异验证：撤销 `soTimeout`、将精确匹配改回 `contains`、删除主机校验后，对应 7 项测试全部失败。slow loris 测试特意设置客户端 20 秒读超时，一旦回归将表现为测试失败而非套件挂起。
+- 全量测试 335 → 373 项（+38），0 失败；测试广度 80.9% → 85.3%（58/68）。
+
+### 说明
+
+**问题七：明文 API key（审查编号 #5，风险等级：信息）——实际位置与报告及前次结论均不相同。**
+
+审查报告将其定位于 `.claude/providers.yaml`。该路径有误：`.claude/` 自 v56.6.1 起已整体 git-ignore。本仓库根目录的 `providers.yaml` 确实被 git 跟踪，但**其提交历史中从未出现过明文 key**，各版本均为 `{env:DEEPSEEK_API_KEY}` 形式的环境变量引用。
+
+本机工作区的该文件另存有一个真实 key，但被 `git update-index --skip-worktree` 标记隐藏（`git ls-files -v providers.yaml` 输出前缀为 `S`），故 `git status` 始终显示干净——这也是前次核查误判「key 自 v45.0.2 起在历史中」的原因：工作区内容与 HEAD 内容不同，而 git 不予提示。需注意该标记的性质：它保存于 `.git/index`，仅对本 clone 有效，克隆者不会继承；且当拉取的提交涉及该文件时 `git pull` 会直接失败。`.gitignore` 中的相关注释已按此更正。
+
+全历史扫描（`git rev-list --all` 逐树 `git grep`）确认，该 key 字面量在整个仓库中仅有一处提交记录：`V56.5.0_PLAN.md` 第 128 行。该处正在论证「此 key 系公共免费占位值、不构成泄露」——结论无误，但论证过程将该字面量抄入正文，使这份计划文档成为仓库中唯一真正提交了 key 的位置，且随 v56.5.0 进入公开的 `main` 分支。现已改为不复述字面量。
+
+该 key 为某公共免费中转站的共享值，故未作轮换。改写已公开分支的提交历史属破坏性操作，须由仓库所有者决定，本版本未执行；如认为有必要，可另行处理。
+
+值得记录的一点：审查报告、前次核查与最终事实三者各不相同。「明文 key 在配置文件里」这一预期太过自然，以致两轮核查都未想到去追问「git 究竟看到了什么」。判断此类问题应以 `git ls-files -v` 与全历史扫描为依据，而非工作区文件内容。
+
+---
+
+## [v56.6.1] - 2026-08-19
+
+> 本版本为 v56.6.0 的补丁版本，修复非中文语言环境下的格式化崩溃、一处组合期状态回写及一处状态显示错误，并更正两份备份规则文件的注释。
+
+### 修复
+
+**问题一：调色台在 de/fr/es/pt/ru 等语言环境下崩溃**
+
+经核查，`SchemePreview` 先以 `String.format("%.1f", ratio)` 将对比度数值转为字符串，再交由 `stringResource` 处理。`String.format` 无 locale 参数时遵循 JVM 默认 locale，而字符串资源按应用内语言设置解析。在小数点为逗号的语言环境下，`"4,7"` 将作为字符串传入资源的数值占位符，直接抛出异常；即便不抛异常，数字格式亦与该语言不符。
+
+处理措施：资源内改为 `%1$.1f` 占位符，`ratio: Double` 原样传入 `stringResource`，由 `Resources.getString(id, args)` 按资源 locale 格式化。全仓库无 locale 参数的 `String.format` 调用仅此一处。
+
+另将 de/es/fr/pt/ru 五份资源中硬编码的「4.5:1」阈值改为「4,5:1」，与同句中现已本地化的实测值对齐。
+
+**问题二：调色台拖动色相环触发两次组合**
+
+经核查，十六进制输入框草稿存储于 `mutableStateOf`，各取色回调在组合期将其改写为新颜色的十六进制串，同一趟组合再读取渲染。此为 Compose 中典型的 backwards write，须多跑一趟方可收敛。
+
+处理措施：草稿改为「用户正在输入」的三态标记（`null` 表示显示取色器颜色），显示值由 `argb` 派生：`val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)`。取色回调仅将其清为 `null`，输入框失焦时同样清空。
+
+**问题三：「自调色」副标题显示未生效的颜色**
+
+经核查，用户存储自定义色后切换回内置配色，该项仍显示 `#RRGGBB` 及「使用中」状态。现增加来源判定：`customSeedArgb?.takeIf { colorSource == CUSTOM }`。
+
+### 变更
+
+`backup_rules.xml`／`data_extraction_rules.xml` 注释此前表述有误，声称会备份「阅读设置、主题、语言」。实际 `<include>` 将备份范围限制为其列出的域，而此处唯一列出的 `sharedpref` 域在本应用中为空：全仓库无任何 `getSharedPreferences`／`PreferenceManager` 调用，设置存储于 DataStore，`dataStoreFile()` 位于 `filesDir/datastore/`，属 `file` 域。即从未备份任何数据。
+
+按离线优先的产品定位，此行为符合预期，故仅更正注释、不改动行为。注释现载明结果为「数据不离开设备」，并提示不得以 `<include domain="file">` 加以修改，否则阅读习惯数据将经 Google 备份通道传出设备。跨设备迁移走应用内备份／导出（SAF 文件或局域网传输），由用户显式触发。
+
+### 技术实现
+
+`FlowTheme` 的 `ColorScheme` 现以 `remember` 包裹，属加固措施而非修复既有缺陷。初步怀疑每次导航均重建 scheme，`staticCompositionLocalOf` 将连带重建整棵子树，但撤销 `remember` 后新增测试仍通过。后经 Compose 编译器报告（`:core` 已支持 `-PcomposeReports=true`）确认，`FlowTheme` 为 `restartable skippable`，五个参数均为 `stable`，输入不变时 Compose 直接跳过整个函数，函数体不执行，故当前不存在该缺陷。保留 `remember` 的理由在于：此路径一旦失去可跳过性（新增不稳定参数或组合期读取即可触发），后果为全应用重组，而代价仅为一次 `remember` 比较。代码注释与测试 KDoc 均已载明该测试"证明了什么、未证明什么"。
+
+`:core/build.gradle.kts` 补充与 `:app` 对齐的 `composeReports` 开关（默认关闭），上述结论即据此得出。
+
+### 测试
+
+- 新增 `FlowThemeStabilityTest`（4 项，Robolectric + Compose），断言重组时 `MaterialTheme.colorScheme` 实例的同一性（`ColorScheme` 无 `equals`，仅可按引用比较）。KDoc 载明其非已发布缺陷的回归门禁。
+- 新增 `FlowColorPresetsTest.everySeedIsDarkEnoughForTheWhiteSelectionCheckmark`：配色选中态的白色对勾为硬编码，保证 12 个种子色与白色对比度均 ≥ 3:1（AA 非文本对比度）。
+- 全量测试 330 → 335 项（+4 +1），0 失败；测试广度 79.4% → 80.9%（55/68）。
 
 ### 文档
-- **README 重写为写给人看的介绍，而不是一份审计清单。** 原文按「概述／功能／架构／构建／安全约束」分节，开头第二段就是模块分层与权限声明 —— 对着代码校对很方便，但一个想知道「这阅读器值不值得装」的人得读到第 47 行才看到第一个能感知的功能。现在改为先说清它是什么、为什么不做云同步（以及这个取舍的代价是什么），再按「找书／读／记笔记看数据」把功能放回使用场景里，架构与门禁下移并保留全部事实。
-- 顺带修正 README 里 4 处与代码不符的地方：`:core` 写 12 套阅读色板（实际 18，v56.5.0 加了 6 套后漏改）、`:data` 写 7 个 Entity（实际 8 —— `ReadingListItemEntity` 与 `ReadingListEntity` 在同一文件里，按文件数会少算一个）、`coverageSummary` 写 77.8%（实际 80.9%），以及安全小节仍在说「云备份只含 shared prefs」—— 这正是本版刚刚改正的那条错述，README 漏改了。
-- 另修 `CLAUDE.md` 一处过期描述：它说 `domain/usecase/` 是「空的遗留目录」，实际该目录已不存在（README 写的「已删除」才是对的）。
-- `README_EN.md` 按同一思路重写，章节结构与中文版逐节对齐（各 15 个标题），并同步修掉同样的 4 处失真 —— 它此前把阅读色板写成 12 套、Entity 写成 7 个、覆盖率写成 77.8%，安全小节同样留着「云备份只含 shared prefs」那句错述。英文版是按英文重写的，不是中文版的逐句翻译。
+
+- README 重写为面向读者的项目介绍而非审计清单。原文按「概述／功能／架构／构建／安全约束」分节，自第二段即载明模块分层与权限声明。现改为先述明产品定位及不做云同步的原因（及其取舍代价），再按「找书／读／记笔记看数据」将功能归入使用场景，架构与门禁下移并保留全部事实。
+- 顺带修正 README 中 4 处与代码不符之处：`:core` 载为 12 套阅读色板（实际 18，v56.5.0 增补 6 套后漏改）、`:data` 载为 7 个 Entity（实际 8，`ReadingListItemEntity` 与 `ReadingListEntity` 属同一文件，按文件数计会少算一个）、`coverageSummary` 载为 77.8%（实际 80.9%）、安全小节仍载「云备份只含 shared prefs」（即本版所修正的错述，README 漏改）。
+- 另修正 `CLAUDE.md` 一处过期描述：其载 `domain/usecase/` 为「空的遗留目录」，实际该目录已不存在（README 所载「已删除」为正确表述）。
+- `README_EN.md` 按同一思路重写，章节结构与中文版逐节对齐（各 15 个标题），并同步修正同样的 4 处失真。英文版为按英文重写，非中文版逐句翻译。
 
 ---
 

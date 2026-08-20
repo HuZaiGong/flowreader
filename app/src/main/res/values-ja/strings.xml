@@ -368,4 +368,10 @@
     <string name="reader_bookmark_default">選択テキストのブックマーク</string>
     <string name="reader_pdf_annotation_on">注釈モード</string>
     <string name="reader_pdf_annotation_off">注釈モードを終了</string>
+
+    <!-- v56.6.2: custom permissions guarding the exported ContentProvider (finding #7) -->
+    <string name="permission_read_library_label">ライブラリの読み取り</string>
+    <string name="permission_read_library_description">このアプリが書籍リストと読書進捗を読み取ることを許可します（本文とファイルパスは含みません）。</string>
+    <string name="permission_write_library_label">ライブラリの変更</string>
+    <string name="permission_write_library_description">このアプリがライブラリを変更することを許可します。書き込み要求は常に拒否されます。</string>
 </resources>

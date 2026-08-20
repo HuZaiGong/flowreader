@@ -358,4 +358,10 @@
     <string name="reader_bookmark_default">Signet de texte sélectionné</string>
     <string name="reader_pdf_annotation_on">Mode annotation</string>
     <string name="reader_pdf_annotation_off">Quitter le mode annotation</string>
+
+    <!-- v56.6.2: custom permissions guarding the exported ContentProvider (finding #7) -->
+    <string name="permission_read_library_label">Lire la bibliothèque</string>
+    <string name="permission_read_library_description">Autorise cette application à lire votre liste de livres et votre progression de lecture. Le texte des livres et les chemins de fichiers ne sont jamais exposés.</string>
+    <string name="permission_write_library_label">Modifier la bibliothèque</string>
+    <string name="permission_write_library_description">Autorise cette application à modifier votre bibliothèque. FlowReader refuse toute écriture.</string>
 </resources>

@@ -4,9 +4,9 @@
 
 仓库语言约定：文档与用户可见字符串用中文，代码与标识符用英文。
 
-FlowReader（心流阅读）是离线优先的 Android 电子书阅读器：Jetpack Compose + Material 3、Clean Architecture + MVVM，没有网络层也没有账号层。支持 EPUB / TXT / PDF / Markdown / FB2 / MOBI / 漫画（CBZ 与图片 ZIP）。
+FlowReader（心流阅读）是离线优先的 Android 电子书阅读器：Jetpack Compose + Material 3、Clean Architecture + MVVM，没有账号层。支持 EPUB / TXT / PDF / Markdown / FB2 / MOBI / 漫画（CBZ 与图片 ZIP）。唯一的网络代码是局域网 OPDS 客户端与局域网备份传输，两者都自行校验对端地址；除此之外不联网。
 
-`AGENTS.md` 与 `AGENTS_CN.md` 保存了更长的阅读器与 Compose 行为陷阱清单，请与本文件一并阅读；但请先看文末「需注意的文档漂移」——其中若干计数已经过期。
+`AGENTS.md` 与 `AGENTS_CN.md` 保存了更长的阅读器与 Compose 行为陷阱清单，请与本文件一并阅读。
 
 ## 命令
 
@@ -14,7 +14,7 @@ FlowReader（心流阅读）是离线优先的 Android 电子书阅读器：Jetp
 
 ```bash
 ./gradlew assembleDebug            # 开发包
-./gradlew assembleRelease          # R8 全模式压缩 + 资源裁剪；故意使用 debug 签名配置
+./gradlew assembleRelease          # R8 全模式压缩 + 资源裁剪；存在 keystore.properties 时用正式签名，否则回退到 debug 签名
 ./gradlew testDebugUnitTest        # 全部 JVM 单元测试
 ./gradlew verifyKotlinStyle        # ktlint（不含 :app）+ 全仓空白字符门禁
 ./gradlew coverageSummary          # 测试广度文件比，须保持 >= 40%
@@ -44,11 +44,11 @@ FlowReader（心流阅读）是离线优先的 Android 电子书阅读器：Jetp
 
 - **ktlint 跳过 `:app`。** 根 `build.gradle.kts` 的 `subprojects` 块对除 `:app` 以外的每个模块启用 ktlint。`:app` 模块的 Kotlin 只受 `verifyKotlinStyle` 内那道空白字符门禁约束——仓库里任何 `.kt`/`.kts` 文件出现 Tab 或行尾空格，都会让整个构建失败。`.editorconfig` 规定：4 空格缩进、LF 换行、140 字符行宽、`android_studio` ktlint 风格。
 
-- **`coverageSummary` 是文件数量比，不是行覆盖率。** 分子：`app`/`core`/`feature:*`/`domain` 四个测试源集里的测试文件。分母：app 的 `data/repository/*Repository*.kt` + app 的 `ui/screens/**/*ViewModel.kt` + feature 的 `*ViewModel.kt` + **`:core` 的全部主源文件** + `domain/repository/*.kt` + `domain/model/*.kt`。当前 44/62 = 71%（15 个 app + 10 个 core + 3 个 feature + 16 个 domain 测试）。仅仅新增一个 `:core` 文件、一个 domain 模型或一个 ViewModel 而不配上对应测试，就足以让构建失败。
+- **`coverageSummary` 是文件数量比，不是行覆盖率。** 分子：`app`/`core`/`feature:*`/`domain` 四个测试源集里的测试文件。分母：app 的 `data/repository/*Repository*.kt` + app 的 `ui/screens/**/*ViewModel.kt` + feature 的 `*ViewModel.kt` + **`:core` 的全部主源文件** + `domain/repository/*.kt` + `domain/model/*.kt`。当前 58/68 = 85.3%（21 个 app + 15 个 core + 4 个 feature + 18 个 domain 测试）。注意 `AppShellViewModel` 在 `ui/` 而非 `ui/screens/`，不在分母里；`:feature:*` 的 main 源文件也不在分母里，只有它们的测试计入分子。仅仅新增一个 `:core` 文件、一个 domain 模型或一个 ViewModel 而不配上对应测试，就足以让构建失败。
 
 - **基准截图已入库。** Roborazzi 1.40 + Robolectric 跑在 JVM 上（不需要模拟器）；两张基准图在 `app/src/test/snapshots/`（`library_shelf_light.png`、`library_skeleton_dark.png`）。截图 API 是 `captureRoboImage(filePath = "src/test/snapshots/<name>.png") { content }` 搭配 `@GraphicsMode(NATIVE)`——1.40 已经没有 `RoborazziRule` 了。插件只在 `:app` 启用。任何有意的视觉改动都需要跑 `recordRoborazziDebug` 并提交新的 PNG。
 
-- **`performanceBaseline` 会重写自己的基线。** 它构建 debug + release 两个包，与 `baseline/apk-size.properties`（debug 27540KB / release 10839KB）对比并对体积增长告警，然后覆盖该文件。本地运行会产生一处 diff——除非体积变化本身是预期的，否则不要提交这次重写。
+- **`performanceBaseline` 会重写自己的基线。** 它构建 debug + release 两个包，与 `baseline/apk-size.properties`（debug 27687KB / release 11027KB）对比并对体积增长告警，然后覆盖该文件。本地运行会产生一处 diff——除非体积变化本身是预期的，否则不要提交这次重写。另外 `PERF-WARNING` 只是一句 `println`，不会让构建失败；**不要拿增量构建出来的 APK 判断体积回归**，AGP 的增量打包会留下条目间空洞，曾把 8KB 的真实差异放大成 1063KB 的假增长。要判断就先 `clean`。
 
 ## 模块划分与当前实况
 
@@ -58,9 +58,11 @@ FlowReader（心流阅读）是离线优先的 Android 电子书阅读器：Jetp
 
 `:feature:*` 的抽取仍在进行中，而且进度并不均匀：
 
-- `:domain` — `domain/model/` 下 10 个模型，`domain/repository/` 下 10 个仓库接口（接口一文件一个）。有几个模型文件里装了不止一个类型：`Chapter`、`PageMode`、`GestureSettings`、`AppThemeMode`、`ColorSource`、`ReaderPaletteId`、`ReaderFontFamily` 都寄居在其他文件中。**没有** `usecase/` 包——业务逻辑刻意放在 ViewModel 里。
+- `:domain` — `domain/model/` 下 11 个模型文件，`domain/repository/` 下 10 个仓库接口（接口一文件一个）。有几个模型文件里装了不止一个类型：`Chapter`、`PageMode`、`GestureSettings`、`AppThemeMode`、`ColorSource`、`ReaderPaletteId`、`ReaderFontFamily` 都寄居在其他文件中（前六个都在 `ReadingSettings.kt` 里）。**没有** `usecase/` 包——业务逻辑刻意放在 ViewModel 里。
 
-- `:core` — 22 个 Kotlin 文件：设计系统，加上所有值得写单测的、不依赖 Compose 的工具。包含 `designsystem/token/`、`designsystem/theme/`（`FlowTheme`、`FlowLocale`）、`designsystem/component/`（`BookCover`、`FlowScaffold`、`FlowTopBar`、`FlowStateHost`、`SkeletonBox`、`FlowComponentPreviews`）、`designsystem/reader/`（12 套 `ReaderPalette`、`ReaderMetrics`、`ReaderTypography`），以及 `core/util/`（`ColorContrast`、`CoverArt`、`FlowFormatters`、`ReaderBehavior`、`ReaderCustomTheme`、`ReadingProgress`、`AnnotationExporter`、`ShelfExporter`）。`core/util/` 与 `ReaderMetrics` 刻意与 Compose 解耦。`:core` 自带 `strings.xml`（另有 `values-en/ja/ko`），并且**确实**通过 `api(...)` 暴露了 Coil，好让 `BookCover` 自洽可用；它不含 Hilt、Room 与导航。
+- `:core` — 27 个 Kotlin 文件：设计系统，加上所有值得写单测的、不依赖 Compose 的工具。包含 `designsystem/token/`、`designsystem/theme/`（`FlowTheme`、`FlowLocale`）、`designsystem/component/`（`BookCover`、`FlowScaffold`、`FlowTopBar`、`FlowStateHost`、`SkeletonBox`、`FlowComponentPreviews`）、`designsystem/reader/`（18 套 `ReaderPalette`、`ReaderMetrics`、`ReaderTypography`），以及 `core/util/`（`ColorContrast`、`ColorSpaces`、`SeedColorScheme`、`ColorWheelMath`、`CoverArt`、`FlowFormatters`、`ReaderBehavior`、`ReaderCustomTheme`、`ReadingProgress`、`AnnotationExporter`、`ShelfExporter`）。`core/util/` 与 `ReaderMetrics` 刻意与 Compose 解耦。`:core` 自带 `strings.xml`，并且**确实**通过 `api(...)` 暴露了 Coil，好让 `BookCover` 自洽可用；它不含 Hilt、Room 与导航。
+
+  `:core` 那 9 条字符串是加载／空／错误状态与几个无障碍描述，会直接显示给用户，所以**它的 locale 必须与 `:app` 的 9 种语言保持一致**。v56.6.2 之前 `:core` 只有 `values-en/ja/ko`，于是德、西、法、葡、俄五种语言下所有加载态和错误态都显示中文——`:app` 在 v56 扩到 9 种语言时没有一并扩 `:core`。往 `:core` 加字符串时，9 个 locale 目录一起加。
 
 - `:feature:reader` — v54 抽出的阅读器纯逻辑：`ChapterPaginator`、`ReaderProgressEngine`、`ReaderSessionTracker`，各自配有 JVM 测试。注意这个模块用的是 `com.flowreader.feature.reader` 包名，与其余所有模块都不同。
 
@@ -86,7 +88,7 @@ FlowReader（心流阅读）是离线优先的 Android 电子书阅读器：Jetp
 
 1. **Room**（`flowreader_db`）— `AppDatabase` 是**第 7 版**，8 个实体，`exportSchema = true`；导出的 schema 在 `data/schemas/com.flowreader.app.data.local.AppDatabase/`（有 4、6、7，没有 5.json）。`MIGRATION_4_5`（新增 `books.tags`）、`MIGRATION_5_6`（书签 `(bookId, chapterIndex, position)` 索引）与 `MIGRATION_6_7`（v53 的书单及其条目）全部在 `DatabaseModule` 中注册。刻意**不使用** `fallbackToDestructiveMigration()`——任何表结构变更都必须手写迁移。`app/build.gradle.kts` 里仍然把 `room.schemaLocation` 设成 `$projectDir/schemas`，但该目录并不存在，而且自 `AppDatabase` 迁到 `:data` 之后也不再有任何东西生成到那里。`BackupRepositoryImpl.importData()` 使用 `database.withTransaction`——请保持备份导入的原子性。
 
-2. **第二个裸 SQLite 数据库**（`flowreader_fts.db`）由 `util/FullTextSearch.kt` 通过 `openOrCreateDatabase` 管理：一张 FTS5 虚拟表（`book_content_fts`）影随一张 `book_content` 表，完全在 Room 之外。它同时支撑书内搜索（注入到 `ReaderViewModel`）与全局搜索（`SearchRepository.rebuildIndex()` + `FullTextSearch.searchAll()`）。`SearchRepositoryImpl` 用 `Mutex` 把重建串行化——并发搜索曾经交错执行删除/索引并损坏索引。不要试图把它并入 `AppDatabase`。
+2. **第二个裸 SQLite 数据库**（`flowreader_fts.db`）由 `util/FullTextSearch.kt` 通过 `openOrCreateDatabase` 管理：一张 FTS5 虚拟表（`book_content_fts`）影随一张 `book_content` 表，完全在 Room 之外。它同时支撑书内搜索（注入到 `ReaderViewModel`）与全局搜索（`SearchRepository.rebuildIndex()` + `FullTextSearch.searchAll()`）。索引改动由 `FullTextSearch.withIndexLock()` 串行化——锁自 v56.4.3 起挂在共享对象上，因为阅读器的单本重新索引会绕过 `SearchRepositoryImpl` 在 v56.4 里持有的那把锁；该锁**不可重入**（故有 `rebuildIndex()` 与 `rebuildIndexLocked()` 之分）。另外，书内查询比较 `book_id` 必须走 `CAST(? AS INTEGER)`——FTS5 列没有类型亲和性，裸的 `book_id = ?` 会静默恒为假。不要试图把它并入 `AppDatabase`。
 
 3. **DataStore Preferences**（`settings`）— `SettingsRepositoryImpl` 独占 `Context.dataStore` 扩展与所有偏好键。`reader_theme` 这个键被复用为存放 `ReaderPaletteId`，旧的 `LIGHT`/`DARK` 值在 `ReaderPaletteId.fromStoredName` 中完成迁移。阅读设置从来没有进过 Room，所以阅读偏好的改动永远不需要数据库迁移。
 
@@ -96,13 +98,29 @@ FlowReader（心流阅读）是离线优先的 Android 电子书阅读器：Jetp
 
 路由是 `ui/Navigation.kt` 中的 sealed class `Screen`，共 10 条：`library`、`stats`、`settings`、`wheel`、`notes`、`reading_lists`、`opds`、`search?query={query}`、`book_detail/{bookId}`、`reader/{bookId}?chapterIndex={chapterIndex}`。每个 `Screen` 持有的是 `@StringRes` 整型资源 ID，而不是 `String`——写死的 `String` 会在首次组合时固化，语言切换后不会更新。跳转请用 `createRoute(...)` 辅助函数；`Screen.Reader.createRoute(bookId, chapterIndex = -1)` 省略 `chapterIndex` 表示「续读」，传非负值则直达该章。
 
-主题在 NavHost 层由 `:core` 的 `FlowTheme` 统一应用一次（`AppThemeMode` LIGHT/DARK/FOLLOW_SYSTEM × `ColorSource` BRAND/DYNAMIC）——不要给单个屏幕再包一层主题。底部标签只有书库 / 统计 / 设置；转盘、笔记、书单与 OPDS 都是从书库顶栏进入的次级页面。v55 起外壳是自适应的：宽度 ≥ 600dp 时把底栏换成手写的导航栏（navigation rail），因为 `NavigationSuiteScaffold` 需要 Material3 1.4，而后者又需要 Compose 1.9+。
+主题在 NavHost 层由 `:core` 的 `FlowTheme` 统一应用一次（`AppThemeMode` LIGHT/DARK/FOLLOW_SYSTEM × `ColorSource` BRAND/DYNAMIC/CUSTOM）——不要给单个屏幕再包一层主题。三种来源读的是 `AppSettings` 的三个不同字段：BRAND 读 `colorPreset`（12 个 `AppColorPreset` 之一），CUSTOM 读 `customSeedArgb`，DYNAMIC 两者都不读。底部标签只有书库 / 统计 / 设置；转盘、笔记、书单与 OPDS 都是从书库顶栏进入的次级页面。v55 起外壳是自适应的：宽度 ≥ 600dp 时把底栏换成手写的导航栏（navigation rail），因为 `NavigationSuiteScaffold` 需要 Material3 1.4，而后者又需要 Compose 1.9+。
 
-## 需注意的文档漂移
+窗口 inset 的契约只在 `FlowShellScaffold` 一处：外壳设 `contentWindowInsets = WindowInsets(0,0,0,0)` **并**加 `.consumeWindowInsets(paddingValues)`，因为 `Modifier.padding()` 只应用 inset 而不消费它，否则 9 个嵌套页面会把状态栏 inset 再加一遍（112dp 而非 88dp）。同理，接受 `modifier` 的包装组件必须在**每个**分支上都应用它——`FlowStateHost` 的成功分支曾是裸的 `content()`，导致页面一有数据就顶穿到 `TopAppBar` 底下。
 
-以下是配套文档中已经过期的信息；请以源码与本文件为准。
+## 安全硬约束（摘要）
 
-- `AGENTS.md` 写着覆盖率 55.8%（v52），并把 `:feature:*` 称为「仍然空着的迁移边界」；实际覆盖率是 71%，而且 `:feature:reader` 自 v54 起就有三个带测试的源文件了。它还只列了 `MIGRATION_4_5` / `MIGRATION_5_6`（漏了 `6_7`），路由清单也不完整（漏了 `notes`、`reading_lists`、`opds`）。
-- `README.md` 写着 8 个仓库接口以及「6 DAO + 6 Entity」；真实数量是 10 个接口、7 个 DAO、8 个实体。
-- `ARCHITECTURE.md` 仍在描述 v51 的计划，早于 `:core` 设计系统与 `:feature:reader` 的抽取。
-- `ROADMAP.md` 的版本戳是 `v56.0.0`，`README.md` 仍在引用 v50.0 / v52.0 的特性节点；两者都不跟随当前版本号。
+完整清单在 `AGENTS_CN.md` 的「安全考量」一节，这里只列最容易被改坏的几条：
+
+- **外部传入的文件名是攻击者可控输入。** 一律过 `ImportFileName.sanitize()` + `resolveWithin()`，且**只由调用方解析一次**（重复查询 `ContentResolver` 会引入 TOCTOU）。注意 `sanitize()` 刻意保留 Unicode，而 `BookParser.sanitizeFileName()` 是纯 ASCII 的、只给漫画目录名用——拿去处理书名会把 `三体.epub` 变成 `_.epub`。
+- **读取攻击者提供的字节一律走上限**：`copyCapped`（超限 -1）/ `readCappedBytes` / `readCappedText`（超限 null）。裸 `copyTo()`/`readText()` 就是 bug。上限：整包 256MB、整文档 128MB、单图 24MB、EPUB 单章 16MB、EPUB 结构性元数据 4MB。`copyCapped` 按契约不删残留文件，由各调用方删。
+- **局域网边界要在每个发起请求的调用点各自落实**，不能指望 OPDS 客户端代劳：全应用只有一项 `INTERNET` 权限，它是为局域网存在的。`LanTransferClient` 曾只校验 `http://` 前缀，于是一个公网链接就能把 200MB 内容拉下来交给会整体覆盖书库的备份导入器。
+- **导出的 ContentProvider 自 v56.6.2 起有权限门禁**：`READ_LIBRARY`（`dangerous`）+ `WRITE_LIBRARY`（`signature`）。这道检查在 Android 框架侧执行，单测覆盖不到，manifest 属性本身就是执行点；那 4 条文案必须 9 种语言齐全，因为会出现在系统授权对话框里。
+- **判断「密钥是否已提交」要看 `git ls-files -v` 和全历史扫描，不能读工作区文件**——根目录 `providers.yaml` 被标了 `skip-worktree`，工作区内容与 HEAD 不同而 `git status` 永远干净。另一条推论：论证「某个值不是密钥」不需要引用那个值。
+- **release 签名要在产物上验证**（`apksigner verify --print-certs`），并且先比 APK 与 `keystore.properties` 的时间戳——旧产物验证出 debug 签名，现象跟修复没生效一样。
+
+## 文档现状（v56.6.2 核对）
+
+这一节此前列的漂移项已在 v56.6.1／v56.6.2 逐条修掉：`AGENTS.md` 的覆盖率与 `:feature:*` 描述、README 的接口／DAO／实体计数、ROADMAP 的版本戳，现均与源码一致。当前状态：
+
+- `AGENTS.md` / `AGENTS_CN.md` —— 结构与陷阱清单的权威。`AGENTS_CN.md` 在 v56.6.2 重写（此前停在 v45，声称项目没有网络功能、领域接口都在 `BookRepository.kt`、只有一个测试文件、没有 ktlint）。
+- `README.md` / `README_EN.md` —— v56.6.1 重写为面向读者的散文，并对着代码核对过计数；两份必须互相同步。
+- `ROADMAP.md` —— 已更新到 v56.6.2，含「否决清单」、待决事项与流程债。
+- `ARCHITECTURE.md` —— **仍然停在 v51 的计划**，早于 `:core` 设计系统与 `:feature:reader` 抽取。这是目前唯一已知的存量漂移。
+- `CHANGELOG.md` —— 最新条目 v56.6.2。
+
+**中英双份的维护规则：英文版是权威。** 改了英文里的某个事实，就在同一个提交里改中文镜像，否则删掉镜像——不要留在「中间状态」，那比没有镜像更容易误导人。这份文件和 `AGENTS_CN.md` 都是为此重写的。

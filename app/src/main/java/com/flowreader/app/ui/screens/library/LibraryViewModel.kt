@@ -218,7 +218,7 @@ class LibraryViewModel @Inject constructor(
             val name = bookParser.displayName(uri)
             if (BookParser.detectFormatStatic(name) == BookFormat.UNKNOWN && isZipArchiveName(name)) {
                 if (zipImporter.isComicArchive(uri)) {
-                    importSingle(uri).fold(
+                    importSingle(uri, name).fold(
                         onSuccess = { _uiState.update { state -> state.copy(isLoading = false) } },
                         onFailure = { error -> _uiState.update { state -> state.copy(isLoading = false, error = error.message ?: "导入失败") } }
                     )
@@ -227,7 +227,7 @@ class LibraryViewModel @Inject constructor(
                 }
                 return@launch
             }
-            val result = importSingle(uri)
+            val result = importSingle(uri, name)
             _uiState.update { state ->
                 result.fold(
                     onSuccess = { state.copy(isLoading = false) },
@@ -266,9 +266,11 @@ class LibraryViewModel @Inject constructor(
             }
     }
 
-    private suspend fun importSingle(uri: Uri): Result<Long> =
+    private suspend fun importSingle(uri: Uri, resolvedName: String? = null): Result<Long> =
         bookParser.parseBook(uri).mapCatching { result ->
-            val internalPath = result.pdfFilePath ?: bookParser.copyFileToInternal(uri)
+            // Reuse the name this import already resolved. Letting copyFileToInternal re-query the
+            // provider would let a hostile one return a different (traversing) name for the write.
+            val internalPath = result.pdfFilePath ?: bookParser.copyFileToInternal(uri, resolvedName)
             val book = result.book.copy(filePath = internalPath ?: "")
             val bookId = bookRepository.insertBook(book)
             chapterRepository.insertChapters(result.chapters.map { it.copy(bookId = bookId) })

@@ -80,11 +80,14 @@ class LanTransferServer(private val file: File) {
                 break
             }
             try {
+                // One worker thread serves every peer, so a connection that never sends a request
+                // line would hold the server for as long as the dialog stays open. A read timeout
+                // bounds that to five seconds per peer instead of forever.
+                client.soTimeout = CLIENT_TIMEOUT_MS
                 client.use { connection ->
                     val reader = connection.getInputStream().bufferedReader()
                     val requestLine = reader.readLine() ?: return@use
-                    val expectedPath = "/backup/$token"
-                    val accepted = requestLine.startsWith("GET ") && requestLine.contains(expectedPath)
+                    val accepted = isBackupRequest(requestLine, token)
                     val output = BufferedOutputStream(connection.getOutputStream())
                     if (accepted) {
                         val headers = buildString {
@@ -111,7 +114,8 @@ class LanTransferServer(private val file: File) {
                     output.flush()
                 }
             } catch (e: Exception) {
-                // A single broken peer must not kill the server.
+                // A single broken or timed-out peer must not kill the server; `client.use` above
+                // has already closed the connection by the time we get here.
             }
         }
         runCatching { socket.close() }
@@ -127,6 +131,24 @@ class LanTransferServer(private val file: File) {
     companion object {
         private const val MAX_PAYLOAD_BYTES = 200L * 1024 * 1024
         private const val TOKEN_CHARS = "0123456789abcdef"
+        private const val CLIENT_TIMEOUT_MS = 5_000
+
+        /**
+         * Exact match on the request line, which is what the class KDoc has always claimed.
+         *
+         * `requestLine.contains("/backup/$token")` accepted `GET /anything/backup/<token>` and
+         * `GET /backup/<token>extra` as well. Not a token leak on its own — you still need the
+         * token — but the guarantee documented above should be the one the code actually enforces,
+         * and a loose match here is the kind of thing a later path-handling change builds on.
+         *
+         * HTTP/1.0 is accepted because `HttpURLConnection` may downgrade, and a bare
+         * `GET <path>` (HTTP/0.9 style) is not.
+         */
+        internal fun isBackupRequest(requestLine: String, token: String): Boolean {
+            if (token.isEmpty()) return false
+            val expected = "/backup/$token"
+            return requestLine == "GET $expected HTTP/1.1" || requestLine == "GET $expected HTTP/1.0"
+        }
 
         fun localIpv4Address(): String? = runCatching {
             NetworkInterface.getNetworkInterfaces()

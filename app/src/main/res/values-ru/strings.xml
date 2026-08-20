@@ -358,4 +358,10 @@
     <string name="reader_bookmark_default">Закладка выделенного текста</string>
     <string name="reader_pdf_annotation_on">Режим аннотаций</string>
     <string name="reader_pdf_annotation_off">Выйти из режима аннотаций</string>
+
+    <!-- v56.6.2: custom permissions guarding the exported ContentProvider (finding #7) -->
+    <string name="permission_read_library_label">Чтение библиотеки</string>
+    <string name="permission_read_library_description">Разрешает приложению читать список книг и прогресс чтения. Текст книг и пути к файлам не раскрываются.</string>
+    <string name="permission_write_library_label">Изменение библиотеки</string>
+    <string name="permission_write_library_description">Разрешает приложению изменять библиотеку. FlowReader отклоняет все запросы на запись.</string>
 </resources>

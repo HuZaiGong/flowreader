@@ -45,8 +45,6 @@ data class BookParseResult(
 class BookParser @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val bufferSize = 8192
-
     // Keep chapter rows safely below Android CursorWindow limits. Large TXT/Markdown
     // files without headings used to be stored as one huge chapter and could crash
     // when Room read the content back for the reader screen.
@@ -60,6 +58,21 @@ class BookParser @Inject constructor(
 
     /** Whole-document cap for TXT / Markdown / FB2 / MOBI single-file formats. */
     private val maxWholeFileBytes = 128L * 1024 * 1024
+
+    /**
+     * Cap for copying a whole container (EPUB / CBZ) or an arbitrary picked file into cache or
+     * `filesDir/books`. Deliberately larger than [maxWholeFileBytes]: a legitimate comic archive
+     * or image-heavy EPUB can exceed the single-document limit, but nothing should be allowed to
+     * write until the disk is full.
+     */
+    private val maxContainerBytes = 256L * 1024 * 1024
+
+    /**
+     * Cap for EPUB structural metadata (`META-INF/container.xml`, the OPF). Both are a few KB in
+     * any real book; the limit exists because they are attacker-controlled entries that used to be
+     * read with an unbounded `readText()`.
+     */
+    private val maxMetadataBytes = 4L * 1024 * 1024
 
     suspend fun parseBook(uri: Uri): Result<BookParseResult> = withContext(Dispatchers.IO) {
         try {
@@ -206,6 +219,54 @@ class BookParser @Inject constructor(
                 val value = match.value
                 value.toLongOrNull()?.toString()?.padStart(12, '0') ?: value
             }.toList()
+
+        private const val BUFFER_SIZE = 8192
+
+        /**
+         * Reads the whole stream into memory up to [limit] bytes; null when the stream is larger
+         * (the caller then skips the entry or fails the parse with a clear message).
+         *
+         * `internal` rather than private so `BookParserCapsTest` can drive the limit with a few
+         * bytes instead of a 256MB fixture. The instance members of the same name delegate here;
+         * they exist only so the ~10 call sites read unchanged.
+         */
+        internal fun readCappedBytes(stream: InputStream, limit: Long): ByteArray? {
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(BUFFER_SIZE)
+            var total = 0L
+            while (true) {
+                val read = stream.read(buffer)
+                if (read <= 0) break
+                total += read
+                if (total > limit) return null
+                output.write(buffer, 0, read)
+            }
+            return output.toByteArray()
+        }
+
+        internal fun readCappedText(stream: InputStream, limit: Long): String? =
+            readCappedBytes(stream, limit)?.toString(Charsets.UTF_8)
+
+        /**
+         * Streams [source] into [target], returning the byte count, or **-1** once more than [limit]
+         * bytes have been read. The partial file is left on disk deliberately: every caller either
+         * deletes it in a `finally` or, in `copyFileToInternal`'s case, deletes it explicitly — the
+         * cap cannot know which. A caller that ignores -1 ships a truncated book.
+         */
+        internal fun copyCapped(source: InputStream, target: File, limit: Long): Long {
+            var total = 0L
+            val buffer = ByteArray(BUFFER_SIZE)
+            FileOutputStream(target).use { output ->
+                while (true) {
+                    val read = source.read(buffer)
+                    if (read <= 0) break
+                    total += read
+                    if (total > limit) return -1
+                    output.write(buffer, 0, read)
+                }
+            }
+            return total
+        }
     }
 
     /**
@@ -224,11 +285,13 @@ class BookParser @Inject constructor(
             if (cursor.moveToFirst()) {
                 val displayNameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
                 if (displayNameIndex >= 0) {
-                    cursor.getString(displayNameIndex)?.takeIf { it.isNotBlank() }?.let { return it }
+                    cursor.getString(displayNameIndex)?.takeIf { it.isNotBlank() }?.let {
+                        return ImportFileName.sanitize(it)
+                    }
                 }
             }
         }
-        return uri.lastPathSegment?.substringAfterLast('/')?.takeIf { it.isNotBlank() } ?: "未知书籍"
+        return ImportFileName.sanitize(uri.lastPathSegment?.substringAfterLast('/'))
     }
 
     private fun getFileSize(uri: Uri): Long {
@@ -245,12 +308,14 @@ class BookParser @Inject constructor(
     }
 
     private fun parseEpubStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
+        val tempFile = File(context.cacheDir, "temp_epub_parse_${System.currentTimeMillis()}.zip")
         return try {
-            val tempFile = File(context.cacheDir, "temp_epub_parse_${System.currentTimeMillis()}.zip")
-            inputStream.use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    input.copyTo(output)
-                }
+            // Capped copy: the per-entry limits below only apply once the archive is on disk, so an
+            // unbounded copy here was the way to fill the disk regardless of them.
+            val copied = inputStream.use { input -> copyCapped(input, tempFile, maxContainerBytes) }
+            if (copied < 0) {
+                tempFile.delete()
+                return Result.failure(Exception("文件过大：EPUB 超过 ${maxContainerBytes / 1024 / 1024}MB 上限"))
             }
 
             val title = fileName.removeSuffix(".epub")
@@ -261,12 +326,16 @@ class BookParser @Inject constructor(
             ZipFile(tempFile).use { zip ->
                 val containerEntry = zip.getEntry("META-INF/container.xml")
                     ?: return@use
-                val containerXml = Jsoup.parse(zip.getInputStream(containerEntry).bufferedReader().readText())
+                // container.xml and the OPF are small by spec, but "by spec" is exactly what a
+                // hostile archive ignores — both are entries an attacker fully controls.
+                val containerText = readCappedText(zip.getInputStream(containerEntry), maxMetadataBytes) ?: return@use
+                val containerXml = Jsoup.parse(containerText)
                 val opfPath = containerXml.select("rootfile").attr("full-path")
                 if (opfPath.isBlank()) return@use
 
                 val opfEntry = zip.getEntry(opfPath) ?: return@use
-                val opfDoc = Jsoup.parse(zip.getInputStream(opfEntry).bufferedReader().readText())
+                val opfText = readCappedText(zip.getInputStream(opfEntry), maxMetadataBytes) ?: return@use
+                val opfDoc = Jsoup.parse(opfText)
 
                 opfDoc.select("creator").firstOrNull()?.let { author = it.text() }
                 opfDoc.select("description").firstOrNull()?.let { description = it.text() }
@@ -328,10 +397,6 @@ class BookParser @Inject constructor(
                 }
             }
 
-            if (tempFile.exists()) {
-                tempFile.delete()
-            }
-
             if (chapters.isEmpty()) {
                 return Result.failure(Exception("未找到可解析的章节内容"))
             }
@@ -353,17 +418,19 @@ class BookParser @Inject constructor(
             )
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            // Every exit path deletes it, including the early failure returns above. Before v56.6.2
+            // only the success path did, so a malformed EPUB left its full-size copy in cacheDir on
+            // each attempt.
+            tempFile.delete()
         }
     }
 
     private fun extractEpubCover(inputStream: InputStream, bookTitle: String): String? {
+        val tempFile = File(context.cacheDir, "temp_epub_${System.currentTimeMillis()}.zip")
         return try {
-            val tempFile = File(context.cacheDir, "temp_epub_${System.currentTimeMillis()}.zip")
-            inputStream.use { input ->
-                FileOutputStream(tempFile).use { output ->
-                    input.copyTo(output)
-                }
-            }
+            val copied = inputStream.use { input -> copyCapped(input, tempFile, maxContainerBytes) }
+            if (copied < 0) return null
 
             ZipInputStream(FileInputStream(tempFile)).use { zipInput ->
                 var entry = zipInput.nextEntry
@@ -373,34 +440,38 @@ class BookParser @Inject constructor(
                 while (entry != null) {
                     val lowerName = entry.name.lowercase()
                     if (lowerName.contains("cover") && (lowerName.endsWith(".jpg") || lowerName.endsWith(".png") || lowerName.endsWith(".jpeg"))) {
-                        coverImage = zipInput.readBytes()
+                        // A cover is an image like any other: hold it to the same 24MB ceiling
+                        // rather than reading whatever the entry claims to be.
+                        coverImage = readCappedBytes(zipInput, maxSingleImageBytes) ?: coverImage
                         coverName = entry.name
                         entry = zipInput.nextEntry
                     } else if (lowerName.endsWith(".opf")) {
-                        val opfContent = zipInput.bufferedReader().readText()
-                        val coverMeta = Regex("item[^>]*href=\"([^\"]+cover[^\"]*\\.(jpg|png|jpeg))\"", RegexOption.IGNORE_CASE)
-                            .find(opfContent)
+                        val opfContent = readCappedText(zipInput, maxMetadataBytes)
+                        val coverMeta = opfContent?.let {
+                            Regex("item[^>]*href=\"([^\"]+cover[^\"]*\\.(jpg|png|jpeg))\"", RegexOption.IGNORE_CASE)
+                                .find(it)
+                        }
                         if (coverMeta != null) {
                             val coverPath = coverMeta.groupValues[1]
-                            val zip = java.util.zip.ZipFile(tempFile)
-                            val coverEntry = zip.getEntry(coverPath)
-                            if (coverEntry != null) {
-                                coverImage = zip.getInputStream(coverEntry).readBytes()
+                            java.util.zip.ZipFile(tempFile).use { zip ->
+                                val coverEntry = zip.getEntry(coverPath)
+                                if (coverEntry != null) {
+                                    zip.getInputStream(coverEntry).use { stream ->
+                                        readCappedBytes(stream, maxSingleImageBytes)?.let { coverImage = it }
+                                    }
+                                }
                             }
-                            zip.close()
                         }
                     }
                     entry = zipInput.nextEntry
-                }
-
-                if (tempFile.exists()) {
-                    tempFile.delete()
                 }
 
                 coverImage?.let { saveCoverImage(it, bookTitle) }
             }
         } catch (e: Exception) {
             null
+        } finally {
+            tempFile.delete()
         }
     }
 
@@ -595,20 +666,35 @@ class BookParser @Inject constructor(
         }
     }
 
-    fun copyFileToInternal(uri: Uri): String? {
+    /**
+     * Copies the picked file into `filesDir/books`.
+     *
+     * [preferredName] exists to close a TOCTOU window: a `ContentResolver` query is not guaranteed
+     * to return the same `DISPLAY_NAME` twice, and a hostile provider can answer `good.epub` while
+     * the format is being detected and `../../databases/flowreader_db` when the bytes are finally
+     * written. Callers that already resolved a name pass it here so one name governs the whole
+     * import. Re-querying is only a fallback for callers that never had one.
+     *
+     * The name is sanitized and the resolved path is re-checked for containment either way — an
+     * unsafe name fails the copy rather than being silently rewritten.
+     */
+    fun copyFileToInternal(uri: Uri, preferredName: String? = null): String? {
         return try {
             val booksDir = File(context.filesDir, "books")
             if (!booksDir.exists()) {
                 booksDir.mkdirs()
             }
 
-            val fileName = getFileName(uri)
-            val file = File(booksDir, fileName)
+            val fileName = preferredName ?: getFileName(uri)
+            val file = ImportFileName.resolveWithin(booksDir, fileName) ?: return null
 
-            context.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(file).use { output ->
-                    input.copyTo(output)
-                }
+            val written = context.contentResolver.openInputStream(uri)?.use { input ->
+                copyCapped(input, file, maxContainerBytes)
+            } ?: return null
+
+            if (written < 0) {
+                file.delete()
+                return null
             }
 
             file.absolutePath
@@ -619,7 +705,9 @@ class BookParser @Inject constructor(
 
     private fun parsePdfStream(uri: Uri, fileName: String, fileSize: Long): Result<BookParseResult> {
         return try {
-            val internalPath = copyFileToInternal(uri)
+            // Pass the name resolved once in parseBook(); re-querying here would reopen the
+            // TOCTOU window that copyFileToInternal's preferredName exists to close.
+            val internalPath = copyFileToInternal(uri, fileName)
                 ?: return Result.failure(Exception("无法保存PDF文件"))
 
             val pageCount = context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
@@ -669,7 +757,13 @@ class BookParser @Inject constructor(
                 return Result.failure(Exception("无法创建漫画目录"))
             }
             val image = File(directory, uniqueComicFileName(fileName, 0))
-            inputStream.use { input -> FileOutputStream(image).use { output -> input.copyTo(output) } }
+            // A single standalone comic page is still just an image: same 24MB ceiling as an
+            // embedded one, instead of an unbounded copy straight to internal storage.
+            val written = inputStream.use { input -> copyCapped(input, image, maxSingleImageBytes) }
+            if (written < 0) {
+                directory.deleteRecursively()
+                return Result.failure(Exception("图片过大：超过 ${maxSingleImageBytes / 1024 / 1024}MB 上限"))
+            }
 
             val chapter = comicChapter(index = 0, title = "第 1 页", imagePath = image.absolutePath)
             Result.success(
@@ -695,7 +789,13 @@ class BookParser @Inject constructor(
     private fun parseComicZipStream(inputStream: InputStream, fileName: String, fileSize: Long): Result<BookParseResult> {
         val tempFile = File(context.cacheDir, "temp_comic_${System.currentTimeMillis()}.zip")
         return try {
-            inputStream.use { input -> FileOutputStream(tempFile).use { output -> input.copyTo(output) } }
+            // ZipImportRules caps entry count and per-entry size once the archive is open; without a
+            // cap on the archive copy itself, a single huge CBZ filled the cache before any of that
+            // ran.
+            val copied = inputStream.use { input -> copyCapped(input, tempFile, maxContainerBytes) }
+            if (copied < 0) {
+                return Result.failure(Exception("文件过大：压缩包超过 ${maxContainerBytes / 1024 / 1024}MB 上限"))
+            }
 
             val title = fileName.removeSuffixIgnoreCase(".zip").removeSuffixIgnoreCase(".cbz")
             val directory = File(context.filesDir, "comics/${System.currentTimeMillis()}_${sanitizeFileName(title)}")
@@ -763,26 +863,9 @@ class BookParser @Inject constructor(
             endPosition = index + 1
         )
 
-    /**
-     * Reads the whole stream into memory up to [limit] bytes; null when the stream is larger
-     * (the caller then skips the entry or fails the parse with a clear message).
-     */
-    private fun readCappedBytes(stream: InputStream, limit: Long): ByteArray? {
-        val output = ByteArrayOutputStream()
-        val buffer = ByteArray(bufferSize)
-        var total = 0L
-        while (true) {
-            val read = stream.read(buffer)
-            if (read <= 0) break
-            total += read
-            if (total > limit) return null
-            output.write(buffer, 0, read)
-        }
-        return output.toByteArray()
-    }
+    private fun readCappedBytes(stream: InputStream, limit: Long): ByteArray? = Companion.readCappedBytes(stream, limit)
 
-    private fun readCappedText(stream: InputStream, limit: Long): String? =
-        readCappedBytes(stream, limit)?.toString(Charsets.UTF_8)
+    private fun readCappedText(stream: InputStream, limit: Long): String? = Companion.readCappedText(stream, limit)
 
     private fun InputStream.readCappedTextNotNull(limit: Long): String =
         readCappedText(this, limit) ?: throw IllegalStateException("文件过大：超过 ${limit / 1024 / 1024}MB 上限")
@@ -790,20 +873,7 @@ class BookParser @Inject constructor(
     private fun InputStream.readCappedBytesNotNull(limit: Long): ByteArray =
         readCappedBytes(this, limit) ?: throw IllegalStateException("文件过大：超过 ${limit / 1024 / 1024}MB 上限")
 
-    private fun copyCapped(source: InputStream, target: File, limit: Long): Long {
-        var total = 0L
-        val buffer = ByteArray(bufferSize)
-        FileOutputStream(target).use { output ->
-            while (true) {
-                val read = source.read(buffer)
-                if (read <= 0) break
-                total += read
-                if (total > limit) return -1
-                output.write(buffer, 0, read)
-            }
-        }
-        return total
-    }
+    private fun copyCapped(source: InputStream, target: File, limit: Long): Long = Companion.copyCapped(source, target, limit)
 
     private fun uniqueComicFileName(name: String, index: Int): String {
         val extension = name.substringAfterLast('.', "jpg").lowercase(Locale.ROOT).takeIf { it.length <= 5 } ?: "jpg"

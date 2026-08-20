@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -15,9 +17,9 @@ android {
         applicationId = "com.flowreader.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5661
+        versionCode = 5662
 
-        versionName = "56.6.1"
+        versionName = "56.6.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -27,9 +29,35 @@ android {
         }
     }
 
+    signingConfigs {
+        // Release signing reads from keystore.properties at the repo root, which is git-ignored
+        // (keystore + passwords never enter version control). When the file is absent — CI, a
+        // fresh clone, anyone without the key — this block is skipped and release falls back to
+        // the debug config below, so assembleDebug and the unit tests keep working. Only a real
+        // release build on a machine that has the keystore gets the production signature.
+        create("release") {
+            val keystorePropsFile = rootProject.file("keystore.properties")
+            if (keystorePropsFile.exists()) {
+                val props = Properties().apply {
+                    keystorePropsFile.inputStream().use { load(it) }
+                }
+                storeFile = file(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("debug")
+            // Use the real release signature when keystore.properties supplied one; otherwise fall
+            // back to debug so builds without the keystore still succeed.
+            signingConfig = if (rootProject.file("keystore.properties").exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

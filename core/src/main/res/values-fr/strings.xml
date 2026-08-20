@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flow_state_loading">Chargement</string>
+    <string name="flow_state_empty">Rien pour le moment</string>
+    <string name="flow_state_error">Erreur</string>
+    <string name="flow_action_retry">Réessayer</string>
+    <string name="flow_action_back">Retour</string>
+    <string name="flow_action_navigate_up">Revenir en arrière</string>
+    <string name="flow_action_close_selection">Quitter la sélection</string>
+    <string name="flow_selection_count">%1$d sélectionnés</string>
+    <string name="flow_cover_description">Couverture de %1$s</string>
+</resources>

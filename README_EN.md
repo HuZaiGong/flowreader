@@ -25,7 +25,7 @@ An Android e-book reader. Open it and read. No sign-up, no login, nobody asking 
 
 It doesn't upload your books, doesn't tally your reading habits, doesn't collect crash logs. The whole app requests a single `INTERNET` permission, and that permission does exactly two things: reach an OPDS library on your own local network, and move a backup between two of your own devices. If you'd rather check than take my word for it, `AndroidManifest.xml` is short enough to read in a minute.
 
-Current version: **v56.6.1**. The interface speaks 9 languages (Chinese, English, Japanese, Korean, German, Spanish, French, Portuguese, Russian), switchable in-app at any time.
+Current version: **v56.6.2**. The interface speaks 9 languages (Chinese, English, Japanese, Korean, German, Spanish, French, Portuguese, Russian), switchable in-app at any time.
 
 ## Why build it this way
 
@@ -110,7 +110,7 @@ CI runs six gates in a fixed order, and you can run the same ones locally:
 ```bash
 ./gradlew verifyKotlinStyle      # ktlint (every module except :app) + repo-wide whitespace check
 ./gradlew testDebugUnitTest      # :app / :core / :domain / :feature:reader
-./gradlew coverageSummary        # file-count test breadth ≥ 40% (currently 80.9%)
+./gradlew coverageSummary        # file-count test breadth ≥ 40% (currently 85.3%)
 ./gradlew assembleDebug
 ./gradlew verifyRoborazziDebug   # screenshot regression
 ./gradlew performanceBaseline    # APK size against baseline/apk-size.properties
@@ -154,16 +154,20 @@ These are hard constraints, not descriptions of the current implementation:
 
 - **One `INTERNET` permission**, for LAN OPDS and LAN transfer only. No accounts, no analytics, no crash reporting, no sync.
 - **Android's automatic backup transfers nothing.** The only domain listed in the backup rules is empty in this app, so books, progress and settings never leave the device through Google's backup transport. That's deliberate — cross-device migration goes through the in-app export or LAN transfer, which you trigger yourself.
-- **Every import path is capped**: EPUB chapters at 16MB, embedded images at 24MB, whole TXT/MD/FB2/MOBI files at 128MB. ZIP / CBZ reject absolute paths and `..` (zip-slip), skip `__MACOSX` and hidden entries, cap entry count and per-entry size, and only admit extensions the parsers recognize.
+- **Every import path is capped**: EPUB chapters at 16MB, embedded images at 24MB, whole TXT/MD/FB2/MOBI files at 128MB, whole containers at 256MB, EPUB structural metadata at 4MB. ZIP / CBZ reject absolute paths and `..` (zip-slip), skip `__MACOSX` and hidden entries, cap entry count and per-entry size, and only admit extensions the parsers recognize.
+- **A file name handed over by another app is untrusted input.** When something opens a book "with FlowReader", the display name it supplies is reduced to its last path segment, stripped of separators and control characters, and the destination is re-checked against the canonical app directory before anything is written — otherwise a single `../../databases/…` would overwrite the database.
+- **LAN receiving checks the peer's address too**: a pasted backup link has to be a loopback / RFC1918 / RFC4193 / `.local`-style LAN address with an exactly matching path. Public links are refused outright.
 - **No DRM circumvention.** Protected files are refused whole rather than half-decoded.
-- The **ContentProvider** exposes read-only book metadata and progress — no file paths, no book text, and all writes refused.
+- The **ContentProvider** exposes read-only book metadata and progress — no file paths, no book text, and all writes refused. It stays open to other apps (automation tools and the like), but since v56.6.2 a caller has to declare a custom permission and get your runtime consent, instead of reading your library silently from the moment it installs.
 - **FileProvider authorizes exactly one subdirectory, `share_cards/`** (the repo has exactly one `getUriForFile()` call site).
 - **No WebView anywhere.** FTS queries and HTML / Markdown exports are escaped; the audit gate forbids new `!!`.
+- **Release builds are signed with a real key**, whose keystore and passwords stay out of version control; environments without the keystore (CI, a fresh clone) fall back to debug signing so they still build.
 
 ---
 
 ## Recent changes
 
+- **v56.6.2** — a third-party static review raised seven findings; all seven are now closed. The one that mattered: when another app opens a book "with FlowReader", the file name it hands over could contain `../` and escape the app's private directory — far enough to overwrite the database. Three more code defects: an EPUB's structural XML was read with no size limit, the LAN receiver checked the scheme but not who it was talking to (a pasted public link really would be fetched off the internet), and the backup server could be held open by a single connection that connected and said nothing. Each of those four ships a regression suite, verified by reverting the fix and watching the tests fail. The remaining three: release builds now use a real signing key (confirmed on the artifact with `apksigner`, not just in the build file); the exported ContentProvider is now behind a permission you have to grant; and the "plaintext API key" turned out not to be where the review said — a full-history scan found the only committed copy was a value quoted inside a planning document, now redacted.
 - **v56.6.1** — follow-up sweep on v56.6.0. The color studio pre-formatted its contrast number with a locale-less `String.format` while string resources resolve against the in-app language, so comma-decimal locales disagreed and threw. The hex field wrote to a state it read in the same composition, paying an extra composition pass on every frame of a drag. The Color studio subtitle still claimed a custom color was in use after switching back to a preset. Also corrected `backup_rules.xml`'s comments, which described the opposite of the real behavior — the backup scope has always been empty, nothing leaves the device, and that's deliberate, so only the comments changed.
 - **v56.6.0** — the color source expanded from two options into **12 built-in presets + wallpaper + a custom picker**, with a hue-ring / disc / spectrum-bar studio. `:core`'s `SeedColorScheme` generates all 24 Material roles from a single seed and guarantees WCAG AA (4.5:1) on every text-on-surface pair for any seed.
 - **v56.5.2** — Compose stability configuration removed unstable inference for domain models. `:domain` has no Compose compiler, so `Book` / `Chapter` and friends were all inferred unstable, re-executing every visible book card on any state change. Declaring them stable dropped unstable classes from 52 to 37; every UiState is stable now.

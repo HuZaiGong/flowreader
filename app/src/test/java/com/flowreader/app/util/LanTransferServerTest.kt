@@ -2,12 +2,14 @@ package com.flowreader.app.util
 
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
 import java.net.URI
 
 class LanTransferServerTest {
@@ -141,5 +143,77 @@ class LanTransferServerTest {
             tokens.size,
             uniqueTokens.size
         )
+    }
+
+    // --- v56.6.2, review finding #4: exact request-line matching ---
+
+    @Test
+    fun onlyTheExactBackupRequestLineIsAccepted() {
+        val token = "0123456789abcdef"
+
+        assertTrue(LanTransferServer.isBackupRequest("GET /backup/$token HTTP/1.1", token))
+        // HttpURLConnection may downgrade, and the server's own response is version-agnostic.
+        assertTrue(LanTransferServer.isBackupRequest("GET /backup/$token HTTP/1.0", token))
+    }
+
+    @Test
+    fun aPathThatMerelyContainsTheTokenIsRefused() {
+        // This is the actual fix: the old check was `requestLine.contains("/backup/$token")`, so
+        // every line below answered 200 despite the KDoc promising "the exact /backup/<token> path".
+        val token = "0123456789abcdef"
+
+        assertFalse(LanTransferServer.isBackupRequest("GET /anything/backup/$token HTTP/1.1", token))
+        assertFalse(LanTransferServer.isBackupRequest("GET /backup/${token}extra HTTP/1.1", token))
+        assertFalse(LanTransferServer.isBackupRequest("GET /../backup/$token HTTP/1.1", token))
+        assertFalse(LanTransferServer.isBackupRequest("GET /backup/$token?x=1 HTTP/1.1", token))
+    }
+
+    @Test
+    fun otherMethodsAndMalformedLinesAreRefused() {
+        val token = "0123456789abcdef"
+
+        assertFalse(LanTransferServer.isBackupRequest("POST /backup/$token HTTP/1.1", token))
+        assertFalse(LanTransferServer.isBackupRequest("HEAD /backup/$token HTTP/1.1", token))
+        assertFalse(LanTransferServer.isBackupRequest("GET /backup/$token", token))
+        assertFalse(LanTransferServer.isBackupRequest("GET  /backup/$token  HTTP/1.1", token))
+        assertFalse(LanTransferServer.isBackupRequest("", token))
+    }
+
+    @Test
+    fun aWrongTokenIsRefusedAndAnEmptyTokenMatchesNothing() {
+        assertFalse(LanTransferServer.isBackupRequest("GET /backup/deadbeefdeadbeef HTTP/1.1", "0123456789abcdef"))
+        // An empty token means the server never started. Without this guard, `/backup/` alone would
+        // match the built expected path and serve the payload to anyone.
+        assertFalse(LanTransferServer.isBackupRequest("GET /backup/ HTTP/1.1", ""))
+    }
+
+    // --- v56.6.2, review finding #4: one stalled peer cannot hold the server ---
+
+    @Test
+    fun aPeerThatNeverSendsARequestDoesNotBlockTheServerForever() {
+        // One worker thread serves every peer, so a socket that connects and stays silent used to
+        // park that thread on `readLine()` for as long as the dialog was open. The 5s `soTimeout`
+        // bounds it. The client timeout below is what makes this a failing test rather than a
+        // hanging one if the fix is reverted.
+        server = LanTransferServer(payload)
+        val url = server!!.start() ?: return
+        val uri = URI(url)
+
+        val stalled = java.net.Socket()
+        try {
+            stalled.connect(InetSocketAddress(uri.host, uri.port), 5_000)
+
+            val connection = uri.toURL().openConnection() as HttpURLConnection
+            connection.connectTimeout = 20_000
+            connection.readTimeout = 20_000
+            try {
+                assertEquals("stalled peer still holding the only worker thread", 200, connection.responseCode)
+                assertEquals("""{"books":[]}""", connection.inputStream.bufferedReader().readText())
+            } finally {
+                connection.disconnect()
+            }
+        } finally {
+            runCatching { stalled.close() }
+        }
     }
 }

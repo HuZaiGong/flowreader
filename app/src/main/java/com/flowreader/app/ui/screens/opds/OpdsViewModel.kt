@@ -100,7 +100,10 @@ class OpdsViewModel @Inject constructor(
             opdsClient.download(url, fileNameFor(entry, url))
                 .mapCatching { file ->
                     val result = bookParser.parseBook(Uri.fromFile(file)).getOrThrow()
-                    val internalPath = result.pdfFilePath ?: bookParser.copyFileToInternal(Uri.fromFile(file))
+                    // The name comes from OpdsClient's own sanitized download file, not from the
+                    // remote server, so pass it explicitly instead of re-deriving it from the URI.
+                    val internalPath = result.pdfFilePath
+                        ?: bookParser.copyFileToInternal(Uri.fromFile(file), file.name)
                     val bookId = bookRepository.insertBook(result.book.copy(filePath = internalPath ?: ""))
                     chapterRepository.insertChapters(result.chapters.map { it.copy(bookId = bookId) })
                     file.delete()

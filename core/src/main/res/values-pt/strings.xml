@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="flow_state_loading">Carregando</string>
+    <string name="flow_state_empty">Nada aqui ainda</string>
+    <string name="flow_state_error">Erro</string>
+    <string name="flow_action_retry">Tentar novamente</string>
+    <string name="flow_action_back">Voltar</string>
+    <string name="flow_action_navigate_up">Navegar para cima</string>
+    <string name="flow_action_close_selection">Sair da seleção</string>
+    <string name="flow_selection_count">%1$d selecionados</string>
+    <string name="flow_cover_description">Capa de %1$s</string>
+</resources>

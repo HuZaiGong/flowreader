@@ -22,6 +22,13 @@ import dagger.hilt.components.SingletonComponent
  * All reads are metadata-only (no file paths, no chapter content). Writes are rejected; the
  * authority is exported so third-party launchers/widgets can build on the data.
  *
+ * Since v56.6.2 the authority is gated by `com.flowreader.app.permission.READ_LIBRARY`
+ * (`dangerous`, declared in the manifest): a caller must declare the permission and have the
+ * user grant it, rather than reading the whole library the moment it is installed. Writes are
+ * additionally gated by a `signature` permission, which is belt-and-braces — [insert], [update]
+ * and [delete] throw regardless. Note that Android enforces both *outside* this class, so no
+ * unit test here can cover the gate; the manifest attributes are the enforcement point.
+ *
  * Hilt does not support `@AndroidEntryPoint` on ContentProviders, so the database arrives via
  * an [EntryPoint] lookup instead of field injection.
  */

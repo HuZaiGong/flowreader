@@ -358,4 +358,10 @@
     <string name="reader_bookmark_default">Ausgewählter Text Lesezeichen</string>
     <string name="reader_pdf_annotation_on">Anmerkungsmodus</string>
     <string name="reader_pdf_annotation_off">Anmerkungsmodus beenden</string>
+
+    <!-- v56.6.2: custom permissions guarding the exported ContentProvider (finding #7) -->
+    <string name="permission_read_library_label">Bibliothek lesen</string>
+    <string name="permission_read_library_description">Erlaubt dieser App, deine Buchliste und deinen Lesefortschritt zu lesen. Buchtext und Dateipfade werden nie weitergegeben.</string>
+    <string name="permission_write_library_label">Bibliothek ändern</string>
+    <string name="permission_write_library_description">Erlaubt dieser App, deine Bibliothek zu ändern. FlowReader lehnt alle Schreibzugriffe ab.</string>
 </resources>

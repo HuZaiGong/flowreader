@@ -368,4 +368,10 @@
     <string name="reader_bookmark_default">선택한 텍스트 북마크</string>
     <string name="reader_pdf_annotation_on">주석 모드</string>
     <string name="reader_pdf_annotation_off">주석 모드 종료</string>
+
+    <!-- v56.6.2: custom permissions guarding the exported ContentProvider (finding #7) -->
+    <string name="permission_read_library_label">서재 읽기</string>
+    <string name="permission_read_library_description">이 앱이 도서 목록과 읽기 진행률을 읽도록 허용합니다. 본문과 파일 경로는 제공되지 않습니다.</string>
+    <string name="permission_write_library_label">서재 수정</string>
+    <string name="permission_write_library_description">이 앱이 서재를 수정하도록 허용합니다. 쓰기 요청은 항상 거부됩니다.</string>
 </resources>

@@ -41,6 +41,7 @@ captures/
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
 
 # External native build folder generated in Android Studio 2.2 and later
 .externalNativeBuild
@@ -99,10 +100,18 @@ hs_err_pid*
 replay_pid*
 
 # AI tool config — may contain API keys; never commit real keys.
-# providers.yaml is already tracked (it holds only a public free-tier placeholder key),
-# so this pattern does NOT apply to it — .gitignore never affects tracked files. If you
-# ever put a real key in it, run `git rm --cached providers.yaml` first, otherwise the
-# change will be committed silently. Copy providers.yaml.example for local overrides.
+# providers.yaml is already tracked, so this pattern does NOT apply to it — .gitignore never
+# affects tracked files. The committed copy only ever references keys as {env:VAR_NAME}.
+#
+# On this machine the working copy additionally carries a real key and is hidden from git by
+# `git update-index --skip-worktree providers.yaml` (check with `git ls-files -v providers.yaml`
+# — an `S` prefix means the flag is set). That flag is per-clone and lives in .git/index: it is
+# NOT inherited by anyone who clones the repo, and it makes `git pull` fail if an incoming
+# commit touches the file. So it protects this checkout only.
+#
+# If you put a real key in providers.yaml on a fresh clone, set the same flag (or
+# `git rm --cached providers.yaml`) BEFORE committing, otherwise it goes up silently.
+# Copy providers.yaml.example for local overrides.
 providers.yaml.local
 
 # AI tool session data (may contain sensitive conversation content) and deps
