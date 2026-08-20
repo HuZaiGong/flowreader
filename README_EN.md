@@ -13,164 +13,179 @@
 </p>
 
 <p align="center">
-  <b>An offline-first Android e-book reader</b><br>
-  No accounts, no cloud sync, no telemetry — your books and reading data stay on this device, period.
+  <b>An Android reader that belongs to one device</b><br>
+  No accounts, no cloud sync, no telemetry
 </p>
 
 ---
 
-## Overview
+## What this is
 
-FlowReader is built with **Jetpack Compose + Material 3** and layered as multi-module **Clean Architecture + MVVM**. It deliberately ships no account system, no cloud sync, no analytics and no crash collection: the whole app requests a single `INTERNET` permission, used only for LAN OPDS catalogs and LAN backup transfer. There is no WebView anywhere in the app.
+An Android e-book reader. Open it and read. No sign-up, no login, nobody asking for your phone number.
 
-Current version: **v56.6.1** (versionCode 5661).
+It doesn't upload your books, doesn't tally your reading habits, doesn't collect crash logs. The whole app requests a single `INTERNET` permission, and that permission does exactly two things: reach an OPDS library on your own local network, and move a backup between two of your own devices. If you'd rather check than take my word for it, `AndroidManifest.xml` is short enough to read in a minute.
 
-**Supported formats**: EPUB, TXT, PDF, Markdown, FB2, MOBI, and comics — single JPG / PNG / WebP images and image-only ZIP / CBZ archives. FB2 and MOBI are imported read-only, split into chapters at import time just like EPUB. **DRM-protected MOBI / AZW files are rejected outright — no decryption of any kind**; HUFF/CDIC-compressed files are rejected whole rather than half-decoded.
+Current version: **v56.6.1**. The interface speaks 9 languages (Chinese, English, Japanese, Korean, German, Spanish, French, Portuguese, Russian), switchable in-app at any time.
 
-The UI and documentation are primarily Chinese while code identifiers are English. The app itself can switch between 9 languages (zh, en, ja, ko, de, es, fr, pt, ru).
+## Why build it this way
 
----
+Cloud sync is genuinely convenient — there's no arguing that. But the usual price is that your library, the page you stopped on, and how long you read each day all live on somebody else's server.
 
-## Features
+FlowReader takes the other side: everything stays local, and the cost is that moving to a new device is something you do by hand (export a file, or send it directly over your own WiFi). That's a deliberate trade, not an unfinished feature.
 
-### Library
+The same instinct shows up in less visible places:
 
-- **Import**: single or batch import; the system "open with another app" path goes through the same restricted pipeline and is consumed exactly once (a configuration change never re-imports).
-- **Bookshelf**: sort by date added / last read / title / author, grid and list views, a large "Continue reading" card; author, description, cover and tags are all editable.
-- **Whole-library search**: cross-book full-text search on SQLite **FTS5**, results split into book titles and chapters, paged loading + search history.
-- **Reading lists**: organize books into user-created lists.
-- **LAN OPDS**: connect to OPDS catalogs on the same local network and download from them. **LAN only** — hosts other than loopback, RFC1918 / RFC4193 private ranges and `.local`-style names are unreachable, and **every redirect is re-validated**.
-- **Progress persistence**: reading progress is written with a 3-second debounce to keep database IO low.
+- Reading palette contrast isn't "the designer thought it looked about right" — **every palette is asserted against WCAG AA by a unit test**, and breaking one breaks the build.
+- Settings contain no fake switches. Three page-turn animations once existed as UI entries with no implementation behind them; the entries were eventually deleted along with the modes. An option that does nothing when tapped is worse than no option.
+- DRM-protected MOBI / AZW files are refused at import. No decryption is attempted.
 
-### Reader
+## What it reads
 
-- **18 reading palettes**: paper white, cream, eye-care green, linen, morning mist, cool gray, e-ink, solarized light, rose quartz, night black, ink blue, dark brown, obsidian, pure black, solarized dark, nord, gruvbox, forest — all asserted automatically against WCAG AA body-text contrast; custom background / text colors are supported too, with the same contrast checks.
-- **Adjustable typography**: font size 12–32sp, line spacing 1.0–2.5x, paragraph spacing, first-line indent, external `.ttf` / `.otf` font import. Chinese body text is line-wrapped at a 34-character-per-line cap.
-- **Three page-turn modes**: slide (animated scrolling), **true pagination** (per-page measurement + swipe / tap to turn), and no-animation jumps. Only genuinely implemented options are offered — the simulation, curl and cover modes that once had nothing but a UI entry were removed along with their entry points.
-- **Native text selection**: long-press to select, word-level selection, drag to extend, dual handles; a floating action bar highlights (5 colors), copies or bookmarks, and the selected range maps exactly to the chapter source.
-- **Comics**: horizontal page-by-page flipping, or a vertically virtualized long list.
-- **PDF**: zoom, drag to flip pages, box-select region annotation.
-- **Fully configurable gestures**: tap zones, double tap, long press, left/right swipes and edge hot-zone width are all adjustable — and actually take effect.
-- **Others**: TTS read-aloud, focus mode (fullscreen immersive), keep screen on, scheduled auto night mode (19:00–07:00, re-evaluated every minute), eye-protection reminders (15/20/30/45/60 minutes), a draggable bottom progress bar.
+EPUB, TXT, PDF, Markdown, FB2, MOBI, and comics — single JPG / PNG / WebP images, or packaged ZIP / CBZ archives.
 
-### Appearance & Theming
+FB2 and MOBI import read-only, split into chapters on the way in, the same as EPUB.
 
-- **12 built-in color presets** (v56.6): violet, indigo, azure, teal, emerald, moss, amber, tangerine, crimson, rose, plum, graphite. Picking one **regenerates the whole Material scheme**, not just an accent. Violet is the default and maps to the hand-tuned brand scheme verbatim, so upgrading changes nothing for existing installs.
-- **Color studio** (v56.6): Settings → Appearance → Color studio offers a **hue ring with an inscribed saturation/value disc**, a **spectrum bar**, brightness and saturation bars, and a hex field — four controls bound to one HSV state, so any of them can finish an adjustment another started. The dialog previews the generated scheme and its measured body-text contrast live; nothing is written until you hit Apply.
-- **Contrast is a guarantee, not a coincidence**: for any seed color, **every text-on-surface pair in the generated scheme clears WCAG AA (4.5:1)**. The generator is Compose-free inside `:core`, so that promise is unit-tested across all 12 presets in both modes, every 5° of the hue circle, and the degenerate black / white / mid-grey seeds.
-- **Theme mode and color source are independent axes**: light / dark / follow-system is one dimension, built-in / wallpaper / custom is another, and the reader's 18 palettes are a third that never follows the app theme.
+## What using it is like
 
-### Notes & Data
+### Finding and organizing books
 
-- **Notes and annotations**: 5-color highlights (yellow / green / blue / pink / orange) with optional thought notes; export from the book detail page as Markdown / HTML / plain text (escaped on export).
-- **Reading statistics**: daily time, pages and speed, bar-chart trends, weekly / monthly reports, fastest reading day and most-read book; custom daily / weekly / monthly reading goals.
-- **Share & transfer**: one-tap reading share cards (image); bookshelf export to CSV / JSON; **LAN backup transfer** — device-to-device direct transfer on the same WiFi, protected by a random token, bound to the actual LAN interface instead of `0.0.0.0`, and the server stops as soon as the dialog closes.
-- **Backup & restore**: export / import books and reading progress; import is a **single atomic transaction**, capped at 200MB.
-- **Home-screen widget**: shows the most recently read book and its current progress.
-- **Decision wheel**: a small tool with customizable options and colors; moved from the bottom primary navigation into the bookshelf top-bar "More" menu in v52.
+Import handles single files and batches, and files arriving through the system's "open with" share sheet go through the same pipeline. The shelf sorts by date added, last read, title or author, offers grid and list views, and puts a large "Continue reading" card up top. Author, description, cover and tags are all editable by hand — metadata parsing is never good enough to get every book right.
 
----
+Two things start earning their keep once the shelf fills up. One is **whole-library full-text search** on SQLite FTS5, which searches inside books rather than only across titles. The other is **reading lists**: make your own groupings and drop books in.
 
-## Architecture
+If you run Calibre or Komga at home, you can pull straight from it over **LAN OPDS**. One hard limit here: only loopback, private ranges and `.local`-style names are reachable — public hosts simply are not, and **every redirect is re-validated** so an address that looks internal can't bounce you somewhere external.
 
-Allowed dependency direction: `feature:* → core / domain`, `data → core / domain`, `app → core / data / domain / feature:*`. `:domain` carries no app / Room / Compose / Hilt dependencies at all.
+### Reading
 
-| Module | Contents |
-|------|------|
-| `:app` | Composition root: `MainActivity`, Hilt wiring (`di/AppModule.kt`), navigation, all screens and ViewModels, **all 10 repository implementations**, `util/`, `widget/` |
-| `:core` | Design system (since v52): tokens, `FlowTheme`, the 12 reading palettes, shared components, plus a set of Compose-free pure functions testable directly on the JVM |
-| `:data` | Room only: `AppDatabase` + 7 DAOs + 7 entities |
-| `:domain` | 10 repository interfaces + domain models. `domain/usecase/` has been removed — business logic deliberately lives in the ViewModels |
-| `:feature:reader` | `ChapterPaginator`, `ReaderProgressEngine`, `ReaderSessionTracker`, `ReaderPositionUnit` (all unit-tested) |
-| `:feature:library` | **No source files yet** — a placeholder module already wired into compilation / lint / tests |
+**18 reading palettes**: paper white, cream, eye-care green, linen, morning mist, cool gray, e-ink, solarized light, rose quartz, night black, ink blue, dark brown, obsidian, pure black, solarized dark, nord, gruvbox, forest. You can also set your own text and background colors, and those get the same contrast check — pick a pair that's hard to read and it adjusts back toward legibility instead of letting you squint at it.
 
-Data flow: `Composable → ViewModel → domain repository interface → data repository impl → Room DAO / DataStore`. Each ViewModel exposes an immutable `StateFlow<XxxUiState>`; errors use Kotlin's built-in `Result`.
+Typography: 12–32sp font size, 1.0–2.5× line spacing, paragraph spacing, first-line indent, and `.ttf` / `.otf` font import. Chinese body text wraps at 34 characters per line, a number borrowed straight from typesetting practice — considerably easier on the eye than letting text run the full width of a phone.
 
-Note one naming mismatch: module namespaces are `com.flowreader.domain` / `com.flowreader.data` and so on, but source packages are uniformly `com.flowreader.app.*`. New files should keep using `com.flowreader.app.*`.
+**Three page-turn modes**: slide (animated scrolling), true pagination (measured page by page, swipe or tap to turn), and instant jumps with no animation. Three, and all three work.
 
-### Three independent persistence layers
+**Long-press selects**, snapping to word boundaries, with drag-to-extend and handles at both ends. The floating bar highlights (5 colors), copies, or bookmarks, and the selected range maps exactly onto the chapter source — that mapping is hand-written here, because Compose's own hoisted-selection API is still `internal`.
 
-1. **Room** (`flowreader_db`) — `AppDatabase` is currently version 7 with `exportSchema = true`. There is **no** `fallbackToDestructiveMigration()`; every schema change requires a hand-written migration.
-2. **A second bare SQLite database** (`flowreader_fts.db`) — FTS5 virtual tables managed directly by `util/FullTextSearch.kt`, completely outside Room, powering both in-book and whole-library search.
-3. **DataStore Preferences** (`settings`) — `SettingsRepositoryImpl` exclusively owns all preference keys.
+Comics flip horizontally page by page or scroll as a vertical list. PDF supports zoom, drag-to-flip, and box-selecting a region to annotate (PDF has no text layer, so annotations are rectangles).
 
-`util/CacheManager.kt` is the only chapter / metadata / cover cache: sized to the `MemoryManager` recommendation, implements `ComponentCallbacks2` to react to memory pressure, and adapts per-book chapter capacity by hit rate. Do not add a second chapter cache.
+Tap zones, double tap, long press, swipes and edge hot-zone width are all configurable — and configuring them actually changes behavior.
+
+There's also TTS read-aloud, focus mode, keep-screen-on, scheduled auto night mode (19:00–07:00, re-checked every minute), eye-strain reminders (15/20/30/45/60 minutes), and a draggable progress bar along the bottom.
+
+### A word about colors
+
+v56.6 grew the app's color options from two into **12 built-in presets + wallpaper + a custom picker**. Choosing a preset **regenerates the entire Material scheme**, not just where the accent color lands. Violet is the default and maps verbatim to the hand-tuned brand scheme — existing installs look exactly as they did before, which is the point.
+
+The custom option is a proper color studio: a **hue ring with an inscribed saturation/value disc**, a **spectrum bar**, brightness and saturation bars, and a hex field. All five inputs are bound to one HSV state, so any of them can pick up where another left off. The dialog previews the generated scheme and its measured body-text contrast live, and nothing is written until you press Apply.
+
+It also makes an unusual promise: **for any seed color, every text-on-surface pair in the generated scheme clears 4.5:1**. Tone ladders alone can't deliver that — a mid-luminance seed will land foreground and background at nearly the same luminance — so each foreground role sweeps away from its background and falls back to black or white. The generator lives in `:core` and doesn't depend on Compose, which is what makes the promise testable: 12 presets × 2 modes × 13 pairs, every 5° around the hue circle, plus degenerate inputs like pure black, pure white and mid-grey.
+
+Worth stating plainly, since they're easy to conflate: **theme mode** (light / dark / follow-system), **color source** (built-in / wallpaper / custom), and **reader palette** (those 18) are three independent axes. Reader palettes never follow the app theme.
+
+### Notes and numbers
+
+Highlights come in 5 colors and each can carry your own note. The book detail page exports notes as Markdown / HTML / plain text, escaped on the way out so a stray `<` in the book doesn't corrupt the file.
+
+Statistics track time, pages and speed per day, with bar-chart trends and weekly / monthly reports. It'll tell you your fastest reading day and your most-opened book, and you can set daily / weekly / monthly goals.
+
+A few smaller things that turn out useful: one-tap reading share cards, bookshelf export to CSV / JSON, a home-screen widget showing what you're reading and how far in, and **LAN backup transfer** — two devices on the same WiFi, direct, protected by a random token, with the server shutting down the moment you close the dialog. Backup import is a **single atomic transaction**, so a failure partway through doesn't leave half your data behind.
+
+Oh, and a decision wheel — spin it when you can't pick what to read next. It moved out of the bottom navigation into the shelf's "More" menu in v52, because it didn't really earn a primary slot.
 
 ---
 
-## Building
+## Building it yourself
 
-Environment: **JDK 17**, **Android SDK 35** (compileSdk 35 / minSdk 26), AGP 8.6.0. The Gradle wrapper fetches Gradle 9.6.1 from a Tencent Cloud mirror; a failing wrapper download is usually a mirror problem, not a project problem.
+You'll need **JDK 17** and **Android SDK 35** (compileSdk 35 / minSdk 26), with AGP 8.6.0 and Kotlin 2.1.0. The Gradle wrapper pulls Gradle 9.6.1 from a Tencent Cloud mirror, so a failing wrapper download is usually the mirror's fault rather than the project's.
 
 ```bash
 git clone https://github.com/HuZaiGong/flowreader.git
 cd flowreader
 
 ./gradlew assembleDebug          # development APK
-./gradlew assembleRelease        # R8 full-mode minify + resource shrinking (deliberately signed with the debug config)
 ./gradlew testDebugUnitTest      # all JVM unit tests
 ```
 
-### Verification gates
-
-CI (`.github/workflows/ci.yml`) runs these six steps in strict order:
+CI runs six gates in a fixed order, and you can run the same ones locally:
 
 ```bash
 ./gradlew verifyKotlinStyle      # ktlint (every module except :app) + repo-wide whitespace check
 ./gradlew testDebugUnitTest      # :app / :core / :domain / :feature:reader
-./gradlew coverageSummary        # file-count test breadth ≥ 40% (currently 77.8%)
+./gradlew coverageSummary        # file-count test breadth ≥ 40% (currently 80.9%)
 ./gradlew assembleDebug
 ./gradlew verifyRoborazziDebug   # screenshot regression
-./gradlew performanceBaseline    # APK size comparison against baseline/apk-size.properties
+./gradlew performanceBaseline    # APK size against baseline/apk-size.properties
 ```
 
-Two common traps:
+Two traps worth knowing about before your first change:
 
-- **ktlint does not apply to `:app`**. Kotlin in `:app` is only checked by the whitespace gate inside `verifyKotlinStyle` — a single tab or trailing-space character in any `.kt` / `.kts` file in the repo fails the entire build. `.editorconfig` mandates 4-space indents, LF and a 140-char line cap.
-- **`coverageSummary` is a file-count ratio, not line coverage**. The denominator includes every main-source file in `:core`, domain models, repository interfaces, ViewModels, etc. **Adding a domain model or a `:core` file without tests fails the build even if nothing else changed.**
-
----
-
-## Security constraints
-
-The project is offline-first and privacy-minded; these are hard constraints:
-
-- **A single `INTERNET` permission**, used only for LAN OPDS. No accounts, no analytics, no crash reporting, no sync.
-- **Caps everywhere on import paths**: EPUB chapters 16MB, embedded images 24MB, whole TXT/MD/FB2/MOBI files 128MB; ZIP / CBZ reject absolute paths and `..` (zip-slip), skip `__MACOSX` and hidden entries, cap entry count and per-entry size, and only allow extensions the parsers support.
-- **No DRM circumvention**.
-- **Backups contain no executable content**, and import is a single atomic transaction; cloud backup includes shared prefs only — the database never leaves the device via Android Backup.
-- The **ContentProvider** (`com.flowreader.app.provider`) exposes read-only book metadata and progress — no file paths, no book text; all writes are refused.
-- **FileProvider authorizes exactly one subdirectory: `share_cards/`** (there is exactly one `getUriForFile()` call site in the whole repo).
-- **No WebView anywhere**; FTS queries and HTML / Markdown export are escaped; the audit gate forbids new `!!`.
+- **ktlint doesn't cover `:app`.** Kotlin there is only scanned by the whitespace gate — **one** tab or trailing space in any `.kt` / `.kts` file anywhere in the repo turns the whole build red. `.editorconfig` sets 4 spaces, LF, 140-column lines.
+- **`coverageSummary` is a file-count ratio, not line coverage.** The denominator counts every main-source file in `:core`, plus domain models, repository interfaces and ViewModels. So adding a domain model without a test fails the build even if you touched nothing else.
 
 ---
 
-## Changelog
+## What the code looks like
 
-Recent releases:
+**Jetpack Compose + Material 3**, multi-module **Clean Architecture + MVVM**. Dependency direction: `feature:* → core / domain`, `data → core / domain`, `app → core / data / domain / feature:*`. `:domain` has no app / Room / Compose / Hilt dependency at all — it's plain Kotlin.
 
-- **v56.6.1** — follow-up sweep on v56.6.0. The color studio pre-formatted its contrast number with a locale-less `String.format` while string resources resolve against the in-app language, so comma-decimal locales disagreed and threw; the hex field wrote to a state it read in the same composition, costing an extra pass per drag frame; the Color studio subtitle still claimed a custom color was in use after switching back to a preset. Also corrected `backup_rules.xml`'s comments, which described the opposite of the real behavior — the backup scope has always been empty (nothing leaves the device) and that is deliberate, so only the comments changed.
-- **v56.6.0** — the color source expanded from two options to **12 built-in presets + wallpaper + a custom picker**, with a hue-ring / disc / spectrum-bar studio. `:core`'s `SeedColorScheme` generates all 24 Material roles from one seed and guarantees WCAG AA (4.5:1) on every text-on-surface pair for any seed.
-- **v56.5.2** — Compose stability configuration eliminates unstable inference for domain models. The `:domain` module has no Compose compiler, causing `Book`/`Chapter`/`Annotation`/`ReadingSettings` parameters to be inferred unstable, re-executing every visible book card on any state change. Declared `com.flowreader.app.domain.model.*` stable via `compose_compiler_config.conf` and wired into all four Compose modules; unstable classes dropped from 52 to 37, all UiState now stable.
-- **v56.5.1** — Localized book detail and stats pages. `:core`'s `FlowFormatters` formats numbers, dates and units by `Locale`; domain models now carry raw values instead of concatenated strings, surviving the v53 language switch instead of frozen Chinese.
-- **v56.4.4** — fixed "content hidden behind the top bar after data loads" on the bookshelf / stats / book detail pages: the success branch of `FlowStateHost` dropped the `modifier`, so the 88dp safe area vanished in the success state while the loading / empty / error states of the same pages were fine.
-- **v56.4.3** — an 11-fix functional bug sweep. In-book full-text search always returned empty because FTS5 columns lacked affinity; reading stats were lost entirely in PAGED mode and for comics; text-selection highlights saved one character short and overlapping highlights rendered twice; the "last 7 days" trend chart actually showed only 2–3 days.
-- **v56.4.2** — fixed issue #6: the outer shell only "applied" window insets without "consuming" them, and the 9 screens below each applied them again, adding a full status-bar height on top.
+| Module | What's in it |
+|------|------|
+| `:app` | Composition root: `MainActivity`, Hilt wiring, navigation, all screens and ViewModels, **all 10 repository implementations** |
+| `:core` | Design system: tokens, `FlowTheme`, the 18 reading palettes, the scheme generator, shared components, and a set of Compose-free pure functions that run directly on the JVM |
+| `:data` | Room only: `AppDatabase` + 8 entities + 7 DAOs |
+| `:domain` | 10 repository interfaces + domain models. No `usecase/` — business logic deliberately stays in the ViewModels |
+| `:feature:reader` | `ChapterPaginator`, `ReaderProgressEngine`, `ReaderSessionTracker`, `ReaderPositionUnit`, all unit-tested |
+| `:feature:library` | **No source files yet** — a placeholder already wired into compilation / lint / tests |
 
-See [CHANGELOG.md](CHANGELOG.md) for the full history, `ROADMAP.md` for longer-term plans and known tech debt, and `AGENTS.md` for the behavioral pitfalls one by one.
+Data flows `Composable → ViewModel → domain repository interface → data repository impl → Room DAO / DataStore`. Each ViewModel exposes an immutable `StateFlow<XxxUiState>`, and errors use Kotlin's built-in `Result`.
+
+One naming mismatch to know up front: module namespaces read `com.flowreader.domain` and the like, but source packages are uniformly `com.flowreader.app.*`. New files follow the latter.
+
+Persistence is **three independent stores**: Room (`flowreader_db`, version 7, with **no** `fallbackToDestructiveMigration()` — every schema change needs a hand-written migration); a bare SQLite database outside Room (`flowreader_fts.db`, FTS5 virtual tables, backing both in-book and whole-library search); and DataStore Preferences for every setting.
+
+There is exactly one chapter / metadata / cover cache, `util/CacheManager.kt`. It sizes itself to available memory, reacts to system memory pressure, and adapts per-book chapter capacity by hit rate. Don't add a second one.
+
+For a finer-grained module map see `ARCHITECTURE.md`; for the behavioral pitfalls one by one see `AGENTS.md` — that last one is the single most useful file to read first.
 
 ---
 
-## Community & Contributing
+## Privacy and security boundaries
 
-- Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or PR: environment setup, CI gates, code conventions and security hard constraints are all there (bilingual).
-- All participants are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
-- Security vulnerabilities: report privately per [SECURITY.md](SECURITY.md) — never as a public issue.
+These are hard constraints, not descriptions of the current implementation:
+
+- **One `INTERNET` permission**, for LAN OPDS and LAN transfer only. No accounts, no analytics, no crash reporting, no sync.
+- **Android's automatic backup transfers nothing.** The only domain listed in the backup rules is empty in this app, so books, progress and settings never leave the device through Google's backup transport. That's deliberate — cross-device migration goes through the in-app export or LAN transfer, which you trigger yourself.
+- **Every import path is capped**: EPUB chapters at 16MB, embedded images at 24MB, whole TXT/MD/FB2/MOBI files at 128MB. ZIP / CBZ reject absolute paths and `..` (zip-slip), skip `__MACOSX` and hidden entries, cap entry count and per-entry size, and only admit extensions the parsers recognize.
+- **No DRM circumvention.** Protected files are refused whole rather than half-decoded.
+- The **ContentProvider** exposes read-only book metadata and progress — no file paths, no book text, and all writes refused.
+- **FileProvider authorizes exactly one subdirectory, `share_cards/`** (the repo has exactly one `getUriForFile()` call site).
+- **No WebView anywhere.** FTS queries and HTML / Markdown exports are escaped; the audit gate forbids new `!!`.
+
+---
+
+## Recent changes
+
+- **v56.6.1** — follow-up sweep on v56.6.0. The color studio pre-formatted its contrast number with a locale-less `String.format` while string resources resolve against the in-app language, so comma-decimal locales disagreed and threw. The hex field wrote to a state it read in the same composition, paying an extra composition pass on every frame of a drag. The Color studio subtitle still claimed a custom color was in use after switching back to a preset. Also corrected `backup_rules.xml`'s comments, which described the opposite of the real behavior — the backup scope has always been empty, nothing leaves the device, and that's deliberate, so only the comments changed.
+- **v56.6.0** — the color source expanded from two options into **12 built-in presets + wallpaper + a custom picker**, with a hue-ring / disc / spectrum-bar studio. `:core`'s `SeedColorScheme` generates all 24 Material roles from a single seed and guarantees WCAG AA (4.5:1) on every text-on-surface pair for any seed.
+- **v56.5.2** — Compose stability configuration removed unstable inference for domain models. `:domain` has no Compose compiler, so `Book` / `Chapter` and friends were all inferred unstable, re-executing every visible book card on any state change. Declaring them stable dropped unstable classes from 52 to 37; every UiState is stable now.
+- **v56.5.1** — localized the book detail and stats pages. Domain models now carry raw values instead of pre-concatenated strings, so they survive the v53 language switch rather than freezing in Chinese.
+- **v56.4.4** — fixed "content hidden behind the top bar once data loads" on the shelf / stats / detail pages: `FlowStateHost`'s success branch dropped the `modifier`, so the 88dp safe area vanished exactly when there was data, while the same page's loading / empty / error states were fine.
+- **v56.4.3** — an 11-fix functional bug sweep. In-book full-text search always returned empty because FTS5 columns have no type affinity; reading stats were discarded wholesale in PAGED mode and for comics; text-selection highlights saved one character short and overlapping highlights rendered twice; the "last 7 days" trend chart actually showed 2–3.
+- **v56.4.2** — fixed issue #6: the outer shell applied window insets without consuming them, and the 9 screens beneath each applied them again, adding a full status-bar height at the top.
+
+Full history in [CHANGELOG.md](CHANGELOG.md); longer-term plans and known tech debt in `ROADMAP.md`.
+
+---
+
+## Getting involved
+
+- Please read [CONTRIBUTING.md](CONTRIBUTING.md) before opening an issue or PR — setup, CI gates, conventions and security constraints are all in there (bilingual).
+- Participants are expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+- **Security vulnerabilities don't belong in public issues.** Report them privately per [SECURITY.md](SECURITY.md).
 
 ---
 
 ## License
 
-Released under the [GNU General Public License v3.0](LICENSE).
+[GNU General Public License v3.0](LICENSE)
 
 <p align="center">Made with ❤️ by HuZaiGong</p>
