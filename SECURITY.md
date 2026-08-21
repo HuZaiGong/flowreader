@@ -44,10 +44,14 @@ We aim to respond within 7 days. The project is maintained by a single person, s
   **IPC surface**: ContentProvider (read-only contract), FileProvider (grant scope), the `ACTION_VIEW` import pipeline
 - **备份导入导出**：原子性、200MB 上限、不含可执行内容
   **Backup import/export**: atomicity, the 200MB cap, no executable content
-- **权限模型**：全应用仅一个 `INTERNET` 权限
-  **Permission model**: the app holds a single `INTERNET` permission
+- **权限模型**：网络权限只有 `INTERNET`；Manifest 另有仅针对旧版 Android 的 maxSdk 存储权限
+  **Permission model**: `INTERNET` is the only network permission; legacy storage permissions remain capped by maxSdk for older Android releases
 
-## 已知问题 / Known issues
+## 当前边界 / Current boundaries
 
-- OPDS 密码目前以明文存于 DataStore；加密（EncryptedSharedPreferences / Jetpack Security）已列入计划但尚未实现。此项为已知设计债务，无需重复报告。
-  OPDS passwords are currently stored in plaintext in DataStore; encryption (EncryptedSharedPreferences / Jetpack Security) is planned but not implemented. This is a known design debt — no need to re-report it.
+- 当前版本没有 OPDS 认证或凭据存储；OPDS 只连接经过地址校验的局域网目录。漏洞报告应针对实际存在的行为和代码路径。
+  The current version has no OPDS authentication or credential store. OPDS connects only to catalogs whose addresses pass the LAN policy. Vulnerability reports should target behavior and code paths that exist in this version.
+- `INTERNET` 是唯一的网络权限；Manifest 中的 `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` 仅对旧版 Android 生效（分别限制到 API 32 / 29）。
+  `INTERNET` is the only network permission. `READ_EXTERNAL_STORAGE` / `WRITE_EXTERNAL_STORAGE` remain only for legacy Android compatibility and are capped at API 32 / 29.
+- 自动备份规则有意不包含 Room、FTS、DataStore 或媒体文件；跨设备迁移必须由用户显式触发应用内导出或局域网传输。
+  Automatic backup rules intentionally exclude Room, FTS, DataStore, and media files; cross-device migration requires an explicit in-app export or LAN transfer.

@@ -18,7 +18,7 @@
 FlowReader 是一个有明确主张的项目：**离线优先、隐私优先**。与以下约束冲突的功能建议会被拒绝：
 
 - 不做账号、云同步、遥测、崩溃收集——这不是待办事项，而是设计决定
-- 全应用只有一个 `INTERNET` 权限，仅供局域网 OPDS 与局域网备份互传；不新增任何权限
+- 网络权限只有一个 `INTERNET`，仅供局域网 OPDS 与局域网备份互传；Manifest 中仍有仅针对旧版 Android 的 maxSdk 存储权限，不新增新的权限
 - 全应用无 WebView；不做任何形式的 DRM 破解
 
 建议在提功能前先读一遍 README 的「安全约束」一节。
@@ -67,7 +67,7 @@ CI（`.github/workflows/ci.yml`）严格按顺序跑以下六项，发往 `main`
 
 以下是项目的硬约束，违反它们的 PR 会被拒绝：
 
-- 不新增任何权限；网络请求仅限局域网 OPDS 与局域网备份互传
+- 不新增权限；网络请求仅限局域网 OPDS 与局域网备份互传。旧版 Android 的 maxSdk 存储权限不应扩大适用范围
 - 不引入遥测、统计、崩溃收集、账号或云同步
 - 不引入 WebView；保持 FTS 查询与 HTML/Markdown 导出的转义
 - 不做 DRM 破解；保持导入路径的大小上限与 zip-slip 防护
@@ -102,7 +102,7 @@ By participating in this project you agree to abide by the [Code of Conduct](COD
 FlowReader is an opinionated project: **offline-first, privacy-minded**. Requests conflicting with the following constraints will be declined:
 
 - No accounts, no cloud sync, no telemetry, no crash collection — these are design decisions, not backlog items
-- The app holds a single `INTERNET` permission, used only for LAN OPDS and LAN backup transfer; no new permissions will be added
+- The app has one network permission, `INTERNET`, used only for LAN OPDS and LAN backup transfer. Legacy storage permissions are capped with `maxSdkVersion`; no new permissions will be added
 - No WebView anywhere; no DRM circumvention of any kind
 
 Please read the "安全约束 / Security constraints" section of the README before proposing a feature.
@@ -151,7 +151,7 @@ Run the full set locally before opening the PR. The two most common traps:
 
 These are the project's hard constraints; PRs violating them will be rejected:
 
-- No new permissions; network traffic only for LAN OPDS and LAN backup transfer
+- No new permissions; network traffic only for LAN OPDS and LAN backup transfer. Do not widen the legacy maxSdk storage permissions
 - No analytics, crash reporting, accounts or cloud sync
 - No WebView; keep the escaping in FTS queries and HTML/Markdown export
 - No DRM circumvention; keep the import-path size caps and zip-slip protection

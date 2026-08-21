@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-FlowReader (心流阅读) is an offline-first Android e-book reader — Jetpack Compose + Material 3, Clean Architecture + MVVM, no network/account layer. Supports EPUB / TXT / PDF / Markdown / FB2 / MOBI / comic archives (JPG/PNG/WebP/ZIP/CBZ). Docs and user-facing strings are Chinese; code and identifiers are English.
+FlowReader (心流阅读) is an offline-first Android e-book reader — Jetpack Compose + Material 3, Clean Architecture + MVVM, no account or cloud-sync layer. The only network clients are LAN-constrained OPDS and backup transfer. Supports EPUB / TXT / PDF / Markdown / FB2 / MOBI / comic archives (JPG/PNG/WebP/ZIP/CBZ). Docs and user-facing strings are Chinese; code and identifiers are English.
 
 `AGENTS.md` holds the full running list of behavioral gotchas (reader, Compose, Room, security). Read it alongside this file; when the two disagree, verify against the source.
 
@@ -118,7 +118,7 @@ In-app language switch (`AppLanguage`: zh default, en, ja, ko, de, es, fr, pt, r
 
 The project is offline-first and privacy-minded — keep it that way. v56.3/v56.4 were dedicated security audits; the following are hard constraints:
 
-- **Single `INTERNET` permission**, used only by the LAN OPDS client and LAN backup transfer. No accounts, analytics, crash reporting, or sync.
+- **Single network permission, `INTERNET`**, used only by the LAN OPDS client and LAN backup transfer. Legacy storage permissions remain maxSdk-capped for old Android releases. No accounts, analytics, crash reporting, or sync.
 - **OPDS is LAN-only**: `OpdsAddress` restricts reachability to loopback / RFC1918 / RFC4193 / `.local`-style names and re-validates **every redirect hop**; public hosts are unreachable. Catalog reads capped at 2MB, downloads at 200MB, acquisition links MIME-filtered.
 - **Import caps everywhere**: `BookParser` read limits, `ZipImportRules` zip-slip/entry caps, backup import 200MB on both SAF and LAN paths, `ACTION_VIEW` ("open with FlowReader") imports run through the same capped pipeline and are consumed once (`intent.data`/`EXTRA_STREAM` cleared) so configuration changes cannot re-import.
 - **No DRM circumvention**: DRM-protected MOBI/AZW files are rejected outright; HUFF/CDIC-compressed files are rejected rather than half-decoded.

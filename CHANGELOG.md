@@ -1,58 +1,58 @@
-# 更新日志
+# 版本变更记录
 
-本项目遵循语义化版本控制规范。
+本记录按照语义化版本控制规范编制，按版本号倒序列示功能、修复、工程治理及安全相关变更。除特别说明外，各项变更均以对应版本源码和测试结果为准。
 
 ---
 
 ## [v56.6.2] - 2026-08-20
 
-> 本版本依据第三方静态审查报告（`SECURITY_REVIEW_2026-08-20.md`）实施安全修复。该报告共列明问题 7 项，本版本全部处理完毕：外部文件名路径校验、读取容量上限、局域网地址校验、备份服务器连接超时、release 正式签名、导出 provider 的权限门禁，以及一处明文 key（其真实位置与报告所述不同，详见「说明」）。核对文档期间另发现并修复一处用户可见缺陷：`:core` 模块缺少 5 种语言。
+> 本版本依据第三方静态审查报告（`SECURITY_REVIEW_2026-08-20.md`）实施安全整改。报告列明的 7 项事项已全部完成处理，范围包括外部文件名路径校验、读取容量上限、局域网地址校验、备份服务器连接超时、Release 正式签名、导出 provider 权限门禁，以及一项敏感凭据记录核查（实际位置与报告所述不一致，详见“说明”）。文档核对期间另发现并修复一项用户可见缺陷：`:core` 模块缺少 5 种语言资源。
 
 ### 安全
 
-**问题一：外部传入文件名可突破应用私有目录边界（审查编号 #1，风险等级：中）**
+**审查事项一：外部传入文件名可突破应用私有目录边界（审查编号 #1，风险等级：中）**
 
 经核查，恶意应用向 FlowReader 发送 `ACTION_VIEW` 意图时，其 `ContentProvider` 可将显示名称构造为 `../../databases/flowreader_db`，导入流程据此覆盖数据库；构造为 `datastore/settings.preferences_pb` 即可覆盖设置文件。上述操作对用户呈现为普通导入。成因如下：`getFileName()` 原样返回 `ContentResolver` 提供的 `DISPLAY_NAME`，`copyFileToInternal()` 将其直接用于构造 `File(booksDir, fileName)`，全程未对该字符串进行校验。
 
-处理措施：新增 `util/ImportFileName.kt`。其中 `sanitize()` 仅保留路径最后一段（`/` 与 `\` 均视为分隔符），将「字母／数字／`.`／`_`／`-`／空格」之外的字符（含控制字符）予以替换，去除开头的点号（防止生成隐藏文件），长度超过 120 字符时截断并保留扩展名。落盘前经 `resolveWithin()` 以 `canonicalFile` 复核目标路径确实位于目标目录内，无法取得规范路径时返回 null，不予导入。
+处理措施：新增 `util/ImportFileName.kt`。其中 `sanitize()` 仅保留路径最后一段（`/` 与 `\` 均视为分隔符），并将字母、数字、`.`、`_`、`-`、空格之外的字符（含控制字符）替换，去除开头的点号，长度超过 120 字符时截断并保留扩展名。文件写入前通过 `resolveWithin()` 以 `canonicalFile` 复核目标路径位于目标目录内；无法取得规范路径时返回 null，终止导入。
 
-说明：消毒处理有意保留 Unicode 字符。仓库中原有仅保留 ASCII 的 `sanitizeFileName()`，其用途为漫画解压目录名，若施用于书名，将使《三体.epub》变为 `_.epub`。两者不可互换，故未复用。
+说明：上述处理有意保留 Unicode 字符。仓库中原有仅保留 ASCII 的 `sanitizeFileName()`，其用途为漫画解压目录名；若用于书名，将使《三体.epub》变为 `_.epub`。两者适用范围不同，未作复用。
 
-另修复一处竞态问题（TOCTOU）：`copyFileToInternal()` 此前自行再次查询 `ContentResolver` 获取文件名，同一 Uri 两次查询可能返回不同结果，即通过校验的名称与实际写入的名称不一致。现文件名由调用方（`LibraryViewModel`／`OpdsViewModel`）解析后传入，全流程仅解析一次。
+同时修复一处竞态问题（TOCTOU）：`copyFileToInternal()` 此前自行再次查询 `ContentResolver` 获取文件名，同一 Uri 两次查询可能返回不同结果，造成通过校验的名称与实际写入的名称不一致。现由调用方（`LibraryViewModel`／`OpdsViewModel`）解析并传入文件名，全流程仅解析一次。
 
-**问题二：伪造 EPUB 文件可导致内存溢出或磁盘写满（审查编号 #2，风险等级：中）**
+**审查事项二：伪造 EPUB 文件可导致内存溢出或磁盘写满（审查编号 #2，风险等级：中）**
 
 经核查，EPUB 的 `META-INF/container.xml` 与 OPF 文件以 `readText()` 无上限读取，整包、图片及压缩包以 `copyTo()` 复制。上述输入内容由文件制作者控制，读取方无从干涉，例如将 `container.xml` 构造至数百 MB 时，`readText()` 将完整读取。
 
-处理措施：相关路径全部改用 `copyCapped`／`readCappedBytes`／`readCappedText`，并新增两档容量上限：整包（EPUB／CBZ／任意选中文件）256MB，EPUB 结构性元数据 4MB；封面图沿用既有 24MB 上限。超限即失败并返回明确提示，同时删除半成品文件。`parseEpubStream` 与 `extractEpubCover` 为此补充 `finally { tempFile.delete() }`，避免提前 return 遗留临时文件。
+处理措施：相关路径统一改用 `copyCapped`／`readCappedBytes`／`readCappedText`，并设置两档容量上限：整包（EPUB／CBZ／任意选中文件）256MB，EPUB 结构性元数据 4MB；封面图沿用既有 24MB 上限。超过上限时终止处理并返回明确提示，同时删除半成品文件。`parseEpubStream` 与 `extractEpubCover` 增加 `finally { tempFile.delete() }`，防止提前返回造成临时文件残留。
 
-**问题三：局域网接收端未校验对方地址，公网链接可被拉取（审查编号 #3，风险等级：低）**
+**审查事项三：局域网接收端未校验对方地址，公网链接可被拉取（审查编号 #3，风险等级：低）**
 
 经核查，`LanTransferClient.download()` 仅校验 `http://` 协议前缀。`http://evil.example.com/backup/…` 将被视为同一 WiFi 网络下的其他设备，从公网拉取至多 200MB 内容并交由备份导入器处理，而备份导入将整体覆盖书库。此行为与「`INTERNET` 权限仅用于局域网」的定位相冲突。
 
-处理措施：复用 OPDS 客户端的 `OpdsAddress.isPrivateHost()` 地址校验（回环／RFC1918／RFC4193／`.local` 类名称），路径须严格匹配 `/backup/` 及 16 位十六进制令牌。该规则可推广适用：本应用仅有一项 `INTERNET` 权限，每个发起请求的调用点须自行校验，不得依赖 OPDS 客户端代为把关。
+处理措施：复用 OPDS 客户端的 `OpdsAddress.isPrivateHost()` 地址校验（回环／RFC1918／RFC4193／`.local` 类名称），路径严格匹配 `/backup/` 及 16 位十六进制令牌。鉴于本应用仅声明一项 `INTERNET` 权限，各请求发起点均须自行完成地址校验，不得依赖 OPDS 客户端代为校验。
 
-**问题四：备份服务器可被低速连接占用（审查编号 #4，风险等级：低）**
+**审查事项四：备份服务器可被低速连接占用（审查编号 #4，风险等级：低）**
 
 经核查，`serve()` 运行于单线程执行器，唯一工作线程将在 `readLine()` 处挂起等待（slow loris 攻击模式），导致对话框开启期间服务器无法响应其他请求。现已为每个连接设置 5 秒 `soTimeout`，最坏情况由「无限期等待」变为「每个滞留连接等待 5 秒」。
 
-另核查发现路径匹配与类文档承诺不符：类文档声明仅应答精确的 `/backup/<token>` 路径，而代码使用 `requestLine.contains("/backup/$token")`，导致 `GET /anything/backup/<token>` 与 `GET /backup/<token>extra` 亦可获得 200 响应。单独考量不构成漏洞（仍须猜中令牌），但文档承诺的边界应与代码执行的边界一致。现 `isBackupRequest()` 按整行精确匹配，并同时接受 HTTP/1.1 与 HTTP/1.0（`HttpURLConnection` 可能降级协议版本）。
+另经核查发现路径匹配规则与类文档不一致：类文档约定仅应答精确的 `/backup/<token>` 路径，而代码使用 `requestLine.contains("/backup/$token")`，导致 `GET /anything/backup/<token>` 与 `GET /backup/<token>extra` 亦可获得 200 响应。该情形仍须猜中令牌，单独不构成漏洞，但文档边界应与代码执行边界一致。现 `isBackupRequest()` 按整行精确匹配，并同时接受 HTTP/1.1 与 HTTP/1.0（`HttpURLConnection` 可能降级协议版本）。
 
-**问题五：release 构建使用 debug 签名（审查编号 #6，风险等级：信息）**
+**审查事项五：Release 构建使用 debug 签名（审查编号 #6，风险等级：信息）**
 
-debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.release` 直接 `signingConfig = signingConfigs.getByName("debug")`，任何人都能构造一个签名相同的升级包覆盖安装到用户机器上。
+debug keystore 随 Android SDK 分发，属于公开材料。此前 `buildTypes.release` 直接 `signingConfig = signingConfigs.getByName("debug")`，任何人均可构造签名相同的升级包并尝试覆盖安装。
 
 处理措施：新增 `signingConfigs { create("release") }`，从仓库根目录的 `keystore.properties`（已 git-ignore，密钥库本身由 `*.jks` 规则覆盖）读取密钥库路径与密码；该文件不存在时回退到 debug 签名，使 CI 与新克隆仍能产出可测试的 `app-release.apk`，单元测试不受影响。同时新增 `keystore.properties.example` 说明配置项与生成方式。
 
-已实测验证，未止于「配置看起来对」：`apksigner verify --print-certs` 显示 `Signer #1 certificate DN: CN=HuZaiGong, OU=Dev, O=flowreader`，与 debug 密钥的 `CN=Android Debug` 及其证书指纹均不相同。附带一处提醒：验证前先确认 APK 的时间戳晚于 `keystore.properties` 的创建时间——本次首次验证时磁盘上的 APK 构建于配置落地之前，配置正确但产物仍是旧的 debug 签名。
+已通过实测验证：`apksigner verify --print-certs` 显示 `Signer #1 certificate DN: CN=HuZaiGong, OU=Dev, O=flowreader`，与 debug 密钥的 `CN=Android Debug` 及其证书指纹均不相同。验证时须确认 APK 构建时间晚于 `keystore.properties` 创建时间；首次验证使用的 APK 早于配置落地，故产物仍为旧 debug 签名。
 
-**问题六：导出的 ContentProvider 未声明权限（审查编号 #7，风险等级：低）**
+**审查事项六：导出的 ContentProvider 未声明权限（审查编号 #7，风险等级：低）**
 
 `content://com.flowreader.app.provider` 以 `exported="true"` 导出且无任何权限声明，故同机任意应用无需申请、无需用户同意，即可读取完整书单与各书阅读进度。该导出本身是有意设计（供自动化工具与桌面小组件读取只读元数据，不含文件路径与正文），问题在于「有意导出」被实现成了「对所有应用静默开放」。
 
 处理措施：新增自定义权限 `com.flowreader.app.permission.READ_LIBRARY` 并置于 `android:readPermission`。调用方须声明该权限且经用户运行时授权方可读取，导出能力本身保留。保护级别取 `dangerous` 而非 `signature`：后者会将该接口限定为与本仓库同签名的应用，等同于删除该功能而非为其加门禁。另以 `signature` 级 `WRITE_LIBRARY` 覆盖 `android:writePermission` 作为第二道防线——`insert`／`update`／`delete` 本身已一律抛异常。权限的标签与说明文案随应用支持的 9 种语言一并提供（该文案会出现在系统授权对话框中）。
 
-需注意，此项变更会影响现有外部集成方：任何已在读取该 provider 的应用将在升级后收到 `SecurityException`，须声明权限并请求授权。经核查，仓库内外均无已知集成方，`README` 与 `ROADMAP` 亦从未将其作为对外接口宣传，故按收紧处理。Android 在本类之外执行权限检查，故单元测试无法覆盖该门禁，manifest 属性即执行点。
+该变更将影响现有外部集成方：已读取该 provider 的应用在升级后将收到 `SecurityException`，须声明权限并请求授权。经核查，仓库内外均无已知集成方，`README` 与 `ROADMAP` 亦未将其作为对外接口宣传，故按收紧权限处理。Android 在应用类之外执行权限检查，单元测试无法覆盖该门禁，manifest 属性为实际执行点。
 
 ### 修复
 
@@ -66,34 +66,34 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 
 ### 测试
 
-- 依审查建议，前四项修复各配备回归测试：`ImportFileNameTest`（15 项）、`BookParserCapsTest`（10 项）、`LanTransferClientTest`（8 项）、`LanTransferServerTest` 新增 5 项。签名与 provider 权限两项无法以单元测试覆盖——前者的验证手段是对产物执行 `apksigner verify --print-certs`，后者的执行点在 Android 框架侧而非应用代码内；两者均以实测结果记录于上，未以测试充数。
+- 依审查建议，前四项修复分别配置回归测试：`ImportFileNameTest`（15 项）、`BookParserCapsTest`（10 项）、`LanTransferClientTest`（8 项）、`LanTransferServerTest` 新增 5 项。签名与 provider 权限两项无法通过单元测试覆盖：前者以 `apksigner verify --print-certs` 对产物进行验证，后者的执行点位于 Android 框架而非应用代码；两项均记录实测结果，不以单元测试替代。
 - 容量上限测试同时固定三项易被改坏的边界：恰好等于上限时应通过（判定为 `> limit` 而非 `>= limit`，否则体积恰在边界的书籍将被拒绝）；超限后不得读完整条流（上限的意义在于 80GB 的流仅消耗一个缓冲区的代价）；`copyCapped` 不删除残留文件（该行为属注释明示的契约，删除由各调用方负责，若将来在 `copyCapped` 内追加删除逻辑，`filesDir/books` 中将残留无人清理的文件）。
-- 各项修复均经变异验证：撤销 `soTimeout`、将精确匹配改回 `contains`、删除主机校验后，对应 7 项测试全部失败。slow loris 测试特意设置客户端 20 秒读超时，一旦回归将表现为测试失败而非套件挂起。
+- 各项修复均经变异验证：撤销 `soTimeout`、将精确匹配改回 `contains`、删除主机校验后，对应 7 项测试均失败。slow loris 测试设置客户端 20 秒读超时，回归时将报告测试失败，不会造成测试套件无限等待。
 - 全量测试 335 → 373 项（+38），0 失败；测试广度 80.9% → 85.3%（58/68）。
 
 ### 说明
 
-**问题七：明文 API key（审查编号 #5，风险等级：信息）——实际位置与报告及前次结论均不相同。**
+**审查事项七：敏感 API key 记录核查（审查编号 #5，风险等级：信息）——实际位置与报告及前次结论均不相同。**
 
 审查报告将其定位于 `.claude/providers.yaml`。该路径有误：`.claude/` 自 v56.6.1 起已整体 git-ignore。本仓库根目录的 `providers.yaml` 确实被 git 跟踪，但**其提交历史中从未出现过明文 key**，各版本均为 `{env:DEEPSEEK_API_KEY}` 形式的环境变量引用。
 
-本机工作区的该文件另存有一个真实 key，但被 `git update-index --skip-worktree` 标记隐藏（`git ls-files -v providers.yaml` 输出前缀为 `S`），故 `git status` 始终显示干净——这也是前次核查误判「key 自 v45.0.2 起在历史中」的原因：工作区内容与 HEAD 内容不同，而 git 不予提示。需注意该标记的性质：它保存于 `.git/index`，仅对本 clone 有效，克隆者不会继承；且当拉取的提交涉及该文件时 `git pull` 会直接失败。`.gitignore` 中的相关注释已按此更正。
+本机工作区的该文件另存有一个真实 key，但被 `git update-index --skip-worktree` 标记为隐藏（`git ls-files -v providers.yaml` 输出前缀为 `S`），因此 `git status` 始终显示干净。这也是前次核查误判“key 自 v45.0.2 起存在于历史记录”的原因：工作区内容与 HEAD 内容不同，而 git 未提示该差异。该标记保存在 `.git/index`，仅对当前 clone 有效，克隆者不会继承；当拉取的提交涉及该文件时，`git pull` 可能直接失败。`.gitignore` 中的相关注释已据此更正。
 
 全历史扫描（`git rev-list --all` 逐树 `git grep`）确认，该 key 字面量在整个仓库中仅有一处提交记录：`V56.5.0_PLAN.md` 第 128 行。该处正在论证「此 key 系公共免费占位值、不构成泄露」——结论无误，但论证过程将该字面量抄入正文，使这份计划文档成为仓库中唯一真正提交了 key 的位置，且随 v56.5.0 进入公开的 `main` 分支。现已改为不复述字面量。
 
-该 key 为某公共免费中转站的共享值，故未作轮换。改写已公开分支的提交历史属破坏性操作，须由仓库所有者决定，本版本未执行；如认为有必要，可另行处理。
+该 key 为某公共免费中转站的共享值，故未作轮换。改写已公开分支提交历史属于破坏性操作，须由仓库所有者另行决定，本版本未执行。
 
-值得记录的一点：审查报告、前次核查与最终事实三者各不相同。「明文 key 在配置文件里」这一预期太过自然，以致两轮核查都未想到去追问「git 究竟看到了什么」。判断此类问题应以 `git ls-files -v` 与全历史扫描为依据，而非工作区文件内容。
+核查结论表明，审查报告、前次核查与最终事实存在差异。此类事项应以 `git ls-files -v` 和全历史扫描结果为依据，不应仅根据工作区文件内容作出判断。
 
 ---
 
 ## [v56.6.1] - 2026-08-19
 
-> 本版本为 v56.6.0 的补丁版本，修复非中文语言环境下的格式化崩溃、一处组合期状态回写及一处状态显示错误，并更正两份备份规则文件的注释。
+> 本版本为 v56.6.0 的补丁版本，处理非中文语言环境下的格式化异常、组合期状态回写及状态显示错误，并更正两份备份规则文件的注释。
 
 ### 修复
 
-**问题一：调色台在 de/fr/es/pt/ru 等语言环境下崩溃**
+**事项一：调色台在 de/fr/es/pt/ru 等语言环境下发生异常**
 
 经核查，`SchemePreview` 先以 `String.format("%.1f", ratio)` 将对比度数值转为字符串，再交由 `stringResource` 处理。`String.format` 无 locale 参数时遵循 JVM 默认 locale，而字符串资源按应用内语言设置解析。在小数点为逗号的语言环境下，`"4,7"` 将作为字符串传入资源的数值占位符，直接抛出异常；即便不抛异常，数字格式亦与该语言不符。
 
@@ -101,13 +101,13 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 
 另将 de/es/fr/pt/ru 五份资源中硬编码的「4.5:1」阈值改为「4,5:1」，与同句中现已本地化的实测值对齐。
 
-**问题二：调色台拖动色相环触发两次组合**
+**事项二：调色台拖动色相环触发重复组合**
 
 经核查，十六进制输入框草稿存储于 `mutableStateOf`，各取色回调在组合期将其改写为新颜色的十六进制串，同一趟组合再读取渲染。此为 Compose 中典型的 backwards write，须多跑一趟方可收敛。
 
 处理措施：草稿改为「用户正在输入」的三态标记（`null` 表示显示取色器颜色），显示值由 `argb` 派生：`val hexDisplay = hexDraft ?: ColorSpaces.toHexString(argb)`。取色回调仅将其清为 `null`，输入框失焦时同样清空。
 
-**问题三：「自调色」副标题显示未生效的颜色**
+**事项三：“自调色”副标题显示未生效的颜色**
 
 经核查，用户存储自定义色后切换回内置配色，该项仍显示 `#RRGGBB` 及「使用中」状态。现增加来源判定：`customSeedArgb?.takeIf { colorSource == CUSTOM }`。
 
@@ -131,7 +131,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 
 ### 文档
 
-- README 重写为面向读者的项目介绍而非审计清单。原文按「概述／功能／架构／构建／安全约束」分节，自第二段即载明模块分层与权限声明。现改为先述明产品定位及不做云同步的原因（及其取舍代价），再按「找书／读／记笔记看数据」将功能归入使用场景，架构与门禁下移并保留全部事实。
+- README 重构为面向使用者和贡献者的项目说明，采用“概述／功能／架构／构建／安全约束”分节，先行说明产品定位及本地存储原则，再依书籍管理、阅读、笔记统计等场景归纳功能，并保留模块边界与工程门禁事实。
 - 顺带修正 README 中 4 处与代码不符之处：`:core` 载为 12 套阅读色板（实际 18，v56.5.0 增补 6 套后漏改）、`:data` 载为 7 个 Entity（实际 8，`ReadingListItemEntity` 与 `ReadingListEntity` 属同一文件，按文件数计会少算一个）、`coverageSummary` 载为 77.8%（实际 80.9%）、安全小节仍载「云备份只含 shared prefs」（即本版所修正的错述，README 漏改）。
 - 另修正 `CLAUDE.md` 一处过期描述：其载 `domain/usecase/` 为「空的遗留目录」，实际该目录已不存在（README 所载「已删除」为正确表述）。
 - `README_EN.md` 按同一思路重写，章节结构与中文版逐节对齐（各 15 个标题），并同步修正同样的 4 处失真。英文版为按英文重写，非中文版逐句翻译。
@@ -143,19 +143,18 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 
 ### 新增
 - **12 套内置配色**：`AppColorPreset`（经典紫、靛蓝、晴空蓝、青碧、翠绿、苔绿、琥珀、橘橙、绯红、玫瑰、梅紫、石墨）。选中任一套会重新生成整套 Material 配色，而不是只替换强调色。
-  - **经典紫是默认值，且被特意特殊处理**：`FlowColorPresets.schemeOf(VIOLET)` 原样返回手工调过的 `FlowLightColorScheme` / `FlowDarkColorScheme`，不走生成器。默认值若改走生成算法，等于给每一个从未碰过这个设置的老用户改颜色 —— `FlowColorPresetsTest` 逐个角色断言这一点。
-- **自调色调色台**（设置 → 外观 → 自调色）：`ColorStudioDialog` 提供四种输入方式绑定同一份 HSV 状态 —— **色相环 + 内嵌饱和度／明度色盘**、**光谱条**、明度条与饱和度条、十六进制输入框，任一种都能接续另一种未调完的颜色。弹窗内实时预览生成后的六个角色色块与实测正文对比度；仅在点「应用」时写入，取消则不动实时主题。
-  - 十六进制输入框不只是便利项，而是**无障碍通道**：Canvas 无法被 TalkBack 操作，两个渐变条因此也带 `progressBarRangeInfo` + `setProgress` 语义。
-- **`ColorSource.CUSTOM`**：第三种配色来源。三个来源各读 `AppSettings` 的不同字段（BRAND 读 `colorPreset`，CUSTOM 读 `customSeedArgb`，DYNAMIC 两者都不读），因此都不是彼此的重复项。仍然刻意没有「跟随系统」—— 运行时与 DYNAMIC 无法区分，只会是又一个假开关。
+  - **经典紫是默认值，并作专门兼容处理**：`FlowColorPresets.schemeOf(VIOLET)` 原样返回手工调整的 `FlowLightColorScheme` / `FlowDarkColorScheme`，不经过生成器。默认值若改用生成算法，将改变未调整过该设置的既有用户界面配色；`FlowColorPresetsTest` 对各颜色角色逐项进行断言。
+- **自调色调色台**（设置 → 外观 → 自调色）：`ColorStudioDialog` 提供四种输入方式并绑定同一 HSV 状态，包括色相环及内嵌饱和度／明度色盘、光谱条、明度条与饱和度条、十六进制输入框。各方式可继续调整其他方式产生的未完成颜色。弹窗实时预览生成后的六个角色色块及正文对比度；仅在选择“应用”后写入，取消操作不改变实时主题。
+  - 十六进制输入框同时承担无障碍输入通道。由于 Canvas 无法由 TalkBack 操作，两个渐变条配置 `progressBarRangeInfo` 和 `setProgress` 语义。
+- **`ColorSource.CUSTOM`**：新增第三种配色来源。三个来源分别读取 `AppSettings` 的不同字段（BRAND 读取 `colorPreset`，CUSTOM 读取 `customSeedArgb`，DYNAMIC 不读取上述字段），不存在功能重复。未增设“跟随系统”来源，原因是运行时无法与 DYNAMIC 作有效区分。
 
 ### 技术实现
-- **`SeedColorScheme`（`:core/util`，不依赖 Compose）**：由单一种子色生成 24 个 Material 角色的 HSL 色阶。刻意是 M3 HCT 的近似而非移植 —— `material-color-utilities` 不是依赖，`dynamicLightColorScheme` 只读壁纸，于是在「给一个离线优先的应用加一个库」和「自己维护约 150 行 HSL 数学」之间选了后者，换来的是这套生成器可以在 JVM 上被测。
-  - **承诺：任意种子色下，生成配色中的每一组正文文字／背景配对都不低于 AA 的 4.5:1。** 单靠色阶做不到这件事 —— 中等亮度的种子会让 `onPrimary` 和 `primary` 落在几乎相同的亮度上 —— 所以每个 `onX` 角色都会朝远离其背景的方向扫描亮度，最终回退到纯黑或纯白。该回退必然成功：最坏情况的背景亮度对纯黑／纯白中较远的一侧仍有 4.58:1。
-  - `onSurfaceVariant` 同时对 `surfaceVariant` **和** `surface` 校验，`onSurface` 反之亦然 —— 应用里每一条副标题都是 `onSurfaceVariant` 落在纯 `surface` 上，只校验同名配对会漏掉真正的用法。
-  - 错误色系固定不随种子变化：红色的错误提示是约定，不是品牌选择；配色跑偏比不跟品牌更糟。
-  - 不设饱和度下限，因此「石墨」这套中性配色真的保持中性（`graphiteStaysNeutral` 守卫）。
-- **`ColorSpaces` / `ColorWheelMath`（`:core/util`，均不依赖 Compose）**：HSV／HSL 转换、十六进制解析，以及调色台的全部几何运算（环形命中判定、内嵌方块边长、手柄反算）。放在这里是因为逆映射一旦差一点，表现就是「圆点跟不上手指」，而这种问题只有在 JVM 测试里才便宜。
-- **写入语义**：`updateColorPreset()` / `updateCustomSeedColor()` 都在**同一个 `edit{}`** 里连带写 `COLOR_SOURCE`。分成两次写会先发出一个「新来源 + 旧颜色」的中间 `AppSettings`，而主题就是从这个 flow 重组的，用户会看到旧配色闪一下。
+- **`SeedColorScheme`（`:core/util`，不依赖 Compose）**：由单一种子色生成 24 个 Material 角色的 HSL 色阶。该实现属于 M3 HCT 的近似方案而非移植；项目未引入 `material-color-utilities`，`dynamicLightColorScheme` 仅用于读取壁纸配色。生成器约 150 行，可在 JVM 环境独立测试。
+  - **对比度要求**：任意种子色生成的正文文字与背景配对均不得低于 AA 4.5:1。中等亮度种子可能使 `onPrimary` 与 `primary` 处于接近亮度，因此各 `onX` 角色向远离背景的方向扫描亮度，并在必要时回退至纯黑或纯白；最不利背景对纯黑或纯白中较远一侧仍可达到 4.58:1。
+  - `onSurfaceVariant` 同时针对 `surfaceVariant` 和 `surface` 校验，`onSurface` 反向执行相同检查，以覆盖副标题在普通 `surface` 上的实际使用场景。
+  - 错误色系固定为红色，不随种子变化；不设置饱和度下限，以确保“石墨”中性配色保持中性（由 `graphiteStaysNeutral` 守卫）。
+- **`ColorSpaces` / `ColorWheelMath`（`:core/util`，均不依赖 Compose）**：承载 HSV／HSL 转换、十六进制解析及调色台全部几何运算，包括环形命中判定、内嵌方块边长和手柄反算。逆映射偏差会造成操作点与手势位置不一致，相关规则通过 JVM 测试验证。
+- **写入语义**：`updateColorPreset()` / `updateCustomSeedColor()` 均在同一个 `edit{}` 中连带写入 `COLOR_SOURCE`。拆分为两次写入会先产生“新来源 + 旧颜色”的中间 `AppSettings`，导致主题短暂显示旧配色。
 - 种子色在读与写两侧都强制为不透明：带旧 alpha 的持久化值会让生成的每个角色都半透明，而对比度数学假定不透明合成。
 
 ### 变更
@@ -170,10 +169,10 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 ---
 
 ## [v56.5.2] - 2026-08-14
-> 性能优化：domain 模型稳定性配置使书架卡片、阅读器参数可跳过重组。
+> 工程优化：通过 domain 模型稳定性配置，使书架卡片和阅读器参数具备跳过无关重组的条件。
 
 ### 优化
-- **恢复 domain 模型的 skippability**：`:domain` 无 Compose 编译器，所以 `Book`/`Chapter`/`Annotation`/`ReadingSettings` 等参数被推断为不稳定，导致每张可见书卡在任意状态变更时都重新执行——无论 `equals()` 检查有多深。
+- **恢复 domain 模型的 skippability**：`:domain` 无 Compose 编译器，所以 `Book`/`Chapter`/`Annotation`/`ReadingSettings` 等参数被推断为不稳定，导致每张可见书卡在任意状态变更时都重新执行，无法通过 `equals()` 检查避免重组。
   - 新增 `compose_compiler_config.conf`（仓库根目录），声明 `com.flowreader.app.domain.model.*` 稳定。
   - 在四个 Compose 模块（`:app`、`:core`、`:feature:library`、`:feature:reader`）通过 `composeCompiler.stabilityConfigurationFiles.add()` 接入。
   - `LibraryMessage` 添加 `@Immutable` 注解（sealed interface 之前只能走 runtime）。
@@ -192,10 +191,8 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - 测试覆盖率：76.2% → 77.8%（49/63）。
 - 全量门禁通过。
 
----
-
 ## [v56.5.1] - 2026-08-14
-> 国际化完成：全部 UI 字符串本地化至 9 种语言（zh / en / ja / ko / de / es / fr / pt / ru）。
+> 完成全部 UI 字符串的 9 种语言本地化（zh / en / ja / ko / de / es / fr / pt / ru）。
 
 ### 新增
 - **9 语言全覆盖**：新增 31 个字符串资源键（搜索、分享、滚轮、阅读器控件、PDF 标注模式），完成阅读器、搜索对话框、分享流程、滚轮页面的本地化。
@@ -213,35 +210,52 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 
 ---
 
+## [v56.5.0] - 2026-08-13
+
+> 完成阅读器体验和本地化扩展，新增 6 套阅读色板、阅读器背景图及阅读器、统计和转盘入口的多语言文案。
+
+### 新增
+
+- 阅读色板从 12 套扩展到 18 套，所有色板均通过 WCAG AA 对比度测试。
+- 阅读器支持导入本地背景图。背景图始终叠加在色板背景下方的可读性蒙层之下，不提供关闭蒙层的选项；图片会复制到应用私有目录并压缩到受控尺寸。
+- 补齐阅读器控制栏、书签、章节列表、统计页和转盘入口的 9 语言文案与无障碍描述。
+
+### 技术实现
+
+- 新增 `ReaderBackgroundImage` 纯逻辑组件，覆盖蒙层 alpha、最坏情况对比度和采样解码的 JVM 测试。
+- 阅读背景和蒙层设置通过现有的 `ReaderViewModel.updateReadingSettings(ReadingSettings)` 写入 DataStore，不进入 Room。
+
+---
+
 ## [v56.4.4] - 2026-08-12
-> 修复三个页面加载出数据后内容被顶栏遮挡：`FlowStateHost` 的成功分支丢弃了 `modifier`。
+> 修复书架、统计和详情页面在数据加载完成后内容被顶栏遮挡的问题：`FlowStateHost` 成功分支未应用 `modifier`。
 
 ### 修复
-- **书架、统计、书籍详情三个页面的内容一旦加载出来就被状态栏与顶栏压住**。`FlowStateHost` 的 `when` 里，error / isLoading / isEmpty 三个分支都把 `modifier` 传给了各自的状态组件，只有成功分支是裸的 `content()`——`modifier` 被直接丢掉。而这三个页面恰好都把 `Scaffold` 的 inset padding 通过这个 `modifier` 传进去：
+- **书架、统计、书籍详情三个页面在数据加载完成后内容被状态栏与顶栏遮挡**。`FlowStateHost` 的 `when` 中，error / isLoading / isEmpty 三个分支均向状态组件传递 `modifier`，成功分支却直接调用 `content()`，导致该参数丢失。这三个页面均通过该参数传入 `Scaffold` 的 inset padding：
   ```kotlin
   ) { paddingValues ->
       FlowStateHost(
           modifier = Modifier.fillMaxSize().padding(paddingValues),   // 成功分支里被丢弃
   ```
-  于是 88dp（24dp 状态栏 + 64dp `TopAppBar`）的安全区在成功状态下消失，`LazyColumn` 从 y=0 开始绘制。加载中／空／错误三个状态反而是正确的，所以现象是「页面一有数据，顶部内容就被遮住」。成功分支改为 `Box(modifier = modifier) { content() }`。
+  于是 88dp（24dp 状态栏 + 64dp `TopAppBar`）的安全区在成功状态下失效，`LazyColumn` 从 y=0 开始绘制。加载中、空和错误状态仍能正确应用安全区。成功分支现改为 `Box(modifier = modifier) { content() }`。
   - 受影响的调用点只有传了 padding 的三处：`LibraryScreen`、`StatsScreen`、`BookDetailScreen`。`NotesScreen`／`OpdsScreen`／`ReadingListsScreen` 只传 `fillMaxSize()`，且走 `FlowScaffold`（自己用 `Box` 加 padding），不受影响；`ReaderScreen` 不传 `modifier`，全屏出血设计，行为不变。
   - **设置页不受影响**：它直接给 `Column` 加 `padding(paddingValues)`，不经过 `FlowStateHost`。
 
 ### 测试
-- `ShellWindowInsetsTest` 新增 2 例，单测 260 → 262（0 失败）。此前的 `tabScreenAppliesEachInsetExactlyOnce` 一直是绿的却抓不到这个 bug——它的 `FakeScreen` 自己给 `Box` 加 padding，从不经过 `FlowStateHost`。
-  - `stateHostSuccessContentClearsTheTopBar` 复刻真实形状（padding 经 `FlowStateHost` 的 `modifier` 传入），断言内容顶边 = 24dp + 64dp。还原旧代码后该例 FAILED（`ShellWindowInsetsTest.kt:136`），确认能抓住。
+- `ShellWindowInsetsTest` 新增 2 例，单测 260 → 262（0 失败）。此前的 `tabScreenAppliesEachInsetExactlyOnce` 未覆盖该问题，原因是其 `FakeScreen` 自行向 `Box` 添加 padding，未经过 `FlowStateHost`。
+  - `stateHostSuccessContentClearsTheTopBar` 复刻真实组合结构（padding 经 `FlowStateHost` 的 `modifier` 传入），断言内容顶边 = 24dp + 64dp。恢复旧代码后该用例失败，验证回归门禁有效。
   - `stateHostLoadingAndSuccessShareTheSameContentTop` 把加载态钉在同一偏移，防止将来修好一个状态又弄坏另一个。
 
 ---
 
 ## [v56.4.3] - 2026-08-12
-> 功能性 bug 排查：书内全文搜索恒返回空结果、翻页模式阅读统计全部丢失，另修八处缺陷。
+> 功能性问题修复：处理书内全文搜索返回空结果、翻页模式阅读统计未落库等问题，并修复其他缺陷。
 
 ### 修复
-- **书内全文搜索永远搜不到任何结果**（影响面最大）。`FullTextSearch.search()` 用 `WHERE book_id = ?` 限定书籍，但 `book_content_fts` 是 FTS5 **external content** 表（`content='book_content'`），FTS5 的列没有声明类型、因而没有列亲和性（column affinity）；而 `SQLiteDatabase.rawQuery()` 只能绑定 `String` 参数。SQLite 在两侧都没有亲和性可做隐式转换时，绝不会认为 INTEGER `5` 等于 TEXT `'5'`，于是这个条件恒为假——书内搜索、以及依赖它的阅读器搜索面板，一直返回 0 条结果。现改为 `WHERE book_id = CAST(? AS INTEGER)`。
+- **书内全文搜索返回空结果**（影响范围较大）。`FullTextSearch.search()` 通过 `WHERE book_id = ?` 限定书籍，但 `book_content_fts` 为 FTS5 **external content** 表（`content='book_content'`），其列未声明类型，且 `SQLiteDatabase.rawQuery()` 只能绑定 `String` 参数。在该条件下，SQLite 不会将 INTEGER `5` 与 TEXT `'5'` 自动视为相等，查询条件因而恒为假。现改为 `WHERE book_id = CAST(? AS INTEGER)`。
   - 全局搜索 `searchAll()` 不受影响：它不按书籍过滤，只有 `MATCH`。`deleteBookContent()` 也不受影响：它查的是普通表 `book_content`，`book_id INTEGER` 有正常亲和性，TEXT 参数会被转换。
   - 根因已用相同 schema + 触发器在 sqlite3 上实证复现：绑定 TEXT 返回 `[]`，绑定 INTEGER 返回该行，加 `CAST` 后恢复正常。
-- **翻页模式与漫画的阅读统计整段丢失**。`updatePosition()` 收到的 `position` 在 `SLIDE`/`NONE` 下是字符偏移，在 `PAGED` 与漫画下却是**已渲染页的下标**；两者都被喂进按字符计算的 `ReaderSessionTracker.recordProgress()`。一次翻页只前进 1，被当作"读了 1 个字符"，`readPages` 永远停在 0，而 `saveReadingStats()` 的 `if (seconds > 0 && pages > 0)` 门槛会把**整个会话**（含已累计的阅读时长）一起丢掉——不是少记页数，是时长和页数都不落库。
+- **翻页模式与漫画的阅读统计未落库**。`updatePosition()` 接收的 `position` 在 `SLIDE`/`NONE` 下为字符偏移，在 `PAGED` 与漫画下为**已渲染页下标**；此前两者均传入按字符计算的 `ReaderSessionTracker.recordProgress()`。翻页每次仅前进 1，被当作读取 1 个字符，`readPages` 保持为 0，`saveReadingStats()` 的 `if (seconds > 0 && pages > 0)` 条件随之丢弃整个会话数据，包括累计阅读时长。
   - 新增 `ReaderSessionTracker.recordPageProgress(pageIndex, charsPerPage)`：一次前进算一页，`charsPerPage` 只用于把速度估算换算回"字/分钟"。
   - 新增 `ReaderPositionUnit`（`CHARACTERS` / `PAGE_INDEX`）把"位置的单位到底是什么"这条规则从 ViewModel 里抽出来，使其可被单测覆盖；漫画恒为页下标，`PAGED` 为页下标，其余为字符。
   - `updatePosition()` 的移动阈值随单位切换：字符模式仍是 200，页模式为 1——页下标每次只 +1，原来的 200 字阈值在页模式下永远不可能触发。
@@ -249,7 +263,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - **切换章节时保存了过期的滚动位置**。`goToChapter()` 用 `uiState.currentPosition` 覆盖 `chapterPositions[上一章]`，但 `currentPosition` 经 250ms 节流，`chapterPositions` 始终更新；改为 `getOrPut`，只在该章从未记录过时才回填。
 - **`recordProgress()` 中潜伏的除零**。`readChars %= charsPerPage` 在 `charsPerPage` 为 0 时抛 `ArithmeticException`。当前调用方恒传正数（不可达），现统一 `coerceAtLeast(1)`。
 - **`CacheManager.estimatedMemory` 只增不减**。`memoryUsage` 在 put 时累加，但 LRU 淘汰（内外两层 `removeEldestEntry`）与 `evictBook()` 都不归还，替换同一章也会重复计数。现在淘汰/替换/逐书清理都会释放对应字符数，计数改在 synchronized 块内用 `put()` 的返回值做差。该值仅用于展示与自适应容量判断，不影响正确性。
-- **划词高亮/书签少存一个字符**。`ParagraphContent.rawRange()` 返回的是**闭区间**（`rawStart..rawEnd`，`rawEnd` 是选区最后一个字符的偏移），但 `Annotation.endPosition` 的所有消费方都按**开区间**处理——`buildParagraphContent()` 渲染的是 `paragraph.substring(relStart, relEnd)`，`ReaderContent`/`PagedReader` 的分段过滤也按开区间比较段尾。写入方却把闭区间的 `range.last` 原样传下去，于是选中「hello」实际存成、也实际只高亮「hell」；只选一个字符时高亮宽度为 0，等于什么都没高亮。现新增 `ParagraphContent.selectionSpan()`，在唯一一处完成 `+1` 转换并顺带切出文本（Composable 的回调无法单测，这个纯函数可以）。
+- **划词高亮和书签少存一个字符**。`ParagraphContent.rawRange()` 返回**闭区间**（`rawStart..rawEnd`，`rawEnd` 为选区最后一个字符的偏移），而 `Annotation.endPosition` 的消费方均按**开区间**处理。写入方此前将闭区间的 `range.last` 原样传递，导致选中“hello”时实际存储并高亮“hell”，单字符选区的高亮宽度为 0。现新增 `ParagraphContent.selectionSpan()`，在唯一位置完成 `+1` 转换并提取文本；该纯函数可独立测试。
 - **重叠或嵌套的高亮会把段落文字重复渲染**。`buildParagraphContent()` 逐条 annotation 追加 `substring(relStart, relEnd)`，重叠区间被追加两次：`abcdefghij` 上高亮 `[0,6)` 与 `[3,9)` 渲染成 `abcdefdefghij`；嵌套时 `lastEnd` 还会**倒退**，连间隙文字一起重复（`abcdefghcdefghij`）。更糟的是 `rawOffsets` 随之与显示文本错位，此后所有划词都会映射到错误的章节偏移。现在按已输出位置钳制起点、跳过被完全覆盖的区间；重叠区取先出现者的颜色，尾部区取后者，文字只输出一次。
 - **划词做的书签跳不回原处**。书签的 `position` 会被 `goToBookmark()` → `goToChapter()` 写回 `currentPosition`，而 `ReaderScreen` 把它交给 `ScrollState.scrollTo()`（滚动模式的**像素**）或 `PagedReader` 当**页下标**用；划词书签存的却是**字符偏移**。滚动模式下会滚到一个无意义的像素位置，分页模式下字符偏移远大于页数、被 `coerceIn(0, pages.size - 1)` 钳到章节最后一页。书签现在统一只存阅读器自己的位置（选区就在当前屏/当前页上，回到该位置即可看到它），`addBookmark()` 不再接受字符偏移参数。高亮不受影响——`Annotation` 的位置确实是字符偏移。
 - **「最近 7 天趋势」图最多只显示两三天**。`getRecentDailyStats(limit)` 走的是 `getRecentStats(limit)` = `ORDER BY date DESC LIMIT :limit`，`LIMIT` 限的是**行数**；但 `reading_stats` 带 `(bookId, date)` 唯一索引，一天一本书一行。同时读 3 本书的用户请求 7 天，只能拿到 21 行中最新的 7 行，即最近 2–3 天（按天聚合后 `takeLast(7)` 也救不回已经没查出来的日期）。现改为按日期范围查询：新增 DAO 方法 `getStatsSince(startDate)`，起始日取 `今天 - (limit - 1)`（含今天），`yyyy-MM-dd` 的字典序等价于日期序，因此 `date >= :startDate` 是正确的范围扫描。`limit` 另做 `coerceAtLeast(1)`，避免 0 或负数算出未来的起始日期把全部数据过滤掉。
@@ -266,10 +280,10 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - 单测总数 227 → 260（0 失败），测试文件 45 → 47。测试广度 72.6% → 75.8%（47/62，实测 `coverageSummary` 输出）。
 
 ## [v56.4.2] - 2026-08-11
-> 修复 issue #6：每个界面顶部空出一条空白带、内容被截断。
+> 修复 issue #6：各页面顶部出现额外空白区域并造成内容截断。
 
 ### 修复
-- **窗口 inset 被重复应用两次**（issue #6「安卓版本界面UI异常：每个界面的顶部UI都很宽，导致内容被截断」）。`Navigation.kt` 的外层 shell `Scaffold` 使用默认的 `ScaffoldDefaults.contentWindowInsets`，并把 `paddingValues` 以 `Modifier.padding()` 交给内容——但 padding 只是**应用**inset，并不**消费**它。于是下层 9 个界面各自的 `Scaffold` + `TopAppBar` 又把同一份 inset 应用了第二遍：标题上方多出整条状态栏高度的空白（截图中 24dp 空白 + 24dp 重复 + 64dp 标题栏 = 112dp），底部导航栏 inset 同样被计算两次（一次已含在 `NavigationBar` 的实测高度里，一次来自界面自己的 `contentWindowInsets.bottom`），把内容顶掉/截断。
+- **窗口 inset 被重复应用两次**（issue #6“安卓版本界面 UI 异常：每个界面的顶部 UI 过宽，导致内容被截断”）。`Navigation.kt` 的外层 shell `Scaffold` 使用默认的 `ScaffoldDefaults.contentWindowInsets`，并通过 `Modifier.padding()` 将 `paddingValues` 传给内容；但 padding 只会应用 inset，不会消费 inset。下层 9 个界面的 `Scaffold` 与 `TopAppBar` 因而再次应用同一份 inset：标题上方增加一条状态栏高度的空白（24dp 空白 + 24dp 重复 inset + 64dp 标题栏 = 112dp），底部导航栏 inset 也被重复计算，造成内容上移或截断。
 - 修法：抽出 `FlowShellScaffold`，设 `contentWindowInsets = WindowInsets(0, 0, 0, 0)` 并追加 `.consumeWindowInsets(paddingValues)`。顶部归零后，状态栏 inset 由各界面的 `TopAppBar` 应用**恰好一次**，应用栏绘制到透明状态栏之下——这本来就是 `MainActivity` 里 `enableEdgeToEdge()` 与 `themes.xml` 透明状态栏/导航栏的意图。底部仍需 `consumeWindowInsets`，因为 shell 在底部花掉的 padding 是 `NavigationBar` 的实测高度，其中已经含有导航栏 inset。
 - 阅读器路由不在 `bottomNavItems` 中（`showBottomBar` 为 false），shell 现在把 inset 原样透传，`ReaderControls` 自己的 `windowInsetsPadding` 因此也变为应用一次，全屏沉浸式生效。
 - 平板/大屏分支（`screenWidthDp >= 600` 的 `NavigationRail`）本就没有外层 `Scaffold`，inset 从来只应用一次，未改动。
@@ -281,7 +295,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - 测试广度 71.0% → 72.6%（45/62）。
 
 ## [v56.4.1] - 2026-08-07
-> 安全加固补丁（基于 v56.4.0 审计的进一步收紧）。
+> 安全加固补丁，在 v56.4.0 审计基础上进一步收紧相关边界。
 
 ### 安全修复
 - **LanTransferServer 令牌生成的潜伏缺陷**：`String.generateToken(length)` 用目标长度而非字符集长度作为索引上限（`random.nextInt(length)`）。当前 `TOKEN_CHARS`（16 个 hex 字符）与 token 长度恰好都是 16，所以现有令牌的熵并未受损——这是一个潜伏缺陷而非活跃漏洞：一旦令牌长度调高就会抛 `StringIndexOutOfBoundsException`，调低则会静默地只取字符集前 N 个字符。现改为 `random.nextInt(charset.length)`，让熵不再依赖两个常量的巧合相等。新增两个回归测试（字符集覆盖度 + 50 个令牌唯一性）。
@@ -294,7 +308,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - 新增 `SECURITY_AUDIT_REPORT.md`（完整审计报告）与 `SECURITY_FIX_SUMMARY.md`（修复总结）。
 
 ## [v56.4.0] - 2026-08
-> 安全审计第二轮（v56.3 收尾后的全量复查）。
+> 开展第二轮安全审计，对 v56.3 收尾后的实现进行全面复查。
 
 ### 修复
 - **「用 FlowReader 打开」不再静默失败**：MainActivity 的 `ACTION_VIEW` intent-filter（epub/text）此前无任何处理——其他应用分享的文件会丢失。现在按 URI 走受限导入管线（解析上限/zip-slip 防护全数生效），intent 消费一次即清空，配置变更不会重复导入。
@@ -310,17 +324,17 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - ContentProvider 只读、无文件路径/正文；FileProvider 路径白名单。
 
 ## [v56.3.0] - 2026-08
-> 全面漏洞与死代码清理（v54-v56 收尾审计）。
+> 完成 v54–v56 阶段的安全问题和无效代码清理。
 
 ### 修复
-- **「屏幕常亮」设置终于生效**：此前持久化但从未应用（v52 清理遗留）；现阅读器按设置应用/清除 `FLAG_KEEP_SCREEN_ON`。
-- **退出时进度/统计不再丢失**：`ReaderViewModel.onCleared()` 在 `viewModelScope` 已取消后仍会启动协程保存——改为独立 IO 作用域同步落库。
+- **“屏幕常亮”设置恢复实际生效**：此前仅持久化而未应用（v52 清理遗留）；现阅读器按设置应用或清除 `FLAG_KEEP_SCREEN_ON`。
+- **退出时进度和统计数据得到保存**：`ReaderViewModel.onCleared()` 此前在 `viewModelScope` 取消后仍启动协程保存，现改为通过独立 IO 作用域同步落库。
 - **备份导入读取上限**：SAF 备份导入与 LAN 导入一致增加 200MB 上限，超限明确报错而非 OOM。
 - **LAN 服务生命周期**：关闭局域网传输对话框即停止 HTTP 服务，不再后台常驻。
 - 阅读器选中引擎消除 `!!`（合规门禁要求无新增 `!!`）；删除 v54 拆分后遗留的死函数 `saveProgressImmediately`；修复语言枚举单测（校验新增五种语言资源目录存在）。
 
 ## [v56.0.0] - 2026-08
-> 打磨、无障碍与性能门禁：让应用对所有用户可读、对 CI 可测。
+> 完善无障碍能力、性能基线及持续集成门禁，确保应用功能可用性和构建结果可验证。
 
 ### 无障碍（TalkBack 走查）
 - 漫画阅读逐页播报「漫画第 N 页」；阅读器正文新增「切换阅读控制栏」TalkBack 自定义操作；全量核对图标/按钮 contentDescription。
@@ -335,8 +349,9 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - **仿真翻页评估**：`docs/page_turn_evaluation.md` 完成评估——拟物化翻页与性能目标、内容重分页、无障碍冲突，暂不实现、不恢复 UI 入口。
 - 修复一个日期敏感单测（硬编码 2026-07-26 窗口，随日历推进开始失败）。
 
+## [v55.0.0] - 2026-08
 
-> 书架门面、自适应与分享：让书架更像书架，让阅读更可分享，并完成离线局域网传输。
+> 完善书架视图、自适应导航、内容分享及离线局域网传输能力。
 
 ### 书架
 - **双视图**：书架支持网格/列表切换（顶栏切换按钮，选择持久化）；网格为自适应封面栅格，首卡是「继续阅读」大卡（封面 + 书名 + 进度条）。
@@ -356,8 +371,9 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - 新增 SearchScreen/SearchViewModel、LanTransferServer/Client、ShareCardGenerator、ShelfExporter（:core）及对应单测（LAN 服务含本地套接字集成测试）；备份仓库支持文件级导出/导入并加 200MB 上限。
 - 测试广度 67.7%（42/62 文件）。
 
+## [v54.1.0] - 2026-08
 
-> 阅读器重塑第一阶段：原生文本选中、真正的分页翻页、ViewModel 拆分与启动/缓存性能。
+> 完成阅读器重构第一阶段，涉及原生文本选择、分页翻页、ViewModel 拆分、启动性能和缓存策略。
 
 ### 阅读体验
 - **原生文本选中（v54.2）**：长按段落进入选中态——按词选中、拖拽扩选、两端手柄可微调；浮动操作栏支持「高亮 / 复制 / 书签」，替代 v52 的段落级操作面板。显示文本→原始章节偏移的纯函数映射（`ReaderTextMapping`）保证标注、书签与用户所见完全一致，含 6 项 JVM 单测。
@@ -375,7 +391,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 
 ## [v54.0.0] - 2026-07
 
-> 阅读器重塑启动：先补齐图片/漫画阅读入口，让图像内容走独立渲染路径，不再伪装成普通文本章节。
+> 启动阅读器重构，新增图片及漫画阅读入口，使图像内容使用独立渲染路径。
 
 ### 图片/漫画阅读
 - 新增 `BookFormat.COMIC`，支持 JPG / JPEG / PNG / WebP 单图导入。
@@ -389,7 +405,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - 新增图片格式识别、漫画自然排序与漫画 ZIP 条目规则单测。
 
 ## [v53.0.0] - 2026-07
-> UI 重构第二阶段 + 兑现原 v52 顺延的书架管理能力。主题是「组件成库、文案出码、书架能批量」。
+> 完成 UI 重构第二阶段及 v52 顺延的书架管理能力，重点涉及组件库建设、字符串资源化和书架批量操作。
 
 ### `:core` 组件库补全
 - 新增 `BookCover`：封面渲染只此一处。传入路径而非 painter，文件解析交给 Coil；**没有封面的书不再共用一个灰色书本图标**，改为按书名/作者哈希生成的确定性渐变 + 首字母（`CoverArt` 纯函数，同一本书永远同一张封面）。
@@ -435,43 +451,43 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 ### 工程
 - Room DB version 6 → **7**，新增手写 `MIGRATION_6_7`，仍无 destructive fallback。
 - `:core` 新增 Coil 依赖与自有 `res/values*`（组件库要自带文案才谈得上"库"）。
-- 测试 81 → **159 个**，测试广度 55.8% → **58.6%（34/58）**：MOBI 解压与尾部裁剪、DRM 拒绝、FB2 解析、zip slip 防护、OPDS 局域网边界（含 `fcbooks.com` 这类"看起来像 IPv6 前缀"的域名）、批量元数据的 null/空白语义、拖拽排序的越界与不丢项性质。
+- 测试 81 → **159 个**，测试广度 55.8% → **58.6%（34/58）**：MOBI 解压与尾部裁剪、DRM 拒绝、FB2 解析、zip slip 防护、OPDS 局域网边界（包括 `fcbooks.com` 等易被误判为 IPv6 前缀的域名）、批量元数据的 null/空白语义、拖拽排序的越界及元素保留性质。
 
 ## [v52.0.0] - 2026-07
-> UI 全面重构第一阶段：地基与清账。主题是「先把假的变成真的，再谈美」。
+> 完成 UI 全面重构第一阶段，重点处理基础设计系统、无效设置清理和实际功能接线。
 
-### 死设置清账（UI 上能点的，渲染层必须生效）
-- **字体族真实生效**：`:core` 新增 `ReaderTypography`，`ReaderContent` 改为消费 `readerBodyStyle`，字体选择不再被 `bodyLarge` 吞掉。字体枚举同时从 8 项收敛为 4 项（默认/衬线/无衬线/等宽）——楷体、仿宋在系统上无法解析，属于同一批假选项；旧值按语义迁移到最接近的真实字体。
-- **自定义字体真实加载**：导入的 `.ttf/.otf` 通过 `Typeface.createFromFile` 校验后加载，失败静默回落内置字体，不再是"导入成功但毫无变化"。
+### 无效设置清理与渲染接入
+- **字体族设置接入实际渲染**：`:core` 新增 `ReaderTypography`，`ReaderContent` 改为使用 `readerBodyStyle`。字体枚举由 8 项收敛为 4 项（默认/衬线/无衬线/等宽）；楷体、仿宋在系统上无法可靠解析，旧值按语义迁移至最接近的真实字体。
+- **自定义字体加载流程完善**：导入的 `.ttf/.otf` 经 `Typeface.createFromFile` 校验后加载，读取失败时回退至内置字体，并保留明确的容错路径。
 - **段间距语义修正**：`paragraphSpacing` 从被当作 dp 使用（默认值 1.0f → 1dp 间距，等于没有间距）改为字号倍数，读取侧对旧值做值域迁移。设置面板新增段间距滑块与首行缩进开关。
-- **手势设置真实接线**：左/中/右点击、双击、长按、左右滑动全部映射到 `GestureAction`；边缘热区宽度 `leftEdgeWidth/rightEdgeWidth` 现在生效并可在设置中调节，此前仅 `tapZoneRatio` 被读取且左右行为硬编码。
-- **翻页模式收敛**：删除从未实现的 `SIMULATION`（仿真）、`CURL`（卷曲）、`SLIDE_OVER`（滑动覆盖）三个假开关，只保留真实存在差异的 `SLIDE`（动画翻页）与 `NONE`（瞬时切换）；旧持久化值回落到 `SLIDE`。仿真翻页降级为 v55+ 独立课题。
-- **备份/恢复接线**：`onExportReady`/`onImportReady` 此前无任何调用点，备份与恢复按钮点了没有反应；现已接上系统文件选择器。
+- **手势设置接入渲染层**：左／中／右点击、双击、长按、左右滑动全部映射到 `GestureAction`；边缘热区宽度 `leftEdgeWidth/rightEdgeWidth` 可在设置中调节。此前仅读取 `tapZoneRatio`，且左右行为为硬编码。
+- **翻页模式收敛**：删除未实现的 `SIMULATION`（仿真）、`CURL`（卷曲）、`SLIDE_OVER`（滑动覆盖）三个界面选项，只保留存在实际实现差异的 `SLIDE`（动画翻页）与 `NONE`（瞬时切换）；旧持久化值回退至 `SLIDE`。仿真翻页调整为 v55+ 独立课题。
+- **备份和恢复功能接入**：`onExportReady` / `onImportReady` 此前无调用点，备份与恢复按钮无法触发操作；现已接入系统文件选择器。
 - **书签死代码处置**：书籍详情页补齐第三个「书签」Tab，渲染此前已实现但从未被调用的书签列表。
 
 ### 设计系统（`:core` 从空壳变成真实模块）
 - 新增 `designsystem/token`：`FlowSpacing`（6 档）、`FlowRadius`（4 档）、`FlowElevation`、`FlowMotion`（4 时长 + 3 曲线）、`FlowShapes`、`FlowTypography`（正文去掉为拉丁文设计的 0.5sp 字距）、`FlowBrandColors`。
-- 新增 `FlowTheme`：**动态取色不再是 Android 12+ 的强制行为**。新增 `ColorSource`（品牌配色 / 跟随壁纸），默认品牌配色，设置页可切换；`AppThemeMode` 新增「跟随系统」。
+- 新增 `FlowTheme`：动态取色不作为 Android 12+ 的强制行为。新增 `ColorSource`（品牌配色 / 跟随壁纸），默认使用品牌配色，设置页可切换；`AppThemeMode` 新增“跟随系统”。
 - 新增 12 套 `ReaderPalette`（纸白/米黄/护眼绿/亚麻/晨雾/冷灰/电子墨水/夜黑/墨蓝/深棕/曜石/纯黑），阅读设置面板改为色板网格，所见即所得。此前阅读器只有 2 组硬编码配色。
 - 新增 `FlowStateHost`：书架/详情/阅读器/统计四套各写一遍的 loading/empty/error 收敛为一套。
 
 ### 阅读器
-- **自动夜间模式真实触发**：改为每分钟轮询时间源，19:00 到点即切换到所选夜间色板；此前 `Calendar` 在组合期只读一次，必须退出重进阅读器才生效。
-- **进度条是真实阅读进度**：进度 = 章节序号 + 章内滚动比例，此前是 `当前章/总章数`（5 章的书读完第 1 章直接显示 20%，章内滚动毫无变化）。拖动时浮层显示目标章节名，松手才跳转。
-- **控制层避让系统栏**：顶栏/底栏改用 `WindowInsets`，边到边模式下不再被状态栏压住；顶栏 8 个同权重图标收敛为 4 个高频动作 + overflow。
+- **自动夜间模式按时间触发**：改为每分钟轮询时间源，19:00 到达后切换至所选夜间色板；此前 `Calendar` 仅在组合期读取一次，需退出并重新进入阅读器后方可生效。
+- **进度条反映章节内阅读进度**：进度计算调整为章节序号与章内滚动比例的组合。此前仅使用 `当前章/总章数`，章内滚动不会改变进度。拖动时浮层显示目标章节名，松手后执行跳转。
+- **控制层适配系统栏**：顶栏和底栏改用 `WindowInsets`，边到边模式下避免被状态栏覆盖；顶栏操作由 8 个同权重图标调整为 4 个高频动作及 overflow。
 - **高亮范围与文本一致**：删除让用户"自己输入要高亮的文本"的对话框（输入内容与实际存储的字符区间可能不一致），改为长按段落弹出底部操作面板，高亮精确覆盖该段落，并支持复制与带备注书签。
 - **阅读设置面板**：`AlertDialog` → `ModalBottomSheet`，改动实时预览；`ReaderViewModel` 六个近乎重复的设置写入方法收敛为一个。
 - **CJK 排版**：正文行宽上限 34 字（平板不再拉出 100+ 字的长行），首行缩进两字可开关，标点避头尾。
 
 ### 信息架构
 - **转盘降级**：从底部一级 Tab 移出（底部导航 4 项 → 3 项：书架/统计/设置），改由书架顶栏 overflow 进入。转盘的 60fps 实现原样保留。
-- **书架继续阅读直达**：「继续阅读」卡片点击直接进入阅读器，不再绕一次详情页。
+- **书架继续阅读直达**：“继续阅读”卡片点击后直接进入阅读器，无需经过详情页。
 - 导入改为 `ExtendedFloatingActionButton`，排序/转盘/设置收进 overflow。
 - 设置页删除与阅读器面板重复的字号/行间距/翻页模式入口（此前两处互相覆盖），只保留应用级与设备级设置。
 
 ### 修复与性能
-- **书架导入失败不再静音**：`LibraryScreen` 此前用 `LaunchedEffect { clearError() }` 直接丢弃错误，用户永远看不到失败原因；改为 Snackbar 呈现。
-- **千章详情页不再卡死**：章节从"塞进 `LazyColumn` 单个 item 的 `Column`"改为 `LazyColumn` 自己的 items，2000 章书籍不再一次性组合全部行。
+- **书架导入失败信息得到展示**：`LibraryScreen` 此前通过 `LaunchedEffect { clearError() }` 丢弃错误，现改为使用 Snackbar 呈现失败原因。
+- **大章节目录页面避免一次性组合全部内容**：章节由单个 `LazyColumn` item 内的 `Column` 改为 `LazyColumn` 自身的 items，2000 章书籍可按需组合。
 - 书架封面改用 Coil 异步解析，移除组合期的 `File(...).exists()` 主线程磁盘 IO。
 - 统计图表重写：删除被完全覆盖的重复矩形（每帧白画一次）、补坐标轴与今日高亮、逐柱语义标签供 TalkBack 朗读；删除与 `formatDateShort` 完全重复且从未被调用的 `formatDate`。
 - 标注导出从截断 12 行的 `AlertDialog` 改为系统分享。
@@ -490,7 +506,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - **Room 计划落地**：Room DB 保持 version 6，schema 迁移到 `data/schemas/`，继续保留 v4→v5 标签字段和 v5→v6 书签索引迁移。
 
 ## [v50.0.0] - 2026-07
-- **开始阅读闪退修复**：TTS 引擎改为点击朗读时懒初始化，避免进入阅读器时因系统 TTS 初始化异常导致崩溃。
+- **开始阅读异常修复**：TTS 引擎改为在用户点击朗读时懒初始化，避免进入阅读器时因系统 TTS 初始化异常导致应用退出。
 - **架构补强**：抽出真实 `:domain` 模块，领域模型/仓库接口不再依赖 Compose UI 或 data 实现。
 - **测试与规范门禁**：新增核心模块 JVM 测试、`verifyKotlinStyle` 和 `coverageSummary` 验证任务。
 - **阅读统计重构**：日报按日期合并，新增周报/月报、最快阅读日、最常读书籍和周/月目标进度。
@@ -502,8 +518,8 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - **书签模块重构**：Room v6 为书签新增 `(bookId, chapterIndex, position)` 索引，Repository 改为校验 ID、规范备注文本并按章节/位置稳定排序。
 
 ## [v49.0.0] - 2026-07
-- **书签系统回归**：阅读器控制栏恢复书签入口，长按段落可添加带备注的书签，支持章节内书签列表跳转/删除。
-- **TTS 朗读回归**：新增系统 TextToSpeech 管理器，阅读器支持从当前阅读位置朗读、暂停和释放资源，不引入第三方 SDK。
+- **书签系统恢复**：阅读器控制栏恢复书签入口，长按段落可添加带备注的书签，并支持章节内书签列表跳转和删除。
+- **TTS 朗读恢复**：新增系统 TextToSpeech 管理器，阅读器支持从当前阅读位置朗读、暂停和释放资源，不引入第三方 SDK。
 - **阅读进度 Widget**：新增 Android 主屏幕 Widget，展示最近阅读书籍标题和进度百分比。
 - **阅读专注模式**：阅读器新增全屏专注按钮，可隐藏状态栏和导航栏，滑动临时唤出系统栏。
 - **夜间模式自动切换**：阅读设置新增自动夜间模式，根据本地时间在夜间切换为深色阅读配色。
@@ -513,13 +529,13 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - **护眼提醒可配置**：阅读设置新增 15/20/30/45/60 分钟护眼提醒间隔，持久化到 DataStore。
 - **翻页记忆**：阅读器按章节记忆滚动位置，切换章节再返回时恢复到上次位置。
 - **书架筛选增强**：书架页面新增分类 FilterChip 筛选；搜索继续同时匹配书名和作者。
-- **错误状态优化**：阅读器加载失败状态新增重试按钮，避免只能返回。
+- **错误状态处理**：阅读器加载失败状态新增重试按钮，提供重新加载路径。
 - **APK 体积优化**：Release 构建启用 R8 full mode，并保留资源压缩/混淆。
 
 ## [v47.0.0] - 2026-07
 - **修复搜索"未找到匹配结果"提前显示**：SearchDialog 新增 `hasSearched` 标记，用户点击搜索后才显示"未找到匹配结果"，消除输入即触发的误报
 - **修复阅读统计不保存**：`saveReadingStats()` 原仅 `onCleared()` 调用，导航保存状态下 ViewModel 不销毁导致统计不落库；新增每 30 秒定期保存 + 章节切换时保存，保存后重置会话计数器防止重复统计
-- **修复阅读统计异常崩溃**：`saveReadingStats()` 添加 try-catch，防止 DB 写入异常导致应用闪退
+- **修复阅读统计异常退出**：`saveReadingStats()` 添加 try-catch，防止 DB 写入异常导致应用退出。
 - **移除设置页"关于"入口的版本号副标题**：`SettingsItem.subtitle` 改为可选参数，关于行不再显示硬编码的"版本 44.0.2"
 - **书籍详情目录可点击跳转**：ChapterItem 添加点击事件，点击章节直接打开阅读器并跳转到对应章节；Reader 路由新增可选 `chapterIndex` 查询参数
 - **书签系统入口隐藏**：阅读器控制栏移除书签/添加书签按钮，书籍详情页移除书签 Tab
@@ -540,7 +556,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - **重组范围优化**：WheelScreen 使用 derivedStateOf 隔离 error/result 与 60 FPS 的 rotationAngle
 
 ## [v45.0.2] - 2026-07
-- **章节切换白屏修复**：goToChapter() 异步加载 content 后未更新 currentChapter，改为协程内同步加载完 content 再更新状态
+- **章节切换空白页面修复**：`goToChapter()` 异步加载 content 后未更新 `currentChapter`，现改为在协程内完成 content 加载后再更新状态。
 
 ## [v45.0.1] - 2026-07
 - **按书籍阅读统计**：BookDetailScreen 添加统计卡片，显示每本书累计阅读时长和页数。
@@ -563,12 +579,12 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 - **主题简化**：仅保留深色/浅色两种主题，全局统一生效，移除 autoTimeTheme/dynamicColor 等逻辑，净减约 260 行。
 
 ## [v43.0.0] - 2026-07
-*   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，连续旋转更流畅；转盘文字始终正向可读，不再倒置。
+*   **决策转盘改进**：`spin()` 改为自动管理协程（`viewModelScope.launch`），无需外部 `LaunchedEffect` 触发；旋转角度基于当前角度叠加，改善连续旋转效果；转盘文字保持正向显示。
 *   **Gradle 升级**：Gradle Wrapper 从 `8.7` 升级到 `9.6.1`；重构 `gradle.properties`，添加 `UseParallelGC`、`vfs.watch`、`kotlin.daemon.jvmargs` 等优化项，提升构建性能。
 *   **漏洞修复**：
     *   `StatsViewModel`：阅读统计数据不再只快取一次，每次收集时实时刷新
     *   `FullTextSearch`：消除不安全的 `!!` 操作符，使用局部变量确保空安全
-    *   `WheelViewModel`：动画协程取消后 `isSpinning` 自动恢复为 false，防止永久卡死
+    *   `WheelViewModel`：动画协程取消后 `isSpinning` 自动恢复为 false，防止状态永久停留在旋转中
     *   `WheelScreen`：消除转盘结果对话框的 NPE 隐患（`!!` → 局部变量判空）
     *   `PdfViewer`：`printStackTrace()` 替换为 `Log.e()`，符合 Android 规范
     *   `ReaderContent`：`paragraphSpacing.toInt().dp` 改用直接浮点数转换，消除精度丢失
@@ -591,7 +607,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 ## [v44.0.1] - 2026-07
 *   **阅读统计修复**：`ReaderViewModel.sessionReadPages` 从未递增导致阅读数据永不保存；现根据滚动字符增量合理累计页数。
 *   **代码清理**：移除 `ReaderViewModel` 中未使用的 `MemoryManager` 注入、`AnnotationType` 导入、未使用的 `sessionCharactersRead` 字段；移除 `ReaderScreen` 中 7 个未使用的导入（`Intent`、`Bitmap`、`PdfRenderer` 等）；修复 `BookDetailScreen` 中 `Icons.Default.ArrowBack` 废弃用法。
-*   **闪退修复**：所有书籍加载流程添加 `try-catch` 和 `bookId > 0` 校验，数据库异常或文件缺失时显示错误提示而非崩溃。
+*   **异常退出修复**：所有书籍加载流程添加 `try-catch` 和 `bookId > 0` 校验，数据库异常或文件缺失时显示错误提示，不再直接退出应用。
 
 ## [v44.0.0] - 2026-07
 *   **CI 修复**：Release 构建类型添加 `signingConfig = signingConfigs.getByName("debug")`，修复 GitHub Actions 中 `build-and-release` Job 因产物路径 `app-release.apk` 不存在而导致上传失败和 Release 创建失败的问题。
@@ -618,7 +634,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 *   **代码清理**：移除 DataManager 中 Sync 残留代码。
 
 ## [v36] - 2025-01
-*   **Bug修复**：修复空安全断言 `!!` 问题 (ReaderViewModel)。
+*   **缺陷修复**：修复 `ReaderViewModel` 中空安全断言 `!!` 的使用问题。
 *   **CI修复**：修复 GitHub Actions build.yml job 定义问题。
 *   **代码优化**：移除过期 Icons.Filled 使用。
 
@@ -643,7 +659,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 *   **UI组件拆分重构**：ReaderScreen 拆分为独立组件模块。
 *   **新增组件**：ReaderContent, PdfViewer, ReaderControls, 各 Dialog 组件。
 *   **智能阅读**：基于阅读速度预测剩余阅读时间，实时计算阅读速度(字/分钟)。
-*   **护眼提醒**：Regular 提醒，每20分钟提醒用户休息。
+*   **护眼提醒**：按固定间隔提醒用户休息，默认间隔为 20 分钟。
 *   **阅读目标**：显示每日阅读目标完成进度，建议休息时间。
 *   **书籍分类增强**：支持分类筛选、添加、删除书籍分类功能。
 
@@ -693,7 +709,7 @@ debug keystore 随 Android SDK 分发，是公开的。此前 `buildTypes.releas
 *   **性能优化**：提升大型书籍解析速度。
 
 ## [v15] - 2024-01
-*   Latest release version.
+*   发布版本记录。
 
 ## [v12.0.0] - 2023-12
 *   新增阅读目标设置（每日阅读时长目标）。

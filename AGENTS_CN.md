@@ -155,8 +155,8 @@ Gradle 模块：`:app`、`:core`、`:data`、`:domain`、`:feature:library`、`:
 
 ## 项目文档与开发环境产物
 
-- `README.md` / `README_EN.md` —— 中英文产品概览，v56.6.1 重写为面向「正在决定要不要装」的读者的散文，架构与门禁信息保留但移到功能介绍之后。两份都在当时对着代码核对过（色板数、实体数、覆盖率、备份那条）；结构方面仍以 `AGENTS.md` / `ARCHITECTURE.md` 为准，且两份 README 必须互相同步。
-- `ARCHITECTURE.md` —— 模块地图与依赖方向（v51+）。
+- `README.md` / `README_EN.md` —— 中英文产品概览，架构与门禁信息保留但移到功能介绍之后。两份都在当时对着代码核对过（色板数、实体数、覆盖率、备份那条）；结构方面仍以 `AGENTS.md` / `ARCHITECTURE.md` 为准，且两份 README 必须互相同步。
+- `ARCHITECTURE.md` —— 当前 v56.6.2 的模块地图、依赖方向、持久化边界、导航外壳与质量门禁。
 - `CHANGELOG.md` —— 完整的语义化版本更新日志，中文；最新条目 v56.6.2。
 - `ROADMAP.md` —— 产品计划与「否决清单」；在添加触及原则（离线优先、性能、克制）的功能之前先查这里。
 - `SECURITY_AUDIT_REPORT.md` —— v56.3/v56.4 安全审计，中文。结论：0 高危、2 中危（ContentProvider 阻塞 Binder、FileProvider 授权过宽）、3 低危（含那个潜伏的令牌 bug）、2 信息级；未发现可远程或可由第三方利用的活跃漏洞。

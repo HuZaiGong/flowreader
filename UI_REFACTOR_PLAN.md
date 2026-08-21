@@ -1,6 +1,8 @@
 # FlowReader UI 全面深层次重构计划书
 
 > 目标版本区间: v52.0.0 → v56.0.0 | 基线: v51.0.0 | 撰写日期: 2026-07-26
+>
+> 归档说明：本计划记录 v52 时期的实施过程，不是当前架构或待办清单。当前模块边界以 [ARCHITECTURE.md](ARCHITECTURE.md) 为准，后续事项以 [ROADMAP.md](ROADMAP.md) 为准。
 
 ---
 

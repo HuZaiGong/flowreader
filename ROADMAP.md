@@ -29,7 +29,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 | 多语言 | ✅ 扩展 | 9 种语言（zh / en / ja / ko / de / es / fr / pt / ru），应用内随时切换 |
 | 全文搜索 (FTS5) | ✅ 稳定 | 单书检索 + 全库跨书检索，结果标明书籍来源 |
 | 标注/高亮 | ✅ 稳定 | 5 色高亮，批注笔记，CRUD |
-| 阅读统计 | ✅ 稳定 | 按真实字符位置累计页数，周/月报告，日/周/月目标 |
+| 阅读统计 | ✅ 可用 | 分页/漫画按页索引累计；滑动/无动画模式仍以滚动像素作为字符位置代理，周/月报告与目标可用但绝对字数不应视为精确值 |
 | 决策转盘 | ✅ 稳定 | 自定义选项和颜色，60fps 动画 |
 | 备份恢复 | ✅ 基础 | 导出/导入书籍 + 进度 + 标注 |
 | ZIP / OPDS 导入 | ✅ 基础 | ZIP 批量导入；OPDS 仅允许局域网 / .local 地址 |
@@ -51,7 +51,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 - `SavedStateHandle` 取出的 bookId 默认 0L，各 ViewModel 需各自校验
 - Room DB version 7，已有 4→5、5→6、6→7 显式迁移，无 destructive migration 兜底
 - 分页模式进度以"页号"为位置语义，与滚动模式像素语义并存；切换模式后进度按章内比例近似恢复。v56.4.3 起这两种单位由 `ReaderPositionUnit` 显式区分，阅读统计各走各的计数路径
-- **滚动模式的阅读统计仍把滚动像素当字符数用**（`ReaderSessionTracker.recordProgress()` 对 `content.substring(上次位置, 当前位置)` 取长度，而这两个值来自 `ScrollState.value`，见 `ReaderContent.kt` 的 `onPositionChanged(scrollState.value)`）。因此"已读字数/阅读速度"在 SLIDE/NONE 下是个与真实字数成正比但系数取决于字号行距的粗略代理值，而非真实字数；页数因除以 `charsPerPage` 而同比缩放，日/周统计的相对趋势可用，绝对值不可信。修正需要引入像素→字符映射（`updatePosition` 已经带着 `chapterScrollFraction`，可用 `比例 × 章节字数`），但会改变统计口径并需要重写 `ReaderSessionTrackerTest` 中既有的按字符断言，故留待专门的统计口径改造
+- **滑动/无动画模式的阅读统计仍以滚动像素近似字符位置**：`ReaderContent` 把 `ScrollState.value` 传入 `ReaderSessionTracker.recordProgress()`；分页和漫画则走 `ReaderPositionUnit.PAGE_INDEX`。因此 SLIDE/NONE 下的已读字数、速度和页数适合看趋势，不应当作排版无关的精确值。后续若改为像素到字符的映射，需要同步调整统计口径和测试。
 
 ### 静态审查 7 条的处置（v56.6.2 收口）
 
@@ -63,9 +63,9 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 ### 流程债
 
-- **v56.5.0 没有 CHANGELOG 条目。** 它作为两个 `wip` 提交进了库（`09e1540` 阅读器/统计/转盘入口的 i18n + 6 套新阅读色板，`6e17c54` 用户自定义阅读背景与强制可读性蒙层），但 `CHANGELOG.md` 从 v56.4.4 直接跳到 v56.5.1。发布规范第 4 条要求每个版本一条 CHANGELOG，这条漏了；也正是它导致 README 的"12 套色板"过期到 v56.6.1 才被发现。
+- **v56.5.0 曾漏记 CHANGELOG**：两个 `wip` 提交完成了阅读器入口本地化、6 套新色板和阅读背景图。现已补入 `CHANGELOG.md`，发布规则仍要求每个版本保留一条条目。
 - **CI 只在 `main` 上跑**（`.github/workflows/ci.yml` 的 `push` / `pull_request` 都只监听 `main`），所以推到 `dev` 的提交没有任何远端验证，六道门禁必须在本地实跑。
-- **`AGENTS_CN.md` / `CLAUDE_CN.md` 已停止同步** —— 前者最后一次更新是 2026-07-24，后者停在 v56.4.0。英文版才是权威，中文镜像要么补齐要么删掉，别留在中间状态误导人。
+- **中英文 agent 文档需要持续同步**：`AGENTS.md` / `AGENTS_CN.md` 与 `CLAUDE.md` / `CLAUDE_CN.md` 都描述实现约束。英文版是事实基准，中文镜像应在同一提交更新；若无法维护镜像，应删除镜像而不是保留过期版本。
 
 ---
 
@@ -75,7 +75,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 **目标**: 修复已知问题，提升日常使用的流畅度
 
-- [x] **阅读统计精确化**：将滚动像素换算改为基于真实字符位置的页数计算；区分连续阅读会话（暂停超过 5 分钟另计新会话）
+- [x] **阅读统计基础能力**：按阅读位置累计页数并区分连续阅读会话（暂停超过 5 分钟另计新会话）；滑动模式的滚动像素代理口径仍列在当前技术债务中
 - [x] **护眼提醒可配置**：提醒间隔从硬编码 20 分钟改为用户可设置（15/20/30/45/60 分钟）
 - [x] **翻页记忆**：每个章节独立记忆滚动位置，切换回来后恢复
 - [x] **书架搜索**：书架搜索已支持作者匹配，并新增分类筛选入口
@@ -90,7 +90,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 - [x] **朗读模式 (TTS 回归)**：重新实现 TTS，使用系统 TextToSpeech API，支持朗读/暂停/停止，不引入第三方 SDK
 - [x] **阅读进度 Widget**：Android 主屏幕 Widget 显示当前阅读书籍和进度
 - [x] **阅读专注模式**：隐藏状态栏/导航栏，全屏沉浸阅读
-- [x] **夜间模式自动切换**：根据时间或光线传感器自动切换深色/浅色主题
+- [x] **夜间模式自动切换**：按本地时间自动切换深色/浅色阅读配色（19:00–07:00，每分钟重新评估；不使用光线传感器）
 
 ### v50 — 数据与搜索
 
@@ -114,7 +114,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 - [x] **Kotlin 2.1 + Compose 1.7**：升级到 Kotlin 2.1.0，继续使用 Compose BOM 2024.12.01（Compose 1.7 系列）
 - [x] **单元测试覆盖率 ≥ 40%**：Repository + ViewModel/domain 核心门禁达到 41.9% 测试文件覆盖口径
 - [x] **引入 detekt 或 ktlint**：引入 ktlint，`verifyKotlinStyle` 与 CI 自动检查新模块/domain 代码风格
-- [x] **Room DB version 5+**：已升级至 version 6，添加标签字段与书签索引迁移
+- [x] **Room DB version 5+**：当前为 version 7，包含 4→5 标签、5→6 书签索引和 6→7 阅读列表迁移
 
 ### v52 — UI 地基与死设置清账
 
@@ -123,7 +123,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 > 本版本采纳 `UI_REFACTOR_PLAN.md` 第一阶段范围。原计划的「书籍管理进阶」整体顺延到 v53：
 > 在死设置未清账、设计系统未建立之前叠加新功能，只会放大问题面。
 
-- [x] **`:core` 设计系统落地**：Token（间距/圆角/高度/动效/排版）+ `FlowTheme` + 12 套 `ReaderPalette` + 排版纯函数
+- [x] **`:core` 设计系统落地**：Token（间距/圆角/高度/动效/排版）+ `FlowTheme` + 18 套 `ReaderPalette` + 排版纯函数
 - [x] **死设置清账**：字体族、自定义字体、段间距、手势设置全部接线；仿真/卷曲/滑动覆盖三个假开关删除；备份/恢复接上文件选择器
 - [x] **动态取色可控**：新增 `ColorSource`，默认品牌配色，不再在 Android 12+ 强制跟随壁纸
 - [x] **自动夜间模式修复**：改为定时驱动，19:00 到点即切
@@ -131,8 +131,8 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 - [x] **转盘降级**：从底部一级 Tab 移出，改挂书架 overflow，底部导航收敛为 3 项
 - [x] **错误必达用户**：书架导入失败不再被静默丢弃
 - [x] **千章详情页性能**：章节扁平化为 `LazyColumn` items
-- [x] **门禁口径修正 + 测试广度 ≥ 55%**：`coverageSummary` 覆盖 `:core`/`:feature`，当前 55.8%
-- [x] **对比度自动化断言**：12 套阅读主题与品牌配色的 WCAG AA 正文对比度纳入单测
+- [x] **门禁口径修正 + 测试广度 ≥ 40%**：`coverageSummary` 覆盖 `:core`/`:feature`，当前 85.3%（58/68）
+- [x] **对比度自动化断言**：阅读色板与品牌配色的 WCAG AA 正文对比度纳入单测
 
 ### v53 — 组件库、状态统一与书籍管理进阶
 
@@ -151,7 +151,7 @@ FlowReader 是一款**纯本地、离线优先**的 Android 电子书阅读器�
 
 - [x] **图片/漫画阅读**：支持 JPG / PNG / WebP 单图导入；ZIP / CBZ 图片包作为一整部漫画，`SLIDE` 左右切页，`NONE` 上下拼接滚动
 - [x] **原生文本选中**：自研选中引擎（平台 `SelectionContainer` 的 hoisted 选中 API 在 Compose 1.7.x 为 internal，故基于公开 `TextLayoutResult` 实现）：长按选词、拖拽扩选、双端手柄，浮动栏支持高亮/复制/书签；显示文本→原始章节偏移的纯函数映射保证标注范围精确
-- [x] **`ReaderViewModel` 拆分**：`ReaderProgressEngine`、`ReaderSessionTracker`（可注入时钟）、`ReaderTtsCoordinator` 抽入 `:feature:reader`，ViewModel 由 785 行降至约 640 行，全部引擎类有 JVM 单测
+- [x] **`ReaderViewModel` 拆分**：`ReaderProgressEngine`、`ReaderSessionTracker`（可注入时钟）和 `ReaderPositionUnit` 抽入 `:feature:reader`；`ReaderTtsCoordinator` 仍属于 `:app` 的阅读器 UI 边界，所有纯逻辑引擎均有 JVM 单测
 - [x] **分页翻页模式**：真正的 `PAGED` 实现——`ChapterPaginator` 用真实 `TextMeasurer` 测量分页，`HorizontalPager` 横向翻页，点击左右 1/3 翻一页，进度按页折算；超大段落按原始偏移切分，标注不漂移
 - [x] **大型书籍性能优化**：漫画纵拼改 `LazyColumn` 虚拟化；EPUB 单章读取 16MB、单图 24MB、TXT/MD/FB2/MOBI 整档 128MB 上限；超大章节继续分块入库
 - [x] **启动速度优化**：`profileinstaller` + 手写 `baseline-prof.txt`（冷启动路径：Application/主题/书架/阅读器/Room/DataStore/Coil）
@@ -184,10 +184,10 @@ v56.0 之后没有再排新功能，实际发生的都是审计、修复和一�
 - **v56.3.0 / v56.4.0 / v56.4.1** —— 三轮安全审计与收尾加固（`SECURITY_AUDIT_REPORT.md` / `SECURITY_FIX_SUMMARY.md`）：ContentProvider 不再在 Binder 线程上 `runBlocking`，FileProvider 从三处全树授权收到一个 `share_cards/` 子目录，令牌生成的取模偏差修正。
 - **v56.4.2 / v56.4.4** —— 两次窗口 inset 修复。前者是外层 shell「应用但不消费」inset，导致下面 9 个界面各自再应用一遍；后者是 `FlowStateHost` 成功分支丢了 `modifier`，页面**有数据时**才失去安全区。两者都说明 inset 契约必须集中在一处。
 - **v56.4.3** —— 11 处功能性 bug 排查：书内全文搜索因 FTS5 列无类型亲和性而恒空、PAGED 与漫画的阅读统计整段丢失、划词高亮少存一个字符、「最近 7 天」实际只显示 2–3 天。
-- **v56.5.0** —— 阅读器自定义背景（带强制可读性蒙层）、6 套新阅读色板（12 → 18）、阅读器/统计/转盘入口 i18n。**这一版没有 CHANGELOG 条目**，见上文「流程债」。
+- **v56.5.0** —— 阅读器自定义背景（带强制可读性蒙层）、6 套新阅读色板（12 → 18）、阅读器/统计/转盘入口 i18n。历史上曾漏记，现已补入 `CHANGELOG.md`。
 - **v56.5.1 / v56.5.2** —— 9 语言字符串补齐（domain 模型改为携带纯数值，不再被语言切换冻结）；Compose 稳定性配置消除 domain 模型的不稳定推断，不稳定类 52 → 37。
 - **v56.6.0 / v56.6.1** —— 配色来源扩为 12 套内置配色 + 跟随壁纸 + 自调色，新增调色台；随后修掉非中文语言下会抛异常的 `String.format`、一处组合期回写，并把两份写反了的备份规则注释改正。
-- **v56.6.2** —— 第三方静态审查 #1–#4：导入文件名可穿越目录、若干无上限读取、局域网接收端不校验主机、备份服务器无读超时且路径匹配过松。#5–#7 见上文「待决事项」。
+- **v56.6.2** —— 第三方静态审查的 7 项问题全部收口：导入文件名、读取上限、局域网地址、备份服务器超时与路径匹配、release 签名、ContentProvider 权限，以及计划文档中的 key 字面量均已处理。
 
 ---
 
@@ -227,7 +227,7 @@ v56.0 之后没有再排新功能，实际发生的都是审计、修复和一�
 1. 六道门禁按 CI 的顺序**实跑**通过：`verifyKotlinStyle` → `testDebugUnitTest` → `coverageSummary` → `assembleDebug` → `verifyRoborazziDebug` → `performanceBaseline`。UP-TO-DATE 不算跑过，必要时用 `--rerun-tasks`
 2. 核心功能冒烟测试通过（打开书籍 → 翻页 → 搜索 → 统计 → 转盘）
 3. 无新增 `!!` 操作符和未处理的 `try-catch`
-4. CHANGELOG.md 已更新（一个版本一条，别再出现 v56.5.0 那样的空档）
+4. CHANGELOG.md 已更新（每个版本一条）
 5. `versionCode` / `versionName` 与 CHANGELOG 最新条目一致
 6. CI 只在 `main` 上触发，因此 `dev` 上的提交没有远端验证 —— 第 1 条必须在本地完成
 

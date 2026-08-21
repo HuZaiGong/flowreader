@@ -153,7 +153,7 @@ The project is offline-first and privacy-minded — keep it that way. v56.3/v56.
 ## Project docs and dev-environment artifacts
 
 - `README.md` / `README_EN.md` — Chinese and English product overviews, rewritten in v56.6.1 as prose for a reader deciding whether to install, with the architecture and gate facts kept but moved below the feature walk-through. Both were corrected against the code at that point (palette count, entity count, coverage, the backup claim); `AGENTS.md` / `ARCHITECTURE.md` are still the authority on structure, and the two READMEs must be kept in step with each other.
-- `ARCHITECTURE.md` — module map and dependency direction (v51+).
+- `ARCHITECTURE.md` — current v56.6.2 module map, dependency direction, persistence boundaries, navigation shell and quality gates.
 - `CHANGELOG.md` — full semantic-version changelog, Chinese; newest entry v56.6.2.
 - `ROADMAP.md` — product plan and "否决清单" (rejected-features list); the place to check before adding a feature that touches principles (offline-first, performance, restraint).
 - `SECURITY_AUDIT_REPORT.md` — v56.3/v56.4 security audit, Chinese. Result: 0 high, 2 medium (ContentProvider Binder blocking, FileProvider over-grant), 3 low (incl. the latent token bug), 2 info; no remotely or third-party exploitable active vulnerability found.

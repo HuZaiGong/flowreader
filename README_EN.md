@@ -23,7 +23,7 @@
 
 An Android e-book reader. Open it and read. No sign-up, no login, nobody asking for your phone number.
 
-It doesn't upload your books, doesn't tally your reading habits, doesn't collect crash logs. The whole app requests a single `INTERNET` permission, and that permission does exactly two things: reach an OPDS library on your own local network, and move a backup between two of your own devices. If you'd rather check than take my word for it, `AndroidManifest.xml` is short enough to read in a minute.
+It doesn't upload your books, doesn't tally your reading habits, doesn't collect crash logs. The app's only network permission is `INTERNET`, and it does exactly two things: reach an OPDS library on your own local network, and move a backup between two of your own devices. The manifest retains maxSdk-capped storage permissions for older Android releases. If you'd rather check than take my word for it, `AndroidManifest.xml` is short enough to read in a minute.
 
 Current version: **v56.6.2**. The interface speaks 9 languages (Chinese, English, Japanese, Korean, German, Spanish, French, Portuguese, Russian), switchable in-app at any time.
 
@@ -152,7 +152,7 @@ For a finer-grained module map see `ARCHITECTURE.md`; for the behavioral pitfall
 
 These are hard constraints, not descriptions of the current implementation:
 
-- **One `INTERNET` permission**, for LAN OPDS and LAN transfer only. No accounts, no analytics, no crash reporting, no sync.
+- **Only one network permission, `INTERNET`**, for LAN OPDS and LAN transfer. The manifest also keeps legacy storage permissions capped with `maxSdkVersion` for older Android releases. There are no accounts, analytics, crash reporting, or sync.
 - **Android's automatic backup transfers nothing.** The only domain listed in the backup rules is empty in this app, so books, progress and settings never leave the device through Google's backup transport. That's deliberate — cross-device migration goes through the in-app export or LAN transfer, which you trigger yourself.
 - **Every import path is capped**: EPUB chapters at 16MB, embedded images at 24MB, whole TXT/MD/FB2/MOBI files at 128MB, whole containers at 256MB, EPUB structural metadata at 4MB. ZIP / CBZ reject absolute paths and `..` (zip-slip), skip `__MACOSX` and hidden entries, cap entry count and per-entry size, and only admit extensions the parsers recognize.
 - **A file name handed over by another app is untrusted input.** When something opens a book "with FlowReader", the display name it supplies is reduced to its last path segment, stripped of separators and control characters, and the destination is re-checked against the canonical app directory before anything is written — otherwise a single `../../databases/…` would overwrite the database.
