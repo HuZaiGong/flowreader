@@ -41,16 +41,11 @@ interface AnnotationDao {
     @Query("DELETE FROM annotations WHERE bookId = :bookId")
     suspend fun deleteAnnotationsByBookId(bookId: Long)
 
-    @Query("SELECT * FROM annotations WHERE bookId = :bookId AND selectedText LIKE '%' || :query || '%'")
-    suspend fun searchAnnotations(bookId: Long, query: String): List<AnnotationEntity>
-
     @Query("SELECT * FROM annotations ORDER BY createdTime DESC")
     fun getAllAnnotations(): Flow<List<AnnotationEntity>>
 
-    /** Cross-book note search. Matches the highlighted passage *and* the user's own note body. */
-    @Query(
-        "SELECT * FROM annotations WHERE selectedText LIKE '%' || :query || '%' " +
-            "OR note LIKE '%' || :query || '%' ORDER BY createdTime DESC"
-    )
-    suspend fun searchAllAnnotations(query: String): List<AnnotationEntity>
+    // No LIKE-based note search here on purpose. The notes screen already has every annotation in
+    // memory (it combines getAllAnnotations() with the shelf to resolve book titles) and filters
+    // there, case-insensitively — which SQLite's LIKE is not for non-ASCII. The two SQL variants
+    // that used to sit here had no caller and quietly disagreed with what the screen actually did.
 }

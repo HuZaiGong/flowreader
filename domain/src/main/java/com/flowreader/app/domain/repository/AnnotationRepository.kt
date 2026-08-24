@@ -14,12 +14,14 @@ interface AnnotationRepository {
     suspend fun deleteAnnotation(annotation: Annotation)
     suspend fun deleteAnnotationById(id: Long)
     suspend fun deleteAnnotationsByBookId(bookId: Long)
-    suspend fun searchAnnotations(bookId: Long, query: String): List<Annotation>
     suspend fun exportAnnotations(bookId: Long, format: AnnotationExportFormat): String
 
-    /** Cross-book notes (v53). [searchAllAnnotations] matches highlighted text *and* note bodies. */
+    /**
+     * Cross-book notes (v53). Searching them is the caller's job: the notes screen holds the whole
+     * list already and filters it case-insensitively, which SQLite's `LIKE` cannot do for non-ASCII
+     * text. The two `LIKE` queries that used to back this had no caller.
+     */
     fun getAllAnnotations(): Flow<List<Annotation>>
-    suspend fun searchAllAnnotations(query: String): List<Annotation>
 }
 
 enum class AnnotationExportFormat { MARKDOWN, HTML, TEXT }

@@ -20,6 +20,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import javax.inject.Singleton
 
 @Module
@@ -106,6 +109,21 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideReadingListDao(database: AppDatabase): ReadingListDao = database.readingListDao()
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object CoroutineModule {
+
+    /**
+     * A [SupervisorJob] so one failed background task cannot tear down every other one, and
+     * [Dispatchers.IO] because the only current consumer — search-index maintenance — is file and
+     * database work. Never cancelled: it is meant to outlive every screen.
+     */
+    @Provides
+    @Singleton
+    @ApplicationScope
+    fun provideApplicationScope(): CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 }
 
 @Module

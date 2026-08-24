@@ -60,10 +60,6 @@ class AnnotationRepositoryImpl @Inject constructor(
         annotationDao.deleteAnnotationsByBookId(bookId)
     }
 
-    override suspend fun searchAnnotations(bookId: Long, query: String): List<Annotation> {
-        return annotationDao.searchAnnotations(bookId, query).map { it.toDomain() }
-    }
-
     override suspend fun exportAnnotations(bookId: Long, format: AnnotationExportFormat): String {
         // Formatting lives in :core so the cross-book notes screen shares it instead of forking.
         return AnnotationExporter.export(getAnnotationsListByBookId(bookId), format)
@@ -73,11 +69,5 @@ class AnnotationRepositoryImpl @Inject constructor(
         return annotationDao.getAllAnnotations().map { entities ->
             entities.map { it.toDomain() }
         }
-    }
-
-    override suspend fun searchAllAnnotations(query: String): List<Annotation> {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return emptyList()
-        return annotationDao.searchAllAnnotations(trimmed).map { it.toDomain() }
     }
 }

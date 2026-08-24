@@ -14,6 +14,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.flowreader.app.core.util.ColorSpaces
 import com.flowreader.app.core.util.ReaderBackgroundImage
+import com.flowreader.app.core.util.SearchHistory
 import com.flowreader.app.domain.model.AppColorPreset
 import com.flowreader.app.domain.model.AppLanguage
 import com.flowreader.app.domain.model.AppSettings
@@ -284,24 +285,23 @@ class SettingsRepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * Encoding and ordering both live in [SearchHistory]: the delimiter is escaped (a query holding
+     * `|` used to split into two junk entries on the next read) and a repeated query is moved to the
+     * front instead of being ignored.
+     */
     override suspend fun addSearchHistory(query: String) {
         context.dataStore.edit { preferences ->
-            val current = preferences[PreferencesKeys.SEARCH_HISTORY] ?: ""
-            val historyList = if (current.isNotEmpty()) current.split("|").toMutableList() else mutableListOf()
-            if (!historyList.contains(query)) {
-                historyList.add(0, query)
-                if (historyList.size > 10) historyList.removeAt(historyList.lastIndex)
-            }
-            preferences[PreferencesKeys.SEARCH_HISTORY] = historyList.joinToString("|")
+            val current = SearchHistory.decode(preferences[PreferencesKeys.SEARCH_HISTORY])
+            preferences[PreferencesKeys.SEARCH_HISTORY] = SearchHistory.encode(
+                SearchHistory.withQuery(current, query)
+            )
         }
     }
 
     override fun getSearchHistory(): Flow<List<String>> = context.dataStore.data
         .retry(3) { it is IOException }
-        .map { preferences ->
-            val history = preferences[PreferencesKeys.SEARCH_HISTORY] ?: ""
-            if (history.isNotEmpty()) history.split("|") else emptyList()
-        }
+        .map { preferences -> SearchHistory.decode(preferences[PreferencesKeys.SEARCH_HISTORY]) }
 
     override suspend fun clearSearchHistory() {
         context.dataStore.edit { preferences ->

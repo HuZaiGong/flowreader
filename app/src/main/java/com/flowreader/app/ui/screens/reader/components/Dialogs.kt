@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.core.util.CjkTokenizer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
@@ -34,6 +35,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import com.flowreader.app.R
 import com.flowreader.app.domain.model.Annotation
+import com.flowreader.app.ui.components.snippetWithMatchEmphasis
 import com.flowreader.app.util.FtsSearchResult
 
 @Composable
@@ -221,7 +223,9 @@ fun SearchDialog(
                 Button(
                     onClick = onSearch,
                     modifier = Modifier.fillMaxWidth(),
-                    enabled = query.isNotBlank() && !isSearching
+                    // Matches the guard in ReaderViewModel.searchInBook: a punctuation-only query
+                    // cannot match anything, so the button must not look actionable.
+                    enabled = CjkTokenizer.isSearchableQuery(query) && !isSearching
                 ) {
                     if (isSearching) {
                         CircularProgressIndicator(modifier = Modifier.size(20.dp))
@@ -255,7 +259,11 @@ fun SearchDialog(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = result.matchedText,
+                                        text = snippetWithMatchEmphasis(
+                                            result.matchedText,
+                                            result.matchStart,
+                                            result.matchLength
+                                        ),
                                         style = MaterialTheme.typography.bodySmall,
                                         maxLines = 3,
                                         overflow = TextOverflow.Ellipsis

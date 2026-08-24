@@ -47,6 +47,8 @@
     <string name="search_history_title">搜索历史</string>
     <string name="search_history_empty">输入关键词，搜索全库书籍与章节</string>
     <string name="search_clear_history">清空</string>
+    <string name="search_indexing_progress">正在建立全文索引 %1$d/%2$d</string>
+    <string name="search_results_partial">索引尚未完成，章节结果可能不全</string>
     <string name="settings_lan_transfer">局域网传输</string>
     <string name="settings_lan_transfer_desc">同一 WiFi 下设备间传输备份文件，不依赖互联网</string>
     <string name="settings_lan_transfer_hint">发送端生成备份链接，接收端粘贴链接即可导入。链接包含随机令牌，仅当前会话有效。</string>

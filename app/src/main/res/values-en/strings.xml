@@ -207,6 +207,8 @@
     <string name="search_history_title">Recent searches</string>
     <string name="search_history_empty">Enter a keyword to search every book and chapter</string>
     <string name="search_clear_history">Clear</string>
+    <string name="search_indexing_progress">Building full-text index %1$d/%2$d</string>
+    <string name="search_results_partial">The index is still building, so chapter results may be incomplete</string>
     <string name="settings_lan_transfer">LAN transfer</string>
     <string name="settings_lan_transfer_desc">Move backup files between devices on the same Wi-Fi, without the internet</string>
     <string name="settings_lan_transfer_hint">The sender creates a backup link; the receiver pastes it to import. The link carries a random token and is valid only for this session.</string>

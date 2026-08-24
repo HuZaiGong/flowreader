@@ -17,7 +17,9 @@ import com.flowreader.app.data.local.entity.ChapterEntity
 import com.flowreader.app.data.local.entity.ReadingStatsEntity
 import com.flowreader.app.domain.repository.BackupRepository
 import com.flowreader.app.domain.repository.ImportResult
+import com.flowreader.app.util.FullTextSearch
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -39,7 +41,8 @@ class BackupRepositoryImpl @Inject constructor(
     private val bookmarkDao: BookmarkDao,
     private val annotationDao: AnnotationDao,
     private val categoryDao: CategoryDao,
-    private val readingStatsDao: ReadingStatsDao
+    private val readingStatsDao: ReadingStatsDao,
+    private val fullTextSearch: FullTextSearch
 ) : BackupRepository {
     override suspend fun exportData(uri: Uri): Result<Unit> = withContext(Dispatchers.IO) {
         try {
@@ -134,6 +137,7 @@ class BackupRepositoryImpl @Inject constructor(
         var booksImported = 0
         var bookmarksImported = 0
         var annotationsImported = 0
+        val importedBookIds = mutableSetOf<Long>()
 
         database.withTransaction {
             val booksArray = json.optJSONArray("books") ?: JSONArray()
@@ -141,6 +145,7 @@ class BackupRepositoryImpl @Inject constructor(
                 val bookJson = booksArray.getJSONObject(i)
                 val book = BookEntity.fromJson(bookJson)
                 bookDao.insertBook(book)
+                importedBookIds += book.id
                 booksImported++
             }
 
@@ -160,7 +165,30 @@ class BackupRepositoryImpl @Inject constructor(
                 annotationsImported++
             }
         }
+        invalidateSearchIndex(importedBookIds)
         return Result.success(ImportResult(booksImported, bookmarksImported, annotationsImported))
+    }
+
+    /**
+     * Drops every restored book from the full-text index so maintenance re-indexes it.
+     *
+     * `insertBook` is `onConflict = REPLACE`, so a restore can put a *different* book under an id the
+     * library already used. The index keyed the old book's text to that id and its completion marker
+     * said the id was done, so maintenance skipped it and search kept serving the previous book's
+     * text under the new book's title — indefinitely. Deliberately outside the Room transaction: the
+     * index lives in a separate database, so it cannot join that transaction, and holding one while
+     * taking the index lock only risks lock-ordering trouble. Best-effort — a failure here leaves
+     * stale hits, which must not fail an import the user has already committed to.
+     */
+    private suspend fun invalidateSearchIndex(bookIds: Set<Long>) {
+        if (bookIds.isEmpty()) return
+        try {
+            fullTextSearch.deleteBooks(bookIds.toList())
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.w("BackupRepositoryImpl", "Failed to invalidate the search index after import", e)
+        }
     }
 
     private companion object {

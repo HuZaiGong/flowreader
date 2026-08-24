@@ -13,7 +13,6 @@ import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.CategoryRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingListRepository
-import com.flowreader.app.domain.repository.SearchRepository
 import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.app.util.BookParser
 import com.flowreader.app.util.ZipImporter

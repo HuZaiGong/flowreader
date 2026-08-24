@@ -17,9 +17,9 @@ android {
         applicationId = "com.flowreader.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5662
+        versionCode = 5663
 
-        versionName = "56.6.2"
+        versionName = "56.6.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -176,6 +176,11 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.16")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("androidx.room:room-testing:2.6.1")
+    // Robolectric's bundled SQLite has no fts5 module, so the search index can only be exercised
+    // end-to-end against a real one. FullTextSearchEngineTest runs the shipped DDL and queries
+    // through this driver; without it the index is only covered by SQL-string assertions, which is
+    // how a tokenizer that could not match Chinese at all shipped through a bug sweep.
+    testImplementation("org.xerial:sqlite-jdbc:3.41.2.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))

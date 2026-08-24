@@ -3,6 +3,7 @@ package com.flowreader.app.ui.screens.reader
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowreader.app.core.util.CjkTokenizer
 import com.flowreader.app.domain.model.Annotation
 import com.flowreader.app.domain.model.AnnotationColor
 import com.flowreader.app.domain.model.Book
@@ -15,6 +16,7 @@ import com.flowreader.app.domain.repository.BookRepository
 import com.flowreader.app.domain.repository.BookmarkRepository
 import com.flowreader.app.domain.repository.ChapterRepository
 import com.flowreader.app.domain.repository.ReadingStatsRepository
+import com.flowreader.app.domain.repository.SearchRepository
 import com.flowreader.app.domain.repository.SettingsRepository
 import com.flowreader.feature.reader.ReaderPositionUnit
 import com.flowreader.feature.reader.ReaderProgressEngine
@@ -27,6 +29,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -80,6 +83,7 @@ class ReaderViewModel @Inject constructor(
     private val annotationRepository: AnnotationRepository,
     private val settingsRepository: SettingsRepository,
     private val readingStatsRepository: ReadingStatsRepository,
+    private val searchRepository: SearchRepository,
     private val cacheManager: CacheManager,
     private val bookLoader: com.flowreader.app.util.BookLoader,
     private val fullTextSearch: FullTextSearch,
@@ -274,7 +278,7 @@ class ReaderViewModel @Inject constructor(
                     }
 
                     calculateReadingPrediction()
-                    if (book.format != BookFormat.COMIC) indexBookForSearch(book, chapterMetadata)
+                    if (book.format != BookFormat.COMIC) indexBookForSearch()
 
                     if (initialChapterIndex >= 0 && initialChapterIndex < chapterMetadata.size) {
                         goToChapter(initialChapterIndex)
@@ -488,21 +492,20 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    private fun indexBookForSearch(book: Book, chapters: List<Chapter>) {
+    /**
+     * Makes sure the opened book is searchable, without re-indexing it on every open.
+     *
+     * This used to hold its own delete-then-reindex loop against [FullTextSearch], which meant two
+     * places knew how to index a book and the reader's copy never wrote the completion marker — so
+     * maintenance re-parsed the same book afterwards, and reopening a 500-chapter novel re-indexed
+     * all 500 chapters every time. The repository is now the only thing that indexes.
+     */
+    private fun indexBookForSearch() {
         viewModelScope.launch {
             try {
-                fullTextSearch.initialize()
-                // Delete-then-reindex must be atomic against SearchRepositoryImpl's global
-                // rebuild, or this book can be wiped from the index after the rebuild already
-                // recorded it as indexed — global search would then silently miss it.
-                fullTextSearch.withIndexLock {
-                    fullTextSearch.deleteBookContent(bookId)
-                    chapters.forEachIndexed { index, chapter ->
-                        chapterRepository.getChapterContent(bookId, index)?.let { content ->
-                            fullTextSearch.indexChapter(bookId, index, chapter.title, content)
-                        }
-                    }
-                }
+                searchRepository.indexBook(bookId)
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("ReaderViewModel", "Failed to index book for search", e)
             }
@@ -519,13 +522,17 @@ class ReaderViewModel @Inject constructor(
 
     fun searchInBook() {
         val query = _uiState.value.searchQuery
-        if (query.isBlank()) return
+        // A punctuation-only query folds away to nothing in the index, so `isNotBlank` was not enough
+        // to keep it from running as a search that could never match.
+        if (!CjkTokenizer.isSearchableQuery(query)) return
         viewModelScope.launch {
             _uiState.update { it.copy(isSearching = true, hasSearched = true) }
             try {
                 val results = fullTextSearch.search(bookId, query)
                 settingsRepository.addSearchHistory(query)
                 _uiState.update { it.copy(searchResults = results, isSearching = false) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 android.util.Log.e("ReaderViewModel", "FTS search failed", e)
                 _uiState.update { it.copy(searchResults = emptyList(), isSearching = false) }

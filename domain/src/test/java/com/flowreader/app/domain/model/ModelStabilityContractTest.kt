@@ -40,7 +40,8 @@ class ModelStabilityContractTest {
         WheelItem::class.java,
         WheelConfig::class.java,
         WheelResult::class.java,
-        GlobalSearchResult::class.java
+        GlobalSearchResult::class.java,
+        SearchIndexProgress::class.java
     )
 
     @Test

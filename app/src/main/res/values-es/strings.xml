@@ -194,6 +194,8 @@
     <string name="search_history_title">Historial de búsqueda</string>
     <string name="search_history_empty">Escribe una palabra clave para buscar en todos los libros y capítulos</string>
     <string name="search_clear_history">Vaciar</string>
+    <string name="search_indexing_progress">Creando el índice de texto completo %1$d/%2$d</string>
+    <string name="search_results_partial">El índice aún se está creando, los resultados por capítulo pueden estar incompletos</string>
     <string name="settings_lan_transfer">Transferencia LAN</string>
     <string name="settings_lan_transfer_desc">Transferir respaldos entre dispositivos en el mismo WiFi, sin Internet</string>
     <string name="settings_lan_transfer_hint">El dispositivo emisor genera un enlace de respaldo; pégalo aquí para importar. El enlace incluye un token aleatorio, válido por una sesión.</string>

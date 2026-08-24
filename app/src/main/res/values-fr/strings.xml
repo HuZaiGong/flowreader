@@ -194,6 +194,8 @@
     <string name="search_history_title">Historique de recherche</string>
     <string name="search_history_empty">Saisissez un mot-clé pour chercher dans tous les livres et chapitres</string>
     <string name="search_clear_history">Effacer</string>
+    <string name="search_indexing_progress">Création de l\'index plein texte %1$d/%2$d</string>
+    <string name="search_results_partial">L\'index est en cours de création, les résultats par chapitre peuvent être incomplets</string>
     <string name="settings_lan_transfer">Transfert LAN</string>
     <string name="settings_lan_transfer_desc">Transférer des sauvegardes entre appareils sur le même WiFi, sans Internet</string>
     <string name="settings_lan_transfer_hint">Le périphérique émetteur génère un lien de sauvegarde ; collez-le ici pour importer. Le lien contient un jeton aléatoire, valable une seule session.</string>

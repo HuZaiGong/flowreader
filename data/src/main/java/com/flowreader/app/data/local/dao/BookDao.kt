@@ -35,10 +35,20 @@ interface BookDao {
     @Query("SELECT * FROM books WHERE filePath = :filePath")
     suspend fun getBookByPath(filePath: String): BookEntity?
 
-    @Query("SELECT * FROM books WHERE title LIKE '%' || :query || '%' OR author LIKE '%' || :query || '%'")
+    /**
+     * Callers must pass [query] through `SqlLike.escape` — hence `ESCAPE '\'`.
+     *
+     * Without it a `%` typed into the search box is a wildcard in the bound argument, so searching
+     * `%` returned the entire library and `_` matched any single character.
+     */
+    @Query(
+        "SELECT * FROM books WHERE title LIKE '%' || :query || '%' ESCAPE '\\' " +
+            "OR author LIKE '%' || :query || '%' ESCAPE '\\'"
+    )
     fun searchBooks(query: String): Flow<List<BookEntity>>
 
-    @Query("SELECT * FROM books WHERE tags LIKE '%' || :tag || '%' ORDER BY addedTime DESC")
+    /** [tag] must be escaped by the caller; see [searchBooks]. */
+    @Query("SELECT * FROM books WHERE tags LIKE '%' || :tag || '%' ESCAPE '\\' ORDER BY addedTime DESC")
     fun getBooksByTag(tag: String): Flow<List<BookEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

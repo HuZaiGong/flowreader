@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,8 +44,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.flowreader.app.R
 import com.flowreader.app.core.designsystem.component.BookCover
 import com.flowreader.app.core.designsystem.token.FlowSpacing
+import com.flowreader.app.core.util.CjkTokenizer
 import com.flowreader.app.core.util.FlowFormatters
 import com.flowreader.app.domain.model.GlobalSearchResult
+import com.flowreader.app.domain.model.SearchIndexProgress
+import com.flowreader.app.ui.components.snippetWithMatchEmphasis
 
 /**
  * The independent search destination (v55): search history on idle, then two-section results —
@@ -101,8 +103,12 @@ fun SearchScreen(
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
 
+            IndexProgressBanner(progress = uiState.indexProgress)
+
             when {
-                uiState.query.trim().length < 2 -> {
+                // The ViewModel decides what counts as a query — a single Chinese character is one.
+                // A flat `length < 2` check here kept 「爱」 on the history screen forever.
+                !CjkTokenizer.isSearchableQuery(uiState.query) -> {
                     HistorySection(
                         history = uiState.history,
                         onUseHistory = { viewModel.useHistory(it) },
@@ -143,6 +149,16 @@ fun SearchScreen(
                         )
                     }
 
+                    if (uiState.chapterResultsArePartial) {
+                        item(key = "chapter_partial") {
+                            Text(
+                                text = stringResource(R.string.search_results_partial),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
                     items(uiState.chapterResults, key = { "chapter-${it.bookId}-${it.chapterIndex}" }) { result ->
                         ChapterSearchRow(result = result, onClick = { onChapterClick(result.bookId, result.chapterIndex) })
                     }
@@ -170,6 +186,42 @@ fun SearchScreen(
                     modifier = Modifier.padding(horizontal = FlowSpacing.lg)
                 )
             }
+        }
+    }
+}
+
+/**
+ * 「正在建立全文索引 N/M」 while the library is being indexed.
+ *
+ * Chapter search can only find text that is already in the index, and indexing a large library takes
+ * long enough that silence reads as "search is broken". The banner is the difference between
+ * 「还没索引完」 and 「确实没有匹配」.
+ */
+@Composable
+private fun IndexProgressBanner(progress: SearchIndexProgress) {
+    if (!progress.isIndexing) return
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = FlowSpacing.lg, vertical = FlowSpacing.sm)
+    ) {
+        Text(
+            text = stringResource(
+                R.string.search_indexing_progress,
+                progress.booksIndexed,
+                progress.booksTotal
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(FlowSpacing.xs))
+        if (progress.booksTotal > 0) {
+            LinearProgressIndicator(
+                progress = { progress.booksIndexed.toFloat() / progress.booksTotal },
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -285,7 +337,7 @@ private fun ChapterSearchRow(result: GlobalSearchResult, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = result.matchedText,
+                    text = snippetWithMatchEmphasis(result.matchedText, result.matchStart, result.matchLength),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis

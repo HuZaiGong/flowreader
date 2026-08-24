@@ -1,9 +1,13 @@
 package com.flowreader.app.data.repository
 
+import android.util.Log
+import com.flowreader.app.core.util.SqlLike
 import com.flowreader.app.data.local.dao.BookDao
 import com.flowreader.app.data.local.entity.BookEntity
 import com.flowreader.app.domain.model.Book
 import com.flowreader.app.domain.repository.BookRepository
+import com.flowreader.app.util.FullTextSearch
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -11,8 +15,13 @@ import javax.inject.Singleton
 
 @Singleton
 class BookRepositoryImpl @Inject constructor(
-    private val bookDao: BookDao
+    private val bookDao: BookDao,
+    private val fullTextSearch: FullTextSearch
 ) : BookRepository {
+
+    private companion object {
+        const val TAG = "BookRepositoryImpl"
+    }
 
     override fun getAllBooks(): Flow<List<Book>> {
         return bookDao.getAllBooks().map { entities ->
@@ -40,14 +49,20 @@ class BookRepositoryImpl @Inject constructor(
         }
     }
 
+    /**
+     * Title/author search. The query is escaped, so `%` and `_` match themselves.
+     *
+     * They used to be wildcards in the bound argument: a lone `%` returned every book in the library
+     * and `a_c` matched "abc" — surprising enough to read as search being broken.
+     */
     override fun searchBooks(query: String): Flow<List<Book>> {
-        return bookDao.searchBooks(query).map { entities ->
+        return bookDao.searchBooks(SqlLike.escape(query)).map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
     override fun getBooksByTag(tag: String): Flow<List<Book>> {
-        return bookDao.getBooksByTag(tag).map { entities ->
+        return bookDao.getBooksByTag(SqlLike.escape(tag)).map { entities ->
             entities.map { it.toDomain() }
         }
     }
@@ -70,10 +85,12 @@ class BookRepositoryImpl @Inject constructor(
 
     override suspend fun deleteBook(book: Book) {
         bookDao.deleteBook(BookEntity.fromDomain(book))
+        dropFromSearchIndex(listOf(book.id))
     }
 
     override suspend fun deleteBookById(id: Long) {
         bookDao.deleteBookById(id)
+        dropFromSearchIndex(listOf(id))
     }
 
     override suspend fun updateReadingProgress(bookId: Long, chapter: Int, position: Int, progress: Float) {
@@ -84,6 +101,26 @@ class BookRepositoryImpl @Inject constructor(
         val valid = ids.filter { it > 0L }.distinct()
         if (valid.isEmpty()) return
         bookDao.deleteBooksByIds(valid)
+        dropFromSearchIndex(valid)
+    }
+
+    /**
+     * Drops deleted books from the full-text index.
+     *
+     * Without this the index kept every deleted book's whole text — so global search returned hits
+     * that opened a book that no longer existed, and the file grew monotonically no matter how much
+     * the user deleted. Best-effort: index maintenance also sweeps ids the library no longer has, so a
+     * failure here degrades to a stale entry until the next search rather than blocking the delete the
+     * user asked for.
+     */
+    private suspend fun dropFromSearchIndex(ids: List<Long>) {
+        try {
+            fullTextSearch.deleteBooks(ids)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to remove deleted books from the search index", e)
+        }
     }
 
     override suspend fun moveBooksToCategory(ids: List<Long>, categoryId: Long?) {

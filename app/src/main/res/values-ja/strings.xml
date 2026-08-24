@@ -207,6 +207,8 @@
     <string name="search_history_title">検索履歴</string>
     <string name="search_history_empty">キーワードを入力して全書籍・全章を検索</string>
     <string name="search_clear_history">クリア</string>
+    <string name="search_indexing_progress">全文インデックスを作成中 %1$d/%2$d</string>
+    <string name="search_results_partial">インデックス作成中のため、章の検索結果は不完全な場合があります</string>
     <string name="settings_lan_transfer">LAN転送</string>
     <string name="settings_lan_transfer_desc">同じWi-Fi上の端末間でバックアップを転送します。インターネットは使いません</string>
     <string name="settings_lan_transfer_hint">送信側がバックアップリンクを作成し、受信側が貼り付けて取り込みます。リンクにはランダムなトークンが含まれ、このセッション中のみ有効です。</string>

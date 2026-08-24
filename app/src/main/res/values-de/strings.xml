@@ -194,6 +194,8 @@
     <string name="search_history_title">Suchverlauf</string>
     <string name="search_history_empty">Geben Sie ein Stichwort ein, um alle Bücher und Kapitel zu durchsuchen</string>
     <string name="search_clear_history">Leeren</string>
+    <string name="search_indexing_progress">Volltextindex wird erstellt %1$d/%2$d</string>
+    <string name="search_results_partial">Der Index wird noch erstellt, Kapitelergebnisse können unvollständig sein</string>
     <string name="settings_lan_transfer">LAN-Übertragung</string>
     <string name="settings_lan_transfer_desc">Sicherungen zwischen Geräten im selben WiFi übertragen, ohne Internet</string>
     <string name="settings_lan_transfer_hint">Das sendende Gerät erstellt einen Sicherungslink; fügen Sie ihn hier ein, um zu importieren. Der Link enthält ein zufälliges Token, gültig für eine Sitzung.</string>

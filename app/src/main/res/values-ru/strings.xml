@@ -194,6 +194,8 @@
     <string name="search_history_title">История поиска</string>
     <string name="search_history_empty">Введите ключевое слово для поиска по всем книгам и главам</string>
     <string name="search_clear_history">Очистить</string>
+    <string name="search_indexing_progress">Создание полнотекстового индекса %1$d/%2$d</string>
+    <string name="search_results_partial">Индекс ещё создаётся, результаты по главам могут быть неполными</string>
     <string name="settings_lan_transfer">Передача по LAN</string>
     <string name="settings_lan_transfer_desc">Передача резервных копий между устройствами в одной Wi-Fi сети, без интернета</string>
     <string name="settings_lan_transfer_hint">Отправляющее устройство создаёт ссылку на резервную копию; вставьте её здесь для импорта. Ссылка содержит случайный токен, действует одну сессию.</string>

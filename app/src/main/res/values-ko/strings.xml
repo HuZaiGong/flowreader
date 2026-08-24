@@ -207,6 +207,8 @@
     <string name="search_history_title">검색 기록</string>
     <string name="search_history_empty">키워드를 입력해 모든 도서와 챕터를 검색하세요</string>
     <string name="search_clear_history">지우기</string>
+    <string name="search_indexing_progress">전문 색인 생성 중 %1$d/%2$d</string>
+    <string name="search_results_partial">색인이 아직 생성 중이므로 챕터 결과가 불완전할 수 있습니다</string>
     <string name="settings_lan_transfer">LAN 전송</string>
     <string name="settings_lan_transfer_desc">같은 Wi-Fi의 기기 간에 백업 파일을 전송합니다. 인터넷은 사용하지 않습니다</string>
     <string name="settings_lan_transfer_hint">보내는 기기에서 백업 링크를 만들고, 받는 기기에서 붙여넣어 가져옵니다. 링크에는 임의 토큰이 포함되며 이번 세션에서만 유효합니다.</string>
